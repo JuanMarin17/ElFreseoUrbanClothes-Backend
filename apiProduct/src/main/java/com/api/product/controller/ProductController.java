@@ -18,6 +18,7 @@ import com.api.product.dto.ProductRequestDTO;
 import com.api.product.dto.ProductResponseDTO;
 import com.api.product.service.ProductService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -27,7 +28,7 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ResponseEntity<ProductResponseDTO> createProduct(@RequestBody ProductRequestDTO productRequestDTO) {
+    public ResponseEntity<ProductResponseDTO> createProduct(@RequestBody @Valid ProductRequestDTO productRequestDTO) {
         ProductResponseDTO response = productService.createProduct(productRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -49,7 +50,7 @@ public class ProductController {
     }   
 
     @PutMapping("{id}")
-    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO productRequestDTO) {
+    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @RequestBody @Valid ProductRequestDTO productRequestDTO) {
         ProductResponseDTO response = productService.updateProduct(id, productRequestDTO).orElse(null);
         if (response != null) {
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
