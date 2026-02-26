@@ -18,7 +18,6 @@ import com.api.product.dto.ProductRequestDTO;
 import com.api.product.dto.ProductResponseDTO;
 import com.api.product.service.ProductService;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -28,7 +27,7 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ResponseEntity<ProductResponseDTO> createProduct(@RequestBody @Valid ProductRequestDTO productRequestDTO) {
+    public ResponseEntity<ProductResponseDTO> createProduct(@RequestBody ProductRequestDTO productRequestDTO) {
         ProductResponseDTO response = productService.createProduct(productRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -50,7 +49,7 @@ public class ProductController {
     }   
 
     @PutMapping("{id}")
-    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @RequestBody @Valid ProductRequestDTO productRequestDTO) {
+    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @RequestBody ProductRequestDTO productRequestDTO) {
         ProductResponseDTO response = productService.updateProduct(id, productRequestDTO).orElse(null);
         if (response != null) {
             return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
@@ -64,9 +63,9 @@ public class ProductController {
         Optional<ProductResponseDTO> response = productService.deleteProduct(id);
 
         if (response.isPresent()) {
-            return ResponseEntity.noContent().build(); // 204
+            return ResponseEntity.noContent().build(); 
         } else {
-            return ResponseEntity.notFound().build(); // 404
+            return ResponseEntity.notFound().build(); 
         }
     }
 }
