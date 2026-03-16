@@ -12,5 +12,7 @@ public class ProductResponseDTO {
     private Double supplier_price_product;
     private Long stock_product;
     private Long id_category;
-    private Long state_product;
+    private Boolean state_product;
+    private String image_url;
+
 }

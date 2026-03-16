@@ -16,36 +16,37 @@ import lombok.Data;
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-
-    @Column(name = "product_id")
+    @Column(name = "id_product")
     private Long id_product;
 
-    @Column(name = "name")
-    private String name_product;
+    @Column(name = "name_product")
+    private String nameProduct;
 
-    @Column(name = "description")
+    @Column(name = "description_product")
     private String description_product;
 
-    @Column(name = "size")
+    @Column(name = "size_product")
     private String size_product;
 
-    @Column(name = "sale_price")
+    @Column(name = "sale_price_product")
     private Double sale_price_product;
 
-    @Column(name = "supplier_price")
+    @Column(name = "supplier_price_product")
     private Double supplier_price_product;
 
-    @Column(name = "stock")
+    @Column(name = "stock_product")
     private Long stock_product;
 
-    // @Column(name = "status")  se debe eliminar el campo status de la base de datos
-    // private String status_product;
 
     @Column(name = "category_id ")
     private Long id_category;
 
-    @Column(name = "state")
-    private Long state_product;
+    @Column(name = "state_product")
+    private Boolean state_product;
+
+    @Column(name = "image_url")
+    private String image_url;
+
 
 }
 
