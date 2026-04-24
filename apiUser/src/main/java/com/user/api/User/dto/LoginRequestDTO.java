@@ -3,9 +3,7 @@ package com.user.api.user.dto;
 import lombok.Data;
 
 @Data
-public class UserRequestDTO {
-    private String userName;
+public class LoginRequestDTO {
     private String email;
     private String password;
-    private String phone;
 }

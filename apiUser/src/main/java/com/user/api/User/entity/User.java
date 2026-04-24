@@ -1,38 +1,49 @@
-package com.user.api.User.entity;
+package com.user.api.user.entity;
+
+import java.time.LocalDateTime;
+import java.util.Set;
+import java.util.UUID;
 
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "user")
+@Table(name = "app_user")
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id")
-    private Long user_id;
+    @GeneratedValue
+    private UUID user_id;
 
-    @Column(name = "first_name")
-    private String name;
-
-    @Column(name = "last_name")
-    private String lastName;
+    @Column(name = "user_name")
+    private String userName;
 
     @Column(name = "email")
     private String email;
 
-    @Column(name = "password")
-    private String password;
-
     @Column(name = "phone")
     private String phone;
 
-    /*
-        first_name
-        last_name
-        email
-        password
-        phone
-        state
-    */
+    @Column(name = "password_hash")
+    private String password;
+
+    @Column(name = "create_at")
+    private LocalDateTime createAt;
+
+    @Column(name = "is_staff")
+    private Boolean isStaff = false;
+
+    @Column(name = "is_active")
+    private Boolean isActive = false;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private SecretKey secretKey;
+
+    @ManyToMany
+    @JoinTable(
+        name = "user_role",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles;
 }

@@ -3,9 +3,9 @@ spring:
     name: api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/tu_base_de_datos
-    username: tu_usuario
-    password: tu_password
+    url: jdbc:postgresql://localhost:5432/users
+    username: postgres
+    password: root
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -17,10 +17,30 @@ spring:
       hibernate:
         format_sql: true
 
-  security:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: elfreseouc@gmail.com
+    password: zbca pmwl ovnt swod
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            required: true
+            enable: true
+
+
+security:
     jwt:
-      secret: MiClaveSuperSecretaParaJWTQueDebeSerLarga
-      expiration: 3600000 # 1 hora en milisegundos
+      secret-key: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+      token-expiration: 3600000 # 1 hora en milisegundos
+
+
+server:
+  port: 8082
+  servlet:
+    context-path: /api/v1
 
 logging:
   level:
