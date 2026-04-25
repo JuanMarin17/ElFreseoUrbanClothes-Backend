@@ -1,6 +1,6 @@
 spring:
   application:
-    name: GateWay
+    name: product
 
   datasource:
     url: ${DB_URL}
