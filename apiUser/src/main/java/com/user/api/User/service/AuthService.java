@@ -87,18 +87,14 @@ public class AuthService {
 
         User user = optionalUser.get();
 
-        String secretKey = user.getSecretKey().getSecretKey();
+        SecretKey secretKey = user.getSecretKey();
 
-        System.out.println(secretKey + " " + validationCodeDTO.getCode());
-
-        Boolean isValid = otpService.validateOtp(user.getSecretKey().getSecretKey(), validationCodeDTO.getCode());
-
-        System.out.println(isValid);
+        Boolean isValid = otpService.validateOtp(secretKey.getSecretKey(), validationCodeDTO.getCode());
 
         if (!isValid) {
             throw new RuntimeException("El codigo ingresado expiro o es incorrecto");
         }
-
+        
         return true;
     }
 
@@ -164,8 +160,6 @@ public class AuthService {
         }
 
         Role role = optionalRole.get();
-
-        System.out.println(role.getRoleID() + " " + role.getName());
 
         user.setUserName(userRequestDTO.getUserName());
         user.setEmail(userRequestDTO.getEmail());
