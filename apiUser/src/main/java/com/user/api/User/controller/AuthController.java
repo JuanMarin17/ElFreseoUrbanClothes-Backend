@@ -16,6 +16,7 @@ import com.user.api.user.dto.ValidationCodeDTO;
 // import com.user.api.user.dto.UserResponseDTO;
 import com.user.api.user.service.AuthService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -26,65 +27,43 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<MessageResponseDTO> register(@RequestBody UserRequestDTO userRequestDTO) {
-        try {
-            MessageResponseDTO response = authService.register(userRequestDTO);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (RuntimeException e) {
-            MessageResponseDTO error = new MessageResponseDTO();
-            error.setMessage(e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
+    public ResponseEntity<MessageResponseDTO> register(@Valid @RequestBody UserRequestDTO userRequestDTO) {
+
+        MessageResponseDTO response = authService.register(userRequestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
     }
 
     @PostMapping("/registerSecondStep")
-    public ResponseEntity<JwtResponseDTO> registerSecondStep(@RequestBody ValidationCodeDTO verificationCodeDTO) {
-        try {
-            JwtResponseDTO response = authService.registerSecondStep(verificationCodeDTO);
-            return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
-        } catch (RuntimeException e) {
-            JwtResponseDTO error = new JwtResponseDTO();
-            error.setMessage(e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
+    public ResponseEntity<JwtResponseDTO> registerSecondStep(
+            @Valid @RequestBody ValidationCodeDTO verificationCodeDTO) {
+
+        JwtResponseDTO response = authService.registerSecondStep(verificationCodeDTO);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+
     }
 
     @PostMapping("/resendVerificationCode")
-    public ResponseEntity<MessageResponseDTO> resendCode(@RequestBody EmailRequestDTO resendCodeDTO) {
-        try {
-            MessageResponseDTO response = authService.resendVerificationCode(resendCodeDTO.getEmail());
-            return ResponseEntity.status(HttpStatus.OK).body(response);
-        } catch (RuntimeException e) {
-            MessageResponseDTO error = new MessageResponseDTO();
-            error.setMessage(e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
+    public ResponseEntity<MessageResponseDTO> resendCode(@Valid @RequestBody EmailRequestDTO resendCodeDTO) {
+
+        MessageResponseDTO response = authService.resendVerificationCode(resendCodeDTO);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+
     }
 
     @PostMapping("/login")
-    public ResponseEntity<MessageResponseDTO> login(@RequestBody LoginRequestDTO loginRequestDTO){
+    public ResponseEntity<MessageResponseDTO> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO) {
 
-        try{
-            MessageResponseDTO responseDTO = authService.login(loginRequestDTO);
-            return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
-        } catch (RuntimeException e){
-            MessageResponseDTO error = new MessageResponseDTO();
-            error.setMessage(e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
+        MessageResponseDTO responseDTO = authService.login(loginRequestDTO);
+        return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
+
     }
 
     @PostMapping("/loginSecondStep")
-    public ResponseEntity<JwtResponseDTO> loginSecondStep(@RequestBody ValidationCodeDTO validationCodeDTO){
+    public ResponseEntity<JwtResponseDTO> loginSecondStep(@Valid @RequestBody ValidationCodeDTO validationCodeDTO) {
 
-        try{
-            JwtResponseDTO responseDTO = authService.loginSecondStep(validationCodeDTO);
-            return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
-        } catch (RuntimeException e){
-            JwtResponseDTO error = new JwtResponseDTO();
-            error.setMessage(e.getMessage());
-            error.setJwt(null);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
+        JwtResponseDTO responseDTO = authService.loginSecondStep(validationCodeDTO);
+        return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
+
     }
 }

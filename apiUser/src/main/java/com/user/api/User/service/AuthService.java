@@ -10,15 +10,22 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.user.api.user.dto.EmailRequestDTO;
 import com.user.api.user.dto.JwtResponseDTO;
 import com.user.api.user.dto.LoginRequestDTO;
 import com.user.api.user.dto.MessageResponseDTO;
 import com.user.api.user.dto.UserRequestDTO;
 import com.user.api.user.dto.ValidationCodeDTO;
 import com.user.api.user.entity.User;
+import com.user.api.user.exception.IncorrectCredentialsException;
+import com.user.api.user.exception.InvalidOtpException;
+import com.user.api.user.exception.RoleNotFoundException;
+import com.user.api.user.exception.UserAlreadyExistsException;
+import com.user.api.user.exception.UserNotFoundException;
 import com.user.api.user.entity.Role;
 import com.user.api.user.entity.SecretKey;
 import com.user.api.user.repository.UserRepository;
+
 import com.user.api.user.repository.RoleRepository;
 import com.user.api.user.repository.SecretKeyRepository;
 
@@ -75,14 +82,10 @@ public class AuthService {
 
     public Boolean validateCode(ValidationCodeDTO validationCodeDTO) {
 
-        if (validationCodeDTO.getEmail() == null || validationCodeDTO.getCode() == null) {
-            throw new RuntimeException("Ningún campo debe estar vacío");
-        }
-
         Optional<User> optionalUser = findByEmail(validationCodeDTO.getEmail());
 
         if (optionalUser.isEmpty()) {
-            throw new RuntimeException("Usuario con este correo inexistente");
+            throw new UserNotFoundException("No se encontro un usuario con ese correo");
         }
 
         User user = optionalUser.get();
@@ -92,18 +95,15 @@ public class AuthService {
         Boolean isValid = otpService.validateOtp(secretKey.getSecretKey(), validationCodeDTO.getCode());
 
         if (!isValid) {
-            throw new RuntimeException("El codigo ingresado expiro o es incorrecto");
+            throw new InvalidOtpException("El codigo ingresado expiro o es incorrecto");
         }
-        
+
         return true;
     }
 
-    public MessageResponseDTO resendVerificationCode(String email){
-        if(email == null){
-            throw new RuntimeException("El correo no puede estar vacio");
-        }
+    public MessageResponseDTO resendVerificationCode(EmailRequestDTO email){
 
-        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Usuario con ese correo inexistente"));
+        User user = userRepository.findByEmail(email.getEmail()).orElseThrow(() -> new UserAlreadyExistsException("Usuario con este correo inexistente"));
 
         SecretKey secretKey = secretKeyRepository.findByUser(user).orElseThrow(()-> new RuntimeException("Este usuario no tiene una llave de configuración"));
 
@@ -112,7 +112,7 @@ public class AuthService {
         secretKey.setExpiresAt(LocalDateTime.now().plusMinutes(5));
         secretKeyRepository.save(secretKey);
 
-        sendEmail(email, newCode);
+        sendEmail(email.getEmail(), newCode);
 
         MessageResponseDTO response = new MessageResponseDTO();
 
@@ -133,30 +133,22 @@ public class AuthService {
         User user = new User();
         MessageResponseDTO messageResponseDTO = new MessageResponseDTO();
 
-        if (userRequestDTO.getUserName() == null ||
-                userRequestDTO.getEmail() == null ||
-                userRequestDTO.getPassword() == null ||
-                userRequestDTO.getPhone() == null) {
-            messageResponseDTO.setMessage("Todos los campos deben estar llenos");
-            return messageResponseDTO;
-        }
-
         Optional<User> userOptional = findByEmail(userRequestDTO.getEmail());
 
         if (userOptional.isPresent()) {
-            throw new RuntimeException("Este usuario ya existe");
+            throw new UserAlreadyExistsException("Usuario con este correo ya existente");
         }
 
         Optional<User> getUserByName = userRepository.findByUserName(userRequestDTO.getUserName());
 
         if (getUserByName.isPresent()) {
-            throw new RuntimeException("Nombre de usuario ya existente");
+            throw new UserAlreadyExistsException("Nombre de usuario ya existente");
         }
 
         Optional<Role> optionalRole = roleRepository.findByName("USER");
 
         if (optionalRole.isEmpty()) {
-            throw new RuntimeException("Tipo de usuario inexistente");
+            throw new RoleNotFoundException("Tipo de usuario inexistente");
         }
 
         Role role = optionalRole.get();
@@ -205,14 +197,10 @@ public class AuthService {
 
         JwtResponseDTO responseDTO = new JwtResponseDTO();
 
-        if (validationCodeDTO.getEmail() == null || validationCodeDTO.getCode() == null) {
-            throw new RuntimeException("Ningún campo puede estar vacio");
-        }
-
         validateCode(validationCodeDTO);
 
         User user = userRepository.findByEmail(validationCodeDTO.getEmail())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         user.setIsActive(true);
         userRepository.save(user);
@@ -250,20 +238,16 @@ public class AuthService {
      * @return
      */
     public MessageResponseDTO login(LoginRequestDTO loginRequestDTO) {
-        if (loginRequestDTO.getEmail() == null || loginRequestDTO.getPassword() == null) {
-            throw new RuntimeException("La contraseña y el correo no pueden estar vacios");
-        }
-
         Optional<User> optionalUser = userRepository.findByEmail(loginRequestDTO.getEmail());
 
         if (optionalUser.isEmpty()) {
-            throw new RuntimeException("El usuario no existe");
+            throw new UserNotFoundException("Usuario no encontrado");
         }
 
         User user = optionalUser.get();
 
         if (!passwordEncoder.matches(loginRequestDTO.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Correo o contraseña incorrectos");
+            throw new IncorrectCredentialsException("Correo o contraseña incorrectos");
         }
 
         String secretKey = user.getSecretKey().getSecretKey();
@@ -280,19 +264,14 @@ public class AuthService {
     }
 
     public JwtResponseDTO loginSecondStep(ValidationCodeDTO validationCodeDTO){
-
-        if(validationCodeDTO.getEmail() == null || validationCodeDTO.getCode() == null){
-            throw new RuntimeException("Ningun campo puede estar vació");
-        }
-
-        User user = userRepository.findByEmail(validationCodeDTO.getEmail()).orElseThrow(()-> new RuntimeException("Usuario con ese correo inexistente"));
+        User user = userRepository.findByEmail(validationCodeDTO.getEmail()).orElseThrow(()-> new UserNotFoundException("Usuario no encontrado"));
 
         Role role = user.getRoles().iterator().next();
 
         Boolean isValid = validateCode(validationCodeDTO);
 
         if(!isValid){
-            throw new RuntimeException("El codigo que ingreso es incorrecto o ya expiro");
+            throw new InvalidOtpException("El codigo que ingreso es incorrecto o ya expiro");
         }
 
         String token = jwtService.generateToken(user.getUser_id(), user.getUserName() , role.getRoleID());
