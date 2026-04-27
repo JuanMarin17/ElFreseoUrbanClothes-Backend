@@ -1,4 +1,4 @@
-package com.api.Gateway.filter;
+package com.api.gateway.filter;
 
 import java.util.Base64;
 
