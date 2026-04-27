@@ -1,4 +1,4 @@
-package com.api.GateWay.config;
+package com.api.Gateway.config;
 
 import java.util.List;
 
