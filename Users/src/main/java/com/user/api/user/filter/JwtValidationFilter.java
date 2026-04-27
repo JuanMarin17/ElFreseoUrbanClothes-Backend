@@ -6,8 +6,6 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.user.api.user.service.JwtService;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,44 +15,26 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class JwtValidationFilter extends OncePerRequestFilter {
-    private final JwtService jwtService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws IOException, ServletException {
-        String authHeader = request.getHeader("Authorization");
+        String userId = request.getHeader("X-User-Id");
+        String userName = request.getHeader("X-User-Name");
+        String roleId = request.getHeader("X-Role-Id");
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if(userId == null || userName == null){
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Header Authorization is missing in the request\"}");
+            response.getWriter().write("{\"error\": \"Request not authorized by geteway\"}");
             return;
         }
 
-        String token = authHeader.substring(7);
+        request.setAttribute("userName", userName);
+        request.setAttribute("user_id", UUID.fromString(userId));
+        request.setAttribute("role_id", roleId);
 
-        try {
-            if (jwtService.isTokenValid(token)) {
-                String username = jwtService.extractUsername(token);
-                UUID userId = jwtService.extractUserId(token);
-                UUID rolId = jwtService.extractRolId(token);
-
-                request.setAttribute("username", username);
-                request.setAttribute("user_id", userId);
-                request.setAttribute("rol_id", rolId);
-
-                filterChain.doFilter(request, response);
-            } else {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\": \"Invalid token\"}");
-                return;
-            }
-        } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Token processing failed\"}");
-        }
+        filterChain.doFilter(request, response);
     }
 
     @Override
