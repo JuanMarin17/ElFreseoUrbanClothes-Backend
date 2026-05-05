@@ -1,72 +1,424 @@
 package com.api.product.controller;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.api.product.dto.ApiResponseDTO;
 import com.api.product.dto.ProductRequestDTO;
 import com.api.product.dto.ProductResponseDTO;
 import com.api.product.service.ProductService;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Controlador REST para la gestión de productos.
+ * 
+ * Todos los endpoints devuelven ApiResponseDTO con:
+ * - mensaje
+ * - código HTTP
+ * - datos
+ * - timestamp
+ * 
+ * NOTA: 
+ * - GET nunca modifica el estado de los productos.
+ * - PUT con {id} se usa para activar o inactivar un producto específico.
+ */
 @RestController
+@RequestMapping("/products")
 @RequiredArgsConstructor
-@RequestMapping("/products/")
 public class ProductController {
+
     private final ProductService productService;
 
+    /**
+     * Crear un nuevo producto. Por defecto se crea activo.
+     *
+     * @param dto DTO con los datos del producto
+     * @return ApiResponseDTO con mensaje, código HTTP y producto creado
+     */
     @PostMapping
-    public ResponseEntity<ProductResponseDTO> createProduct(@RequestBody @Valid ProductRequestDTO productRequestDTO) {
-        ProductResponseDTO response = productService.createProduct(productRequestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    public ResponseEntity<ApiResponseDTO<ProductResponseDTO>> createProduct(@RequestBody ProductRequestDTO dto) {
+        try {
+            ProductResponseDTO product = productService.createProduct(dto);
 
-    @GetMapping 
-    public ResponseEntity<List<ProductResponseDTO>> listProducts() {
-        List<ProductResponseDTO> products = productService.ListProducts();
-        return ResponseEntity.status(HttpStatus.FOUND).body(products);
-    }
+            ApiResponseDTO<ProductResponseDTO> response = ApiResponseDTO.<ProductResponseDTO>builder()
+                    .message("Producto creado correctamente y activo por defecto")
+                    .status(HttpStatus.CREATED.value())
+                    .data(product)
+                    .timestamp(OffsetDateTime.now())
+                    .build();
 
-    @GetMapping("{id}")
-    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long id) {
-        ProductResponseDTO response = productService.listProdcut(id).orElse(null);
-        if (response != null) {
-            return ResponseEntity.status(HttpStatus.FOUND).body(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-    }   
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
-    @PutMapping("{id}")
-    public ResponseEntity<ProductResponseDTO> updateProduct(@PathVariable Long id, @RequestBody @Valid ProductRequestDTO productRequestDTO) {
-        ProductResponseDTO response = productService.updateProduct(id, productRequestDTO).orElse(null);
-        if (response != null) {
-            return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (RuntimeException e) {
+            ApiResponseDTO<ProductResponseDTO> response = ApiResponseDTO.<ProductResponseDTO>builder()
+                    .message("Error al crear producto: " + e.getMessage())
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                    .data(null)
+                    .timestamp(OffsetDateTime.now())
+                    .build();
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
 
-        Optional<ProductResponseDTO> response = productService.deleteProduct(id);
+    /**
+     * Lista todos los productos con paginación.
+     * GET solo consulta, no modifica el estado.
+     *
+     * @param page número de página (0-index)
+     * @param size cantidad de registros por página
+     * @return ApiResponseDTO con lista de productos
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponseDTO<List<ProductResponseDTO>>> listProducts(
+            @RequestParam int page,
+            @RequestParam int size) {
 
-        if (response.isPresent()) {
-            return ResponseEntity.noContent().build(); 
+        List<ProductResponseDTO> products = productService.listProducts(page, size);
+
+        if (products.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
+                    ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                            .message("No hay productos en esta página")
+                            .status(HttpStatus.NO_CONTENT.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build()
+            );
+        }
+
+        return ResponseEntity.ok(
+                ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                        .message("Lista de productos obtenida correctamente")
+                        .status(HttpStatus.OK.value())
+                        .data(products)
+                        .timestamp(OffsetDateTime.now())
+                        .build()
+        );
+    }
+
+    /**
+     * Lista productos activos con paginación.
+     * GET solo consulta, no activa ni inactiva productos.
+     *
+     * @param page número de página
+     * @param size cantidad de registros
+     * @return ApiResponseDTO con lista de productos activos
+     */
+    @GetMapping("/active")
+    public ResponseEntity<ApiResponseDTO<List<ProductResponseDTO>>> listActiveProducts(
+            @RequestParam int page,
+            @RequestParam int size) {
+
+        List<ProductResponseDTO> products = productService.listActiveProducts(page, size);
+
+        if (products.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
+                    ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                            .message("No hay productos activos en esta página")
+                            .status(HttpStatus.NO_CONTENT.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build()
+            );
+        }
+
+        return ResponseEntity.ok(
+                ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                        .message("Lista de productos activos obtenida correctamente")
+                        .status(HttpStatus.OK.value())
+                        .data(products)
+                        .timestamp(OffsetDateTime.now())
+                        .build()
+        );
+    }
+
+    /**
+     * Obtener un producto por su ID.
+     *
+     * @param id UUID del producto
+     * @return ApiResponseDTO con el producto si existe o mensaje de error
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponseDTO<ProductResponseDTO>> getById(@PathVariable UUID id) {
+
+        Optional<ProductResponseDTO> product = productService.getById(id);
+
+        if (product.isPresent()) {
+            return ResponseEntity.ok(
+                    ApiResponseDTO.<ProductResponseDTO>builder()
+                            .message("Producto encontrado correctamente")
+                            .status(HttpStatus.OK.value())
+                            .data(product.get())
+                            .timestamp(OffsetDateTime.now())
+                            .build()
+            );
         } else {
-            return ResponseEntity.notFound().build(); 
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ApiResponseDTO.<ProductResponseDTO>builder()
+                            .message("Producto con ID " + id + " no encontrado")
+                            .status(HttpStatus.NOT_FOUND.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build()
+            );
         }
     }
+
+
+    /**
+     * Actualizar un producto existente.
+     *
+     * @param id  UUID del producto a actualizar
+     * @param dto DTO con los datos actualizados
+     * @return ApiResponseDTO con producto actualizado o mensaje de error
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponseDTO<ProductResponseDTO>> updateProduct(
+            @PathVariable UUID id,
+            @RequestBody ProductRequestDTO dto) {
+
+        try {
+            Optional<ProductResponseDTO> updated = productService.updateProduct(id, dto);
+
+            if (updated.isPresent()) {
+                return ResponseEntity.status(HttpStatus.ACCEPTED).body(
+                        ApiResponseDTO.<ProductResponseDTO>builder()
+                                .message("Producto actualizado correctamente")
+                                .status(HttpStatus.ACCEPTED.value())
+                                .data(updated.get())
+                                .timestamp(OffsetDateTime.now())
+                                .build()
+                );
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        ApiResponseDTO.<ProductResponseDTO>builder()
+                                .message("Producto con ID " + id + " no encontrado para actualizar")
+                                .status(HttpStatus.NOT_FOUND.value())
+                                .data(null)
+                                .timestamp(OffsetDateTime.now())
+                                .build()
+                );
+            }
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    ApiResponseDTO.<ProductResponseDTO>builder()
+                            .message("Error al actualizar producto: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build()
+            );
+        }
+    }
+
+
+    /**
+     * Inactivar un producto (estado = INACTIVO) por ID.
+     *
+     * @param id UUID del producto
+     * @return ApiResponseDTO con producto inactivado o mensaje de error
+     */
+    @PutMapping("/inactive/{id}")
+    public ResponseEntity<ApiResponseDTO<ProductResponseDTO>> inactiveProduct(@PathVariable UUID id) {
+        try {
+            Optional<ProductResponseDTO> product = productService.inactiveProduct(id);
+
+            if (product.isPresent()) {
+                return ResponseEntity.ok(
+                        ApiResponseDTO.<ProductResponseDTO>builder()
+                                .message("Producto inactivado correctamente")
+                                .status(HttpStatus.OK.value())
+                                .data(product.get())
+                                .timestamp(OffsetDateTime.now())
+                                .build()
+                );
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        ApiResponseDTO.<ProductResponseDTO>builder()
+                                .message("Producto con ID " + id + " no encontrado para inactivar")
+                                .status(HttpStatus.NOT_FOUND.value())
+                                .data(null)
+                                .timestamp(OffsetDateTime.now())
+                                .build()
+                );
+            }
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    ApiResponseDTO.<ProductResponseDTO>builder()
+                            .message("Error al inactivar producto: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build()
+            );
+        }
+    }
+
+
+    /**
+     * Activar un producto (estado = ACTIVO) por ID.
+     *
+     * @param id UUID del producto
+     * @return ApiResponseDTO con producto activado o mensaje de error
+     */
+    @PutMapping("/active/{id}")
+    public ResponseEntity<ApiResponseDTO<ProductResponseDTO>> activateProduct(@PathVariable UUID id) {
+        try {
+            Optional<ProductResponseDTO> product = productService.activeProduct(id);
+
+            if (product.isPresent()) {
+                return ResponseEntity.ok(
+                        ApiResponseDTO.<ProductResponseDTO>builder()
+                                .message("Producto activado correctamente")
+                                .status(HttpStatus.OK.value())
+                                .data(product.get())
+                                .timestamp(OffsetDateTime.now())
+                                .build());
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                        ApiResponseDTO.<ProductResponseDTO>builder()
+                                .message("Producto con ID " + id + " no encontrado para activar")
+                                .status(HttpStatus.NOT_FOUND.value())
+                                .data(null)
+                                .timestamp(OffsetDateTime.now())
+                                .build());
+            }
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    ApiResponseDTO.<ProductResponseDTO>builder()
+                            .message("Error al activar producto: " + e.getMessage())
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build());
+        }
+    }
+    /**
+     * Mostrar todos los productos, tanto activos como inactivos
+     * @return
+     */
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponseDTO<List<ProductResponseDTO>>> listAllProducts() {
+
+        List<ProductResponseDTO> products = productService.listAllProducts();
+
+        if (products.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
+                    ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                            .message("No hay productos registrados")
+                            .status(HttpStatus.NO_CONTENT.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build());
+        }
+
+        return ResponseEntity.ok(
+                ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                        .message("Lista completa de productos obtenida correctamente")
+                        .status(HttpStatus.OK.value())
+                        .data(products)
+                        .timestamp(OffsetDateTime.now())
+                        .build());
+    }
+
+    /**
+     * Solo muestra los productos que esten activos
+     * @return
+     */
+    @GetMapping("/all/active")
+    public ResponseEntity<ApiResponseDTO<List<ProductResponseDTO>>> listAllActiveProducts() {
+
+        List<ProductResponseDTO> products = productService.listAllActiveProducts();
+
+        if (products.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
+                    ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                            .message("No hay productos activos registrados")
+                            .status(HttpStatus.NO_CONTENT.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build());
+        }
+
+        return ResponseEntity.ok(
+                ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                        .message("Lista completa de productos activos obtenida correctamente")
+                        .status(HttpStatus.OK.value())
+                        .data(products)
+                        .timestamp(OffsetDateTime.now())
+                        .build());
+    }
+
+    /**
+     * Muestra todos los productos nuevos que se hayan creado durante el tiempo de 7 dias maximo
+     * @return
+     */
+    @GetMapping("/new")
+    public ResponseEntity<ApiResponseDTO<List<ProductResponseDTO>>> listNewProducts() {
+
+        List<ProductResponseDTO> products = productService.listNewProducts();
+
+        if (products.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
+                    ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                            .message("No hay productos nuevos en la última semana")
+                            .status(HttpStatus.NO_CONTENT.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build());
+        }
+
+        return ResponseEntity.ok(
+                ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                        .message("Lista de productos nuevos obtenida correctamente (últimos 7 días)")
+                        .status(HttpStatus.OK.value())
+                        .data(products)
+                        .timestamp(OffsetDateTime.now())
+                        .build());
+    }
+
+    /**
+     * Muestra todos los rpoductos nuevos que no pasen de un tiempo de creado de 7 dias y que ademas esten activos 
+     * @return
+     */
+    @GetMapping("/new/active")
+    public ResponseEntity<ApiResponseDTO<List<ProductResponseDTO>>> listNewActiveProducts() {
+
+        List<ProductResponseDTO> products = productService.listNewActiveProducts();
+
+        if (products.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(
+                    ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                            .message("No hay productos activos nuevos en la última semana")
+                            .status(HttpStatus.NO_CONTENT.value())
+                            .data(null)
+                            .timestamp(OffsetDateTime.now())
+                            .build());
+        }
+
+        return ResponseEntity.ok(
+                ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                        .message("Lista de productos activos nuevos obtenida correctamente (últimos 7 días)")
+                        .status(HttpStatus.OK.value())
+                        .data(products)
+                        .timestamp(OffsetDateTime.now())
+                        .build());
+    }
+    
 }
