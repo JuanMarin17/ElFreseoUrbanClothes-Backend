@@ -12,5 +12,5 @@ public class ValidationCodeDTO {
     private String email;
 
     @NotNull(message = "El código es obligatorio")
-    private Integer code;
+    private String code;
 }

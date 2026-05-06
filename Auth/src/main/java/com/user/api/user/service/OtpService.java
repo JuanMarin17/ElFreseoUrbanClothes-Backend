@@ -3,6 +3,7 @@ package com.user.api.user.service;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.user.api.user.entity.SecretKey;
@@ -23,6 +24,8 @@ public class OtpService {
 
     private final SecretKeyRepository secretKeyRepository;
 
+    private final PasswordEncoder passwordEncoder;
+
     /**
      * Generador de la llave unica del usuario para poder crear codigos unicos al momento de hacer un registro o un inicio de sesión
      * 
@@ -39,7 +42,7 @@ public class OtpService {
      * @param userSecretKey
      * @return
      */
-    public Integer generateOtp(String userSecretKey){
+    public String generateOtp(String userSecretKey){
         Integer code = gAuth.getTotpPassword(userSecretKey);
 
         Optional<SecretKey> optionalSecret = secretKeyRepository.findBySecretKey(userSecretKey);
@@ -50,11 +53,11 @@ public class OtpService {
 
         SecretKey secret = optionalSecret.get();
 
-        secret.setCode(code);
+        secret.setCode(passwordEncoder.encode(code.toString()));
         secret.setExpiresAt(LocalDateTime.now().plusMinutes(5));
         secretKeyRepository.save(secret);
 
-        return code;
+        return code.toString();
     }
 
     /**
@@ -64,7 +67,7 @@ public class OtpService {
      * @param userOtp
      * @return
      */
-    public Boolean validateOtp(String userSecretKey, Integer userOtp){
+    public Boolean validateOtp(String userSecretKey, String userOtp){
         Optional<SecretKey> optionalSecret = secretKeyRepository.findBySecretKey(userSecretKey);
 
         if(optionalSecret.isEmpty()){
@@ -74,7 +77,9 @@ public class OtpService {
         SecretKey secret = optionalSecret.get();
 
         Boolean notExpired = LocalDateTime.now().isBefore(secret.getExpiresAt());
-        Boolean match = secret.getCode().equals(userOtp);
+        Boolean match = passwordEncoder.matches(userOtp , secret.getCode());
+
+        System.out.println(notExpired + " " + match + " " + userOtp);
 
         if(notExpired && match){
             secret.setCode(null);

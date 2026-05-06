@@ -43,6 +43,8 @@ public class StoreService {
             throw new StoreAlreadyExistsException("Ya existe un negocio con el nombre: " + dto.getName());
         }
 
+        
+
         Store store = Store.builder()
                 .ownerId(dto.getOwnerId())
                 .name(dto.getName())

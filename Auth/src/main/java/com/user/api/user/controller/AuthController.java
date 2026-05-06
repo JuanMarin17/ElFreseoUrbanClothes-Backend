@@ -1,8 +1,10 @@
 package com.user.api.user.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,6 +13,7 @@ import com.user.api.user.dto.JwtResponseDTO;
 import com.user.api.user.dto.LoginRequestDTO;
 import com.user.api.user.dto.MessageResponseDTO;
 import com.user.api.user.dto.EmailRequestDTO;
+import com.user.api.user.dto.ForgotPasswordRequestDTO;
 import com.user.api.user.dto.UserRequestDTO;
 import com.user.api.user.dto.ValidationCodeDTO;
 // import com.user.api.user.dto.UserResponseDTO;
@@ -66,4 +69,17 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
 
     }
+
+    @PostMapping("/forgotPassword")
+    public ResponseEntity<MessageResponseDTO> forgotPassword(@Valid @RequestBody EmailRequestDTO emailRequestDTO){
+        MessageResponseDTO responseDTO = authService.forgotPassword(emailRequestDTO.getEmail());
+        return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
+    }
+
+    @PutMapping("/forgotPasswordSecondStep")
+    public ResponseEntity<MessageResponseDTO> forgotPasswordSecondStep(@Valid @RequestBody ForgotPasswordRequestDTO forgotPasswordRequestDTO){
+        MessageResponseDTO responseDTO = authService.forgotPasswordSecondStep(forgotPasswordRequestDTO);
+        return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
+    }
+
 }

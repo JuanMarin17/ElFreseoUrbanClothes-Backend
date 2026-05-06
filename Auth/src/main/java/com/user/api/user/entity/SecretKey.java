@@ -23,7 +23,7 @@ public class SecretKey {
     private String secretKey;
 
     @Column(name = "code")
-    private Integer code;
+    private String code;
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
