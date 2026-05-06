@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.user.api.user.dto.EmailRequestDTO;
+import com.user.api.user.dto.ForgotPasswordRequestDTO;
 import com.user.api.user.dto.JwtResponseDTO;
 import com.user.api.user.dto.LoginRequestDTO;
 import com.user.api.user.dto.MessageResponseDTO;
@@ -58,7 +59,7 @@ public class AuthService {
      * @param to
      * @param code
      */
-    public void sendEmail(String to, Integer code) {
+    public void sendEmail(String to, String code) {
         SimpleMailMessage email = new SimpleMailMessage();
 
         email.setFrom(emailShop);
@@ -107,8 +108,8 @@ public class AuthService {
 
         SecretKey secretKey = secretKeyRepository.findByUser(user).orElseThrow(()-> new RuntimeException("Este usuario no tiene una llave de configuración"));
 
-        Integer newCode = otpService.generateOtp(secretKey.getSecretKey());
-        secretKey.setCode(newCode);
+        String newCode = otpService.generateOtp(secretKey.getSecretKey());
+        secretKey.setCode(passwordEncoder.encode(newCode));
         secretKey.setExpiresAt(LocalDateTime.now().plusMinutes(5));
         secretKeyRepository.save(secretKey);
 
@@ -116,7 +117,7 @@ public class AuthService {
 
         MessageResponseDTO response = new MessageResponseDTO();
 
-        response.setMessage("Se envió un nuevo código a: " + email);
+        response.setMessage("Se envió un nuevo código a: " + email.getEmail());
 
         return response;
     }
@@ -170,7 +171,7 @@ public class AuthService {
 
         secretKeyRepository.save(secretKey);
 
-        Integer code = otpService.generateOtp(userSecretKey);
+        String code = otpService.generateOtp(userSecretKey);
 
         sendEmail(userRequestDTO.getEmail(), code);
 
@@ -252,7 +253,7 @@ public class AuthService {
 
         String secretKey = user.getSecretKey().getSecretKey();
 
-        Integer code = otpService.generateOtp(secretKey);
+        String code = otpService.generateOtp(secretKey);
 
         sendEmail(loginRequestDTO.getEmail(), code);
 
@@ -263,6 +264,12 @@ public class AuthService {
         return response;
     }
 
+    /**
+     * 
+     * 
+     * @param validationCodeDTO
+     * @return
+     */
     public JwtResponseDTO loginSecondStep(ValidationCodeDTO validationCodeDTO){
         User user = userRepository.findByEmail(validationCodeDTO.getEmail()).orElseThrow(()-> new UserNotFoundException("Usuario no encontrado"));
 
@@ -282,6 +289,49 @@ public class AuthService {
         response.setMessage("Se inicio sesión correctamente");
 
         return response;
+    }
+
+    public MessageResponseDTO forgotPassword(String email){
+        MessageResponseDTO response = new MessageResponseDTO();
+
+        User user = userRepository.findByEmail(email).orElseThrow(()-> new UserNotFoundException("Usuario no encontrado"));
+
+        String secretKey = user.getSecretKey().getSecretKey();
+
+        String code = otpService.generateOtp(secretKey);
+
+        sendEmail(email, code);
+
+        response.setMessage("Se envio un codigo de verificació al correo: " +  email);
+        return response;
+    }
+
+    public MessageResponseDTO forgotPasswordSecondStep(ForgotPasswordRequestDTO fPRequest){
+        User user = userRepository.findByEmail(fPRequest.getEmail()).orElseThrow(()-> new UserNotFoundException("Usuario no encontrado"));
+
+        String secretKey = user.getSecretKey().getSecretKey();
+
+        Boolean isValid = otpService.validateOtp(secretKey, fPRequest.getCode());
+
+        System.out.println(isValid);
+        if(!isValid){
+            throw new InvalidOtpException("El codigo ingresado es incorrecto o ya expiro");
+        }
+
+        user.setPassword(passwordEncoder.encode(fPRequest.getPassword()));
+        userRepository.save(user);
+
+        MessageResponseDTO responseDTO = new MessageResponseDTO();
+        responseDTO.setMessage("Se cambio la contraseña correctamente");
+
+        SimpleMailMessage sendEmail = new SimpleMailMessage();
+
+        sendEmail.setFrom(emailShop);
+        sendEmail.setTo(fPRequest.getEmail());
+        sendEmail.setSubject("cambio de contraseña");
+        sendEmail.setText("Se cambio la contraseña correctamente");
+
+        return responseDTO;
     }
 
 }
