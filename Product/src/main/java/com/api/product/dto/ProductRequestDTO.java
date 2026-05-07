@@ -30,10 +30,7 @@ public class ProductRequestDTO {
         private String sku;
         private BigDecimal price;
         private Integer stock;
+        private Integer minStock;
     }
 
-    @Data
-    public static class ImageDTO {
-        private String url;
-    }
-} 
+}
