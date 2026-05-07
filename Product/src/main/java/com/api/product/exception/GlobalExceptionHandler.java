@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -16,114 +17,276 @@ import com.api.product.dto.ErrorResponseDTO;
 
 /**
  * GLOBAL EXCEPTION HANDLER - Manejador Global de Excepciones
- * 
+ *
+ * <p>
  * ¿PARA QUÉ SIRVE?
- * Intercepta todas las excepciones que ocurran en los controladores de la aplicación
- * y las convierte en respuestas HTTP estructuradas y amigables para el cliente.
- * En lugar de mostrar errores técnicos, devuelve JSON estructurado con información clara.
- * 
+ * </p>
+ * <p>
+ * Esta clase se encarga de capturar todas las excepciones que ocurren dentro
+ * de la aplicación (principalmente en los controllers) y convertirlas en
+ * respuestas HTTP con formato JSON estructurado.
+ * </p>
+ *
+ * <p>
+ * ¿POR QUÉ ES IMPORTANTE?
+ * </p>
+ * <ul>
+ *   <li>Evita que el backend devuelva errores técnicos (stack trace) al cliente.</li>
+ *   <li>Centraliza el manejo de errores (no se repite código en cada controller).</li>
+ *   <li>Permite retornar códigos HTTP correctos: 400, 404, 409, 500, etc.</li>
+ *   <li>Mejora la comunicación con el frontend (el frontend sabe interpretar errores).</li>
+ * </ul>
+ *
+ * <p>
  * ¿CÓMO FUNCIONA?
- * @RestControllerAdvice: Permite que esta clase sea un manejador global de errores
- * para TODOS los controladores REST de la aplicación.
+ * </p>
+ * <p>
+ * @RestControllerAdvice hace que esta clase intercepte errores de TODOS los controladores REST.
+ * Cada método anotado con @ExceptionHandler escucha un tipo de excepción específico.
+ * </p>
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
      * MÉTODO 1: handleValidationException
-     * 
+     *
+     * <p>
      * ¿PARA QUÉ SIRVE?
-     * Maneja los errores de validación cuando los datos enviados por el cliente
-     * no cumplen con las reglas definidas en ProductRequestDTO (@NotBlank, @Size, etc).
-     * 
-     * EJEMPLO: Si envías un producto sin nombre (campo obligatorio),
-     * este método captura el error y devuelve un JSON estructurado.
+     * </p>
+     * <p>
+     * Captura errores cuando el cliente envía datos inválidos en un DTO,
+     * por ejemplo cuando se usa @Valid en un controller y el DTO tiene anotaciones como:
+     * @NotBlank, @NotNull, @Min, etc.
+     * </p>
+     *
+     * <p>
+     * EJEMPLO:
+     * </p>
+     * <pre>
+     * {
+     *   "name": "",
+     *   "variants": []
+     * }
+     * </pre>
+     *
+     * <p>
+     * Esto provocará errores que serán capturados aquí y se devolverá un JSON con detalles.
+     * </p>
+     *
+     * @param ex      excepción lanzada por validaciones de Spring
+     * @param request información de la petición HTTP
+     * @return ResponseEntity con estado 400 y cuerpo JSON estructurado
      */
-    @ExceptionHandler(MethodArgumentNotValidException.class) // Escucha esta excepción específica
+    @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDTO> handleValidationException(
-            MethodArgumentNotValidException ex,  // La excepción capturada
-            WebRequest request) {                 // Información de la solicitud HTTP
+            MethodArgumentNotValidException ex,
+            WebRequest request) {
 
-        // Crear un Map para agrupar errores por nombre de campo
-        // EJEMPLO: { "name_product": ["El nombre es obligatorio"], "sale_price": ["Precio inválido"] }
+        // Mapa para agrupar errores por campo
+        // Ejemplo:
+        // {
+        //   "name": ["El nombre es obligatorio"],
+        //   "variants[0].sku": ["El SKU es obligatorio"]
+        // }
         Map<String, List<String>> errors = new HashMap<>();
-        
-        // forEach: Recorre cada error de validación encontrado
-        // computeIfAbsent: Si el campo no existe en el Map, lo crea con una lista nueva
-        // add: Agrega el mensaje del error a la lista del campo
+
         ex.getBindingResult().getFieldErrors().forEach(error ->
-            errors.computeIfAbsent(error.getField(), k -> new java.util.ArrayList<>())
-                  .add(error.getDefaultMessage())
+                errors.computeIfAbsent(error.getField(), k -> new java.util.ArrayList<>())
+                        .add(error.getDefaultMessage())
         );
 
-        // Construir la respuesta de error usando el patrón Builder
         ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
-                .status(HttpStatus.BAD_REQUEST.value())                    // 400 - Solicitud incorrecta
-                .message("Error de validación en los datos enviados")      // Mensaje amigable
-                .path(request.getDescription(false).replace("uri=", ""))  // Ruta que causó el error (/products)
-                .timestamp(LocalDateTime.now())                            // Hora del error
-                .errors(errors)                                            // Map con errores por campo
-                .exception("MethodArgumentNotValidException")             // Tipo de excepción
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message("Error de validación en los datos enviados")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(LocalDateTime.now())
+                .errors(errors)
+                .exception("MethodArgumentNotValidException")
                 .build();
 
-        // Retornar ResponseEntity con estado 400 (BAD_REQUEST) y el JSON de error
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     /**
-     * MÉTODO 2: handleResourceNotFoundException
-     * 
+     * MÉTODO 2: handleBadRequestException
+     *
+     * <p>
      * ¿PARA QUÉ SIRVE?
-     * Maneja excepciones cuando se intenta acceder a un producto que no existe
-     * (por ejemplo: GET /products/9999 donde 9999 no existe en la BD).
-     * 
-     * EJEMPLO: Buscas un producto con ID 999 que no existe,
-     * este método captura el error y devuelve 404 con mensaje claro.
+     * </p>
+     * <p>
+     * Captura errores personalizados relacionados con peticiones incorrectas (400),
+     * por ejemplo:
+     * - datos faltantes
+     * - reglas de negocio inválidas
+     * - valores negativos donde no deberían existir
+     * </p>
+     *
+     * @param ex      excepción personalizada BadRequestException
+     * @param request información de la petición HTTP
+     * @return ResponseEntity con estado 400
      */
-    @ExceptionHandler(ResourceNotFoundException.class) // Escucha la excepción personalizada
-    public ResponseEntity<ErrorResponseDTO> handleResourceNotFoundException(
-            ResourceNotFoundException ex,  // La excepción personalizada lanzada
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponseDTO> handleBadRequestException(
+            BadRequestException ex,
             WebRequest request) {
 
-        // Construir respuesta de error
         ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
-                .status(HttpStatus.NOT_FOUND.value())                      // 404 - No encontrado
-                .message(ex.getMessage())                                  // Mensaje del error
-                .path(request.getDescription(false).replace("uri=", ""))  // Ruta que causó error
-                .timestamp(LocalDateTime.now())                            // Hora del error
-                .exception("ResourceNotFoundException")                    // Tipo de excepción
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(LocalDateTime.now())
+                .exception("BadRequestException")
                 .build();
 
-        // Retornar ResponseEntity con estado 404 (NOT_FOUND)
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * MÉTODO 3: handleConflictException
+     *
+     * <p>
+     * ¿PARA QUÉ SIRVE?
+     * </p>
+     * <p>
+     * Maneja errores cuando hay un conflicto en el sistema (409).
+     * Por ejemplo:
+     * - intentar crear un producto con el mismo nombre
+     * - intentar registrar una variante con SKU duplicado
+     * </p>
+     *
+     * @param ex      excepción personalizada ConflictException
+     * @param request información de la petición HTTP
+     * @return ResponseEntity con estado 409
+     */
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponseDTO> handleConflictException(
+            ConflictException ex,
+            WebRequest request) {
+
+        ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(LocalDateTime.now())
+                .exception("ConflictException")
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
+    /**
+     * MÉTODO 4: handleResourceNotFoundException
+     *
+     * <p>
+     * ¿PARA QUÉ SIRVE?
+     * </p>
+     * <p>
+     * Maneja errores cuando un recurso no existe en la base de datos.
+     * Por ejemplo:
+     * - buscar un producto por ID que no existe
+     * - buscar una marca que no existe
+     * - buscar una categoría que no existe
+     * </p>
+     *
+     * @param ex      excepción personalizada ResourceNotFoundException
+     * @param request información de la petición HTTP
+     * @return ResponseEntity con estado 404
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponseDTO> handleResourceNotFoundException(
+            ResourceNotFoundException ex,
+            WebRequest request) {
+
+        ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
+                .status(HttpStatus.NOT_FOUND.value())
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(LocalDateTime.now())
+                .exception("ResourceNotFoundException")
+                .build();
+
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
     /**
-     * MÉTODO 3: handleGlobalException
-     * 
+     * MÉTODO 5: handleHttpMessageNotReadableException
+     *
+     * <p>
      * ¿PARA QUÉ SIRVE?
-     * "Red de seguridad" - Captura CUALQUIER excepción no manejada
-     * que no coincida con los métodos anteriores.
-     * Previene que errores inesperados expongan información técnica.
-     * 
-     * EJEMPLO: Si ocurre un error en la base de datos o un null pointer
-     * que no fue validado, este método lo atrapa.
+     * </p>
+     * <p>
+     * Captura errores cuando el cliente envía un JSON mal formado o ilegible.
+     * Esto pasa por ejemplo cuando el JSON está incompleto, tiene comas incorrectas,
+     * o cuando se envía un tipo de dato inválido.
+     * </p>
+     *
+     * <p>
+     * EJEMPLO:
+     * </p>
+     * <pre>
+     * {
+     *   "price": "texto"   // debería ser número
+     * }
+     * </pre>
+     *
+     * @param ex      excepción lanzada por Spring cuando no puede leer el body
+     * @param request información de la petición HTTP
+     * @return ResponseEntity con estado 400
      */
-    @ExceptionHandler(Exception.class) // Escucha CUALQUIER excepción (la más genérica)
-    public ResponseEntity<ErrorResponseDTO> handleGlobalException(
-            Exception ex,                  // Cualquier excepción
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException ex,
             WebRequest request) {
 
-        // Construir respuesta de error genérica
         ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())          // 500 - Error interno
-                .message("Error interno del servidor")                     // Mensaje genérico (no expone detalles)
-                .path(request.getDescription(false).replace("uri=", ""))  // Ruta que causó error
-                .timestamp(LocalDateTime.now())                            // Hora del error
-                .exception(ex.getClass().getSimpleName())                 // Tipo real de excepción (para logs)
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message("El cuerpo de la solicitud está mal formado o contiene tipos inválidos")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(LocalDateTime.now())
+                .exception("HttpMessageNotReadableException")
                 .build();
 
-        // Retornar ResponseEntity con estado 500 (INTERNAL_SERVER_ERROR)
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    /**
+     * MÉTODO 6: handleGlobalException
+     *
+     * <p>
+     * ¿PARA QUÉ SIRVE?
+     * </p>
+     * <p>
+     * Este método es la "red de seguridad" del sistema.
+     * Captura cualquier excepción que no haya sido manejada por los métodos anteriores.
+     * </p>
+     *
+     * <p>
+     * IMPORTANTE:
+     * </p>
+     * <ul>
+     *   <li>Devuelve 500 (INTERNAL_SERVER_ERROR)</li>
+     *   <li>No expone detalles técnicos al cliente</li>
+     *   <li>Evita que el backend devuelva mensajes peligrosos</li>
+     * </ul>
+     *
+     * @param ex      excepción general
+     * @param request información de la petición HTTP
+     * @return ResponseEntity con estado 500
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponseDTO> handleGlobalException(
+            Exception ex,
+            WebRequest request) {
+
+        ErrorResponseDTO errorResponse = ErrorResponseDTO.builder()
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message("Error interno del servidor")
+                .path(request.getDescription(false).replace("uri=", ""))
+                .timestamp(LocalDateTime.now())
+                .exception(ex.getClass().getSimpleName())
+                .build();
+
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
