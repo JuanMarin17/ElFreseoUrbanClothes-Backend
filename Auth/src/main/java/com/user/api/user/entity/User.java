@@ -15,24 +15,15 @@ public class User {
     @GeneratedValue
     private UUID user_id;
 
-    @Column(name = "user_name")
-    private String userName;
-
     @Column(name = "email")
     private String email;
-
-    @Column(name = "phone")
-    private String phone;
 
     @Column(name = "password_hash")
     private String password;
 
     @Column(name = "create_at")
     private LocalDateTime createAt;
-
-    @Column(name = "is_staff")
-    private Boolean isStaff = false;
-
+    
     @Column(name = "is_active")
     private Boolean isActive = false;
 

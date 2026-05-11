@@ -38,7 +38,7 @@ public class JwtService {
      * @param rolId
      * @return
      */
-    public String generateToken(UUID userId, String fullName, UUID rolId) {
+    public String generateToken(UUID userId, String fullName, String rolId) {
 
         return Jwts.builder()
                 .claims(Map.of(
@@ -117,8 +117,8 @@ public class JwtService {
      * @param token
      * @return
      */
-    public UUID extractRolId(String token) {
-        return extractClaims(token, claims -> claims.get("rol_id", UUID.class));
+    public String extractRol(String token) {
+        return extractClaims(token, claims -> claims.get("rol_id", String.class));
     }
 
     /**
@@ -140,7 +140,7 @@ public class JwtService {
             throw new RuntimeException("Token is invalid " + e.getMessage());
         }
 
-        return generateToken(claims.get("user_id", UUID.class), claims.getSubject(), claims.get("rol_id", UUID.class));
+        return generateToken(claims.get("user_id", UUID.class), claims.getSubject(), claims.get("rol_id", String.class));
     }
 
 }

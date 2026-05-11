@@ -10,11 +10,13 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.user.api.user.client.UsersClient;
 import com.user.api.user.dto.EmailRequestDTO;
 import com.user.api.user.dto.ForgotPasswordRequestDTO;
 import com.user.api.user.dto.JwtResponseDTO;
 import com.user.api.user.dto.LoginRequestDTO;
 import com.user.api.user.dto.MessageResponseDTO;
+import com.user.api.user.dto.UserRegisterDTO;
 import com.user.api.user.dto.UserRequestDTO;
 import com.user.api.user.dto.ValidationCodeDTO;
 import com.user.api.user.entity.User;
@@ -51,6 +53,8 @@ public class AuthService {
     private final OtpService otpService;
 
     private final RoleRepository roleRepository;
+
+    private final UsersClient usersClient;
 
     /**
      * Este es el generador de email, crea un email y lo envia al correo del usuario
@@ -140,12 +144,6 @@ public class AuthService {
             throw new UserAlreadyExistsException("Usuario con este correo ya existente");
         }
 
-        Optional<User> getUserByName = userRepository.findByUserName(userRequestDTO.getUserName());
-
-        if (getUserByName.isPresent()) {
-            throw new UserAlreadyExistsException("Nombre de usuario ya existente");
-        }
-
         Optional<Role> optionalRole = roleRepository.findByName("USER");
 
         if (optionalRole.isEmpty()) {
@@ -154,14 +152,20 @@ public class AuthService {
 
         Role role = optionalRole.get();
 
-        user.setUserName(userRequestDTO.getUserName());
         user.setEmail(userRequestDTO.getEmail());
         user.setPassword(passwordEncoder.encode(userRequestDTO.getPassword()));
         user.setCreateAt(LocalDateTime.now());
-        user.setPhone(userRequestDTO.getPhone());
         user.setRoles(Set.of(role));
 
         User userSave = userRepository.save(user);
+
+        UserRegisterDTO userRegisterDTO = new UserRegisterDTO();
+        userRegisterDTO.setUserId(userSave.getUser_id());
+        userRegisterDTO.setUserName(userRequestDTO.getUserName());
+        userRegisterDTO.setPhone(userRequestDTO.getPhone());
+        userRegisterDTO.setImageProfile(userRequestDTO.getImageProfile());
+
+        usersClient.createUser(userRegisterDTO);
 
         String userSecretKey = otpService.userSecretKey();
 
@@ -217,10 +221,12 @@ public class AuthService {
 
         Role role = user.getRoles().iterator().next();
 
+        String userName = usersClient.getUserName(user.getUser_id());
+
         String token = jwtService.generateToken(
             user.getUser_id(),
-            user.getUserName(),
-            role.getRoleID()
+            userName,
+            role.getName()
         );
 
         mailSender.send(sendEmail);
@@ -281,7 +287,9 @@ public class AuthService {
             throw new InvalidOtpException("El codigo que ingreso es incorrecto o ya expiro");
         }
 
-        String token = jwtService.generateToken(user.getUser_id(), user.getUserName() , role.getRoleID());
+        String userName = usersClient.getUserName(user.getUser_id());
+
+        String token = jwtService.generateToken(user.getUser_id(), userName , role.getName());
 
         JwtResponseDTO response = new JwtResponseDTO();
 

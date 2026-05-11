@@ -2,7 +2,7 @@ spring:
   application:
     name: Store
 server:
-  port: 8082   # cambia si usas gateway u otros servicios
+  port: 8081   # cambia si usas gateway u otros servicios
 
 spring:
   application:
