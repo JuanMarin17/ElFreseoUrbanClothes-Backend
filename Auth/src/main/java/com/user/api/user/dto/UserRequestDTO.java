@@ -24,4 +24,7 @@ public class UserRequestDTO {
     @Pattern(regexp = "^[0-9]{7,15}$", message = "El teléfono solo debe contener números (7-15 dígitos)")
     private String phone;
 
+    @NotBlank(message = "La imagen del perfil no puede estar vacia")
+    private String imageProfile;
+
 }

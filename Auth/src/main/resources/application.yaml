@@ -3,7 +3,7 @@ spring:
     name: api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/users
+    url: jdbc:postgresql://localhost:5432/auth
     username: postgres
     password: root
     driver-class-name: org.postgresql.Driver
@@ -30,6 +30,9 @@ spring:
             required: true
             enable: true
 
+users:
+  service:
+    url: http://localhost:8083
 
 security:
     jwt:

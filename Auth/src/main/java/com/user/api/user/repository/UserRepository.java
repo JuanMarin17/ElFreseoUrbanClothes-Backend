@@ -10,7 +10,5 @@ import com.user.api.user.entity.User;
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByEmail(String Email);
-
-    Optional<User> findByUserName(String user_name);
     
 }
