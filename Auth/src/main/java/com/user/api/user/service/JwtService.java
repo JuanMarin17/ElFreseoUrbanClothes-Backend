@@ -43,7 +43,7 @@ public class JwtService {
         return Jwts.builder()
                 .claims(Map.of(
                         "user_id", userId,
-                        "rol_id", rolId)) // Playload
+                        "rol", rolId)) // Playload
                 .subject(fullName) // Quien es el usuario
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + tokenExpiration))
