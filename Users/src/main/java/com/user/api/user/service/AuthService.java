@@ -224,7 +224,7 @@ public class AuthService {
 
         mailSender.send(sendEmail);
 
-        responseDTO.setMessage("El registro fue exitoso");
+        responseDTO.setMessage("Tu cuenta se registró correctamente");
         responseDTO.setJwt(token);
 
         return responseDTO;
@@ -279,7 +279,7 @@ public class AuthService {
         JwtResponseDTO response = new JwtResponseDTO();
 
         response.setJwt(token);
-        response.setMessage("Se inicio sesión correctamente");
+        response.setMessage("Iniciaste sesión correctamente");
 
         return response;
     }
