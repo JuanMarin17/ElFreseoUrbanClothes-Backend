@@ -1,0 +1,15 @@
+package com.api.Store.dto;
+
+import com.api.Store.enums.StoreRole;
+import lombok.Builder;
+import lombok.Data;
+
+import java.util.UUID;
+
+@Data
+@Builder
+public class StoreUserResponseDTO {
+    private UUID userId;
+    private UUID storeId;
+    private StoreRole role;
+}
