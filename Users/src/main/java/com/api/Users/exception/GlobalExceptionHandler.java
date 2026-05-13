@@ -2,6 +2,11 @@
 package com.api.Users.exception;
 
 import com.api.Users.dto.MessageResponseDTO;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,23 +15,47 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    // Errores de validación de campos
+    // Errores de @Valid — campos inválidos en el request
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<MessageResponseDTO> handleValidationErrors(MethodArgumentNotValidException ex) {
-        MessageResponseDTO response = new MessageResponseDTO();
-        response.setMessage("Error de validación: " + ex.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .reduce((m1, m2) -> m1 + ", " + m2).orElse("Datos inválidos"));
-        response.setStatus(HttpStatus.BAD_REQUEST.value());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    public ResponseEntity<Map<String, Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
+        Map<String, String> fieldErrors = new HashMap<>();
+
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+            fieldErrors.put(error.getField(), error.getDefaultMessage())
+        );
+
+        return buildResponse(HttpStatus.BAD_REQUEST, "Error de validación", fieldErrors);
+    }
+
+    // Error si el jwt no contiene el userId, o sea no esta autenticado
+    @ExceptionHandler(UnauthorizedUserException.class)
+    public ResponseEntity<Map<String, Object>> handleUnauthorizedUser(UnauthorizedUserException e){
+        return buildResponse(HttpStatus.BAD_REQUEST, e.getMessage(), null);
+    }
+
+    // Error si el id del usuario no corresponde con el nesecario
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequestException(BadRequestException e){
+        return buildResponse( HttpStatus.BAD_REQUEST, e.getMessage(), null);
     }
 
     // Cualquier otro error no controlado
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<MessageResponseDTO> handleGeneric(Exception ex) {
-        MessageResponseDTO response = new MessageResponseDTO();
-        response.setMessage("Error interno del servidor: " + ex.getMessage());
-        response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    public ResponseEntity<Map<String , Object>> handleGeneric(Exception e) {
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error Interno del servidor " + e, null);
+    }
+
+    // Builder del response estandarizado
+    private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, Object errors) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", status.value());
+        body.put("message", message);
+
+        if (errors != null) {
+            body.put("errors", errors);
+        }
+
+        return ResponseEntity.status(status).body(body);
     }
 }
