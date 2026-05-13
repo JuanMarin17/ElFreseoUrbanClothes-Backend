@@ -39,8 +39,8 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserDTO> myProfile(@RequestHeader(value = "X-User-Id") UUID userId){
-        UserDTO response = userService.myProfile(userId);
+    public ResponseEntity<UserDTO> myProfile(){
+        UserDTO response = userService.myProfile();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }
