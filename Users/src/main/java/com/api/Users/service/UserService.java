@@ -7,7 +7,10 @@ import org.springframework.stereotype.Service;
 import com.api.Users.dto.MessageResponseDTO;
 import com.api.Users.dto.UserDTO;
 import com.api.Users.entity.User;
+import com.api.Users.exception.BadRequestException;
+import com.api.Users.exception.UnauthorizedUserException;
 import com.api.Users.repository.UserRepository;
+import com.common_request_context_starter.context.RequestContext;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +52,19 @@ public class UserService {
         return userName;
     }
 
-    public UserDTO myProfile(UUID userId){
+    public UserDTO myProfile(){
+        String userIdHeader = RequestContext.getHeader("X-User-Id");
+
+        if(userIdHeader == null){
+            throw new UnauthorizedUserException("Usuario no autenticado");
+        }
+
+        UUID userId;
+        try{
+            userId = UUID.fromString(userIdHeader);
+        } catch (IllegalArgumentException e){
+            throw new BadRequestException("Formato invalido del userId");
+        }
         User user = userRepository.findById(userId).orElseThrow(()-> new RuntimeException("Usuario no encontrado"));
         
         UserDTO response = new UserDTO();

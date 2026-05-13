@@ -28,6 +28,7 @@ public class JwtValidationFilter extends AbstractGatewayFilterFactory<Object>{
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
             String authHeader = request.getHeaders().getFirst("Authorization");
+            String storeId = request.getHeaders().getFirst("X-Store-Id");
 
             if(authHeader == null || !authHeader.startsWith("Bearer ")){
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
@@ -48,7 +49,7 @@ public class JwtValidationFilter extends AbstractGatewayFilterFactory<Object>{
                 ServerHttpRequest enrichedRequest = request.mutate()
                                             .header("X-User-Id", claims.get("user_id", String.class))
                                             .header("X-User-Name", claims.getSubject())
-                                            .header("X-User-Role", claims.get("rol_id", String.class))
+                                            .header("X-User-Role", claims.get("rol", String.class))
                                             .build();
 
                 return chain.filter(exchange.mutate().request(enrichedRequest).build());
