@@ -34,10 +34,12 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "product_id")
     private UUID productId;
-
+    @Column(name = "store_id")
+    private UUID storeId;
+    @Column(name = "name")
     private String name;
-    private String description;
-    
+    @Column(name = "description")
+    private String description;    
 
     @ManyToOne
     @JoinColumn(name = "brand_id")
