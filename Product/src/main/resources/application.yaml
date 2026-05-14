@@ -3,15 +3,10 @@ spring:
     name: product
 
   datasource:
-    url: ${DB_URL}
-    username: ${USER_NAME}
-    password: ${PASSWORD}
     driver-class-name: org.postgresql.Driver
-
-    hikari:
-      data-source-properties:
-        ssl: true
-        sslmode: require
+    url: ${DB_URL} # Se lee desde .env
+    username: ${DB_USER} # Se lee desde .env
+    password: ${DB_PASSWORD} # Se lee desde .env
 
   jpa:
     hibernate:
@@ -23,9 +18,11 @@ spring:
         format_sql: true
 
 server:
-  port: 8080
+  port: ${SERVER_PORT} # Se lee desde .env
+  servlet:
+    context-path: /api/v1
 
-# Configuración JWT (para validar tokens)
-jwt:
-  secret: mi_secreto_super_seguro_123456
-  expiration: 3600000
+cloudinary:
+  cloud_name: ${NAME_CLOUD} # Se lee desde .env
+  api_key: ${KEY_CLOUD} # Se lee desde .env
+  api_secret: ${SECRET_CLOUD} # Se lee desde .env
