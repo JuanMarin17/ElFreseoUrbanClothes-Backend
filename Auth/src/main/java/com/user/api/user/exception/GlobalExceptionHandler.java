@@ -18,9 +18,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
 
-        ex.getBindingResult().getFieldErrors().forEach(error ->
-            fieldErrors.put(error.getField(), error.getDefaultMessage())
-        );
+        ex.getBindingResult().getFieldErrors()
+                .forEach(error -> fieldErrors.put(error.getField(), error.getDefaultMessage()));
 
         return buildResponse(HttpStatus.BAD_REQUEST, "Error de validación", fieldErrors);
     }
@@ -52,7 +51,13 @@ public class GlobalExceptionHandler {
     // Cualquier otro error no controlado status 500
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", null);
+        Map<String, Object> errorDetails = new HashMap<>();
+        errorDetails.put("exception", ex.getClass().getSimpleName());
+        errorDetails.put("error", ex.getMessage());
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Error interno del servidor. Tipo: " + ex.getClass().getSimpleName() + ". Detalle: "
+                        + (ex.getMessage() != null ? ex.getMessage() : "Sin mensaje"),
+                errorDetails);
     }
 
     // Builder del response estandarizado

@@ -2,7 +2,9 @@ spring:
   application:
     name: Store
 server:
-  port: 8081   # cambia si usas gateway u otros servicios
+  port: 8081
+  servlet:
+    context-path: /api/v1   # cambia si usas gateway u otros servicios
 
 spring:
   application:
