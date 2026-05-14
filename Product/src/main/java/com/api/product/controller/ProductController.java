@@ -6,23 +6,20 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.api.product.dto.ApiResponseDTO;
 import com.api.product.dto.ProductRequestDTO;
 import com.api.product.dto.ProductResponseDTO;
 import com.api.product.service.ProductService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,6 +35,10 @@ import lombok.RequiredArgsConstructor;
  * NOTA:
  * - GET nunca modifica el estado de los productos.
  * - PUT con {id} se usa para actualizar productos.
+ *
+ * IMPORTANTE:
+ * - Las imágenes NO se suben desde el backend.
+ * - El frontend debe subirlas a Cloudinary y enviar solo las URLs.
  */
 @RestController
 @RequestMapping("/products")
@@ -45,36 +46,26 @@ import lombok.RequiredArgsConstructor;
 public class ProductController {
 
     private final ProductService productService;
-    private final ObjectMapper objectMapper;
 
     /**
-     * Crear un nuevo producto (con imágenes).
+     * Crear un nuevo producto.
      *
-     * Este endpoint recibe un multipart/form-data con:
-     * - product: JSON con los datos del producto
-     * - images: lista de imágenes (opcional)
+     * Este endpoint recibe un JSON con los datos del producto.
+     * Las imágenes se reciben como una lista de URLs (máximo 6).
      *
-     * @param productJson JSON del producto en String
-     * @param images lista de imágenes opcionales
+     * @param dto datos del producto
      * @return producto creado
      */
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping
     public ResponseEntity<ApiResponseDTO<ProductResponseDTO>> createProduct(
-            @RequestPart("product") String productJson,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+            @RequestBody ProductRequestDTO dto) {
 
         try {
-            ProductRequestDTO dto = objectMapper.readValue(productJson, ProductRequestDTO.class);
-
-            if (images != null && !images.isEmpty()) {
-                dto.setImages(images);
-            }
-
             ProductResponseDTO product = productService.createProduct(dto);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(
                     ApiResponseDTO.<ProductResponseDTO>builder()
-                            .message("Producto creado correctamente con imágenes")
+                            .message("Producto creado correctamente")
                             .status(HttpStatus.CREATED.value())
                             .data(product)
                             .timestamp(OffsetDateTime.now())
@@ -94,30 +85,21 @@ public class ProductController {
     }
 
     /**
-     * Actualizar un producto existente (con opción de agregar nuevas imágenes).
+     * Actualizar un producto existente.
      *
-     * Este endpoint recibe un multipart/form-data con:
-     * - product: JSON con los datos del producto
-     * - images: lista de nuevas imágenes opcionales
+     * Este endpoint recibe un JSON con los datos del producto.
+     * Si llegan imágenes nuevas, deben ser URLs (máximo 6 en total).
      *
      * @param id UUID del producto
-     * @param productJson JSON del producto en String
-     * @param images lista de imágenes opcionales
+     * @param dto datos actualizados
      * @return producto actualizado
      */
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping("/{id}")
     public ResponseEntity<ApiResponseDTO<ProductResponseDTO>> updateProduct(
             @PathVariable UUID id,
-            @RequestPart("product") String productJson,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
+            @RequestBody ProductRequestDTO dto) {
 
         try {
-            ProductRequestDTO dto = objectMapper.readValue(productJson, ProductRequestDTO.class);
-
-            if (images != null && !images.isEmpty()) {
-                dto.setImages(images);
-            }
-
             Optional<ProductResponseDTO> updated = productService.updateProduct(id, dto);
 
             if (updated.isPresent()) {

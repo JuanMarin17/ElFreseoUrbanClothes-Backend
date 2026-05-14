@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.web.multipart.MultipartFile;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,10 +20,13 @@ public class ProductRequestDTO {
     private UUID brandId;
 
     private List<VariantDTO> variants;
-    private List<MultipartFile> images;
+    private List<String> images;
     private List<UUID> categoryIds;
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class VariantDTO {
         private String sku;
         private BigDecimal price;
