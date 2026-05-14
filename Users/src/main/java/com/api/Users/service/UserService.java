@@ -53,7 +53,9 @@ public class UserService {
     }
 
     public UserDTO myProfile(){
-        String userIdHeader = RequestContext.getHeader("X-User-Id");
+        String userIdHeader = RequestContext.getHeader("x-user-id");
+
+        System.out.println(userIdHeader);
 
         if(userIdHeader == null){
             throw new UnauthorizedUserException("Usuario no autenticado");

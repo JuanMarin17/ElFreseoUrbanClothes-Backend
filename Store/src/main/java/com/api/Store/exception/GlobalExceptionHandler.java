@@ -51,7 +51,13 @@ public class GlobalExceptionHandler {
     // ── Cualquier otro error ────────────────────────────────────────────────
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", null);
+        Map<String, Object> errorDetails = new HashMap<>();
+        errorDetails.put("exception", ex.getClass().getSimpleName());
+        errorDetails.put("error", ex.getMessage());
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Error interno del servidor. Tipo: " + ex.getClass().getSimpleName() + ". Detalle: "
+                        + (ex.getMessage() != null ? ex.getMessage() : "Sin mensaje"),
+                errorDetails);
     }
 
     // ── Helper ──────────────────────────────────────────────────────────────
@@ -60,7 +66,8 @@ public class GlobalExceptionHandler {
         body.put("timestamp", LocalDateTime.now());
         body.put("status", status.value());
         body.put("message", message);
-        if (errors != null) body.put("errors", errors);
+        if (errors != null)
+            body.put("errors", errors);
         return ResponseEntity.status(status).body(body);
     }
 }
