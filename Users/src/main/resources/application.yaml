@@ -1,6 +1,9 @@
+server:
+  port: 8083
+
 spring:
   application:
-    name: api
+    name: Users
 
   datasource:
     url: jdbc:postgresql://localhost:5432/users
@@ -9,41 +12,28 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
         format_sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
 
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: elfreseouc@gmail.com
-    password: zbca pmwl ovnt swod
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            required: true
-            enable: true
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
 
+  instance:
+    prefer-ip-address: true
 
-security:
-    jwt:
-      secret-key: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
-      token-expiration: 3600000 # 1 hora en milisegundos
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
 
-
-server:
-  port: 8082
-  servlet:
-    context-path: /api/v1
-
-logging:
-  level:
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    org.springframework.security: DEBUG
+  endpoint:
+    health:
+      show-details: always
