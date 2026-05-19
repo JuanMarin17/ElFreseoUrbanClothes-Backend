@@ -14,7 +14,7 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // ── Validaciones Jakarta (@NotBlank, @Size, etc.) ──────────────────────
+    // ── Validaciones Jakarta (@NotBlank, @Size, @Valid, etc.) ─────────────────
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationErrors(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = new HashMap<>();
@@ -24,43 +24,48 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Error de validación", fieldErrors);
     }
 
-    // ── Tienda ya existe ────────────────────────────────────────────────────
+    // ── Tienda ya existe ──────────────────────────────────────────────────────
     @ExceptionHandler(StoreAlreadyExistsException.class)
     public ResponseEntity<Map<String, Object>> handleStoreAlreadyExists(StoreAlreadyExistsException ex) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), null);
     }
 
-    // ── Tienda no encontrada ────────────────────────────────────────────────
+    // ── Tienda no encontrada ──────────────────────────────────────────────────
     @ExceptionHandler(StoreNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleStoreNotFound(StoreNotFoundException ex) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), null);
     }
 
-    // ── Rol inválido ────────────────────────────────────────────────────────
+    // ── Rol inválido ──────────────────────────────────────────────────────────
     @ExceptionHandler(InvalidRoleException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidRole(InvalidRoleException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
     }
 
-    // ── Usuario ya pertenece a la tienda ───────────────────────────────────
+    // ── Usuario ya pertenece a la tienda ──────────────────────────────────────
     @ExceptionHandler(UserAlreadyInStoreException.class)
     public ResponseEntity<Map<String, Object>> handleUserAlreadyInStore(UserAlreadyInStoreException ex) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), null);
     }
 
-    // ── Cualquier otro error ────────────────────────────────────────────────
+    // ── Settings inválidas ────────────────────────────────────────────────────
+    @ExceptionHandler(InvalidStoreSettingsException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidStoreSettings(InvalidStoreSettingsException ex) {
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), null);
+    }
+
+    // ── Error genérico ────────────────────────────────────────────────────────
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
         Map<String, Object> errorDetails = new HashMap<>();
         errorDetails.put("exception", ex.getClass().getSimpleName());
-        errorDetails.put("error", ex.getMessage());
+        errorDetails.put("detail", ex.getMessage() != null ? ex.getMessage() : "Sin mensaje");
+
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-                "Error interno del servidor. Tipo: " + ex.getClass().getSimpleName() + ". Detalle: "
-                        + (ex.getMessage() != null ? ex.getMessage() : "Sin mensaje"),
-                errorDetails);
+                "Error interno del servidor", errorDetails);
     }
 
-    // ── Helper ──────────────────────────────────────────────────────────────
+    // ── Helper ────────────────────────────────────────────────────────────────
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message, Object errors) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", LocalDateTime.now());

@@ -21,34 +21,52 @@ public class StoreSettings {
     @Column(name = "store_id")
     private UUID storeId;
 
+    @Column(name = "completed_step")
+    private Integer completedStep;
+
     @Column(name = "logo_url")
     private String logoUrl;
 
-    @Column(name = "banner_url")
-    private String bannerUrl;
+    // Objeto plan: { id, name, price, features }
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "plan", columnDefinition = "jsonb")
+    private Map<String, Object> plan;
 
-    @Column(name = "primary_color")
-    private String primaryColor;
+    // Datos básicos de la tienda: { name, description }
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "basic", columnDefinition = "jsonb")
+    private Map<String, Object> basic;
 
-    @Column(name = "secondary_color")
-    private String secondaryColor;
+    // Componentes visuales: { banner, header, footer }
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "components", columnDefinition = "jsonb")
+    private Map<String, Object> components;
 
-    @Column(name = "font")
-    private String font;
-
-    @Column(name = "theme")
-    private String theme;
-
+    // Layout elegido: { id, title, description, img }
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "layout", columnDefinition = "jsonb")
     private Map<String, Object> layout;
 
-    @Column(name = "currency")
-    private String currency = "COP";
+    // Datos legales: { legalName, idNumber, documentName }
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "legal", columnDefinition = "jsonb")
+    private Map<String, Object> legal;
 
-    @Column(name = "language")
-    private String language = "es";
+    // Método de pago y envío: { paymentMethod, shipping }
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "payment", columnDefinition = "jsonb")
+    private Map<String, Object> payment;
+
+    // Configuración de preview del builder
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "preview", columnDefinition = "jsonb")
+    private Map<String, Object> preview;
+
+    // Estilos visuales (colores, fuentes, bordes, etc.)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "styles", columnDefinition = "jsonb")
+    private Map<String, Object> styles;
 
     @Column(name = "updated_at")
-    private OffsetDateTime updatedAt = OffsetDateTime.now();
+    private OffsetDateTime updatedAt;
 }

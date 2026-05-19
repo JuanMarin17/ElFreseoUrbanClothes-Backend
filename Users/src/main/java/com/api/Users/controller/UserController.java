@@ -42,15 +42,6 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserDTO> myProfile(HttpServletRequest request) {
-        // UserDTO response = userService.myProfile();
-        // return ResponseEntity.status(HttpStatus.OK).body(response);
-
-        // Enumeration<String> headers = request.getHeaderNames();
-        // while (headers.hasMoreElements()) {
-        //     String h = headers.nextElement();
-        //     System.out.println(h + " = " + request.getHeader(h));
-        // }
-
         return ResponseEntity.ok(userService.myProfile());
     }
 }
