@@ -2,6 +2,7 @@ package com.user.api.user.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -80,5 +81,9 @@ public class AuthController {
         MessageResponseDTO responseDTO = authService.forgotPasswordSecondStep(forgotPasswordRequestDTO);
         return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
     }
-
+    @DeleteMapping("/deactivateAccount")
+    public ResponseEntity<MessageResponseDTO> deactivateAccount() {
+        MessageResponseDTO response = authService.deactivateAccount();
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
 }
