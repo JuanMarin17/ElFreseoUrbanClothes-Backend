@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.api.Users.dto.MessageResponseDTO;
 import com.api.Users.dto.UserDTO;
+import com.api.Users.dto.UserResponseDTO;
 import com.api.Users.service.UserService;
 
 import jakarta.validation.Valid;
@@ -43,8 +44,8 @@ public class UserController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserDTO> myProfile() {
-        UserDTO response = userService.myProfile();
+    public ResponseEntity<UserResponseDTO> myProfile() {
+        UserResponseDTO response = userService.myProfile();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
     

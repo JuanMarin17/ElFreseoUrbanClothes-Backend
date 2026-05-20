@@ -4,8 +4,10 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.api.Users.client.AuthClient;
 import com.api.Users.dto.MessageResponseDTO;
 import com.api.Users.dto.UserDTO;
+import com.api.Users.dto.UserResponseDTO;
 import com.api.Users.entity.User;
 import com.api.Users.exception.BadRequestException;
 import com.api.Users.exception.UnauthorizedUserException;
@@ -13,6 +15,7 @@ import com.api.Users.exception.UserNotFoundException;
 import com.api.Users.repository.UserRepository;
 import com.common_request_context_starter.context.RequestContext;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -21,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 @Data
 public class UserService {
     private final UserRepository userRepository;
+    private final AuthClient authClient;
 
     /**
      * Metodo para crear usuario con foto de perfil
@@ -65,33 +69,37 @@ public class UserService {
 
         return userName;
     }
-  
+
     /**
      * Obtiene la información del perfil del usuario autenticado
      * usando el ID enviado en el header X-User-Id.
      *
      * @return datos básicos del usuario autenticado
      */
-    public UserDTO myProfile() {
-        String userIdHeader = RequestContext.getHeader("X-User-Id");
+    public UserResponseDTO myProfile() {
+        String userIdHeader = RequestContext.getHeader("x-user-id");
 
         if (userIdHeader == null) {
             throw new UnauthorizedUserException("Usuario no autenticado");
         }
-
+        
         UUID userId;
         try {
             userId = UUID.fromString(userIdHeader);
+            System.out.println(userId);
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Formato invalido del userId");
         }
+        
+        String userEmail = authClient.getEmail(userId);
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        UserDTO response = new UserDTO();
+        UserResponseDTO response = new UserResponseDTO();
 
         response.setUserId(userId);
         response.setUserName(user.getUserName());
         response.setPhone(user.getPhone());
+        response.setUserEmail(userEmail);
         response.setImageProfile(user.getImageProfile());
 
         return response;
