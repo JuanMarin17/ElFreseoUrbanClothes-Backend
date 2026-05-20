@@ -49,7 +49,7 @@ public class JwtValidationFilter extends AbstractGatewayFilterFactory<Object>{
                 ServerHttpRequest enrichedRequest = request.mutate()
                                             .header("X-User-Id", claims.get("user_id", String.class))
                                             .header("X-User-Name", claims.getSubject())
-                                            .header("X-User-Role", claims.get("rol", String.class))
+                                            .header("X-User-Role", claims.get("role", String.class))
                                             .build();
 
                 return chain.filter(exchange.mutate().request(enrichedRequest).build());

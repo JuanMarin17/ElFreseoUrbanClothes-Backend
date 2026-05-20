@@ -65,7 +65,7 @@ public class UserService {
 
         return userName;
     }
-
+  
     /**
      * Obtiene la información del perfil del usuario autenticado
      * usando el ID enviado en el header X-User-Id.

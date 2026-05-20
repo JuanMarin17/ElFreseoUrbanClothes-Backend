@@ -39,7 +39,13 @@ public class GlobalExceptionHandler {
     // Cualquier otro error no controlado
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception e) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error Interno del servidor " + e, null);
+        Map<String, Object> errorDetails = new HashMap<>();
+        errorDetails.put("exception", e.getClass().getSimpleName());
+        errorDetails.put("error", e.getMessage());
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Error interno del servidor. Tipo: " + e.getClass().getSimpleName() + ". Detalle: "
+                        + (e.getMessage() != null ? e.getMessage() : "Sin mensaje"),
+                errorDetails);
     }
 
     // Builder del response estandarizado
