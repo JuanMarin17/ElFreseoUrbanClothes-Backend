@@ -17,6 +17,12 @@ spring:
               /api/v1/auth/forgotPassword,
               /api/v1/auth/forgotPasswordSecondStep,
 
+        - id: store-routes
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/stores,
+              /api/stores/**
+
         - id: users-routes
           uri: http://localhost:8083
           predicates:

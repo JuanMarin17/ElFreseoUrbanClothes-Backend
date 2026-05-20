@@ -2,6 +2,7 @@ package com.api.Store.service;
 
 import com.api.Store.dto.settings.StoreSettingsRequestDTO;
 import com.api.Store.dto.settings.StoreSettingsResponseDTO;
+import com.api.Store.entity.Store;
 import com.api.Store.entity.StoreSettings;
 import com.api.Store.exception.StoreNotFoundException;
 import com.api.Store.repository.StoreRepository;
@@ -40,14 +41,18 @@ public class StoreSettingsService {
         verifyStoreExists(storeId);
 
         StoreSettings settings = storeSettingsRepository.findById(storeId)
-                .orElse(StoreSettings.builder().storeId(storeId).build());
+                .orElseGet(() -> {
+                    Store store = storeRepository.findById(storeId)
+                            .orElseThrow(() -> new StoreNotFoundException(
+                                    "Tienda no encontrada con id: " + storeId));
+                    return StoreSettings.builder().store(store).build();
+                });
 
         applyChanges(settings, dto);
         settings.setUpdatedAt(OffsetDateTime.now());
 
         return toResponse(storeSettingsRepository.save(settings));
     }
-
     // ── Mapper ───────────────────────────────────────────────────────────────
 
     /**
