@@ -1,0 +1,567 @@
+{
+  "info": {
+    "name": "Users API",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "description": "Colección de pruebas para el módulo de usuarios. Incluye casos felices y casos de error.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "valid_user_id",
+      "value": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Create User",
+      "item": [
+        {
+          "name": "✅ Crear usuario válido",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"userName\": \"john_doe\",\n  \"phone\": \"+521234567890\",\n  \"imageProfile\": \"https://example.com/avatar.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/createUser",
+              "host": ["{{base_url}}"],
+              "path": ["users", "createUser"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Mensaje correcto', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.message).to.eql('Usuario creado correctamente');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Crear usuario - nombre de usuario duplicado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"660e8400-e29b-41d4-a716-446655440001\",\n  \"userName\": \"john_doe\",\n  \"phone\": \"+521234567890\",\n  \"imageProfile\": \"https://example.com/avatar2.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/createUser",
+              "host": ["{{base_url}}"],
+              "path": ["users", "createUser"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Crear usuario - body vacío",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/createUser",
+              "host": ["{{base_url}}"],
+              "path": ["users", "createUser"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Crear usuario - sin body",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/users/createUser",
+              "host": ["{{base_url}}"],
+              "path": ["users", "createUser"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Get Username by ID",
+      "item": [
+        {
+          "name": "✅ Obtener nombre - ID válido existente",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/myUserName/{{valid_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "myUserName", "{{valid_user_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Respuesta es string', () => {",
+                  "  pm.expect(pm.response.text()).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Obtener nombre - UUID inexistente",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/myUserName/00000000-0000-0000-0000-000000000000",
+              "host": ["{{base_url}}"],
+              "path": [
+                "users",
+                "myUserName",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Obtener nombre - ID con formato inválido",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/myUserName/not-a-valid-uuid",
+              "host": ["{{base_url}}"],
+              "path": ["users", "myUserName", "not-a-valid-uuid"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. My Profile (GET /me)",
+      "item": [
+        {
+          "name": "✅ Mi perfil - header X-User-Id válido",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "{{valid_user_id}}" }],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene userId', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('userId');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Mi perfil - sin header X-User-Id",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Mi perfil - X-User-Id con formato inválido",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-User-Id", "value": "esto-no-es-uuid" }],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Mi perfil - X-User-Id UUID inexistente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "00000000-0000-0000-0000-000000000000"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Update User",
+      "item": [
+        {
+          "name": "✅ Actualizar usuario - datos completos",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-User-Id", "value": "{{valid_user_id}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"john_updated\",\n  \"phone\": \"+529876543210\",\n  \"imageProfile\": \"https://example.com/new-avatar.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/update",
+              "host": ["{{base_url}}"],
+              "path": ["users", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Mensaje correcto', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.message).to.eql('Usuario actualizado correctamente');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "✅ Actualizar usuario - solo teléfono",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-User-Id", "value": "{{valid_user_id}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+521111111111\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/update",
+              "host": ["{{base_url}}"],
+              "path": ["users", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Actualizar usuario - sin header X-User-Id",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"john_updated\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/update",
+              "host": ["{{base_url}}"],
+              "path": ["users", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Actualizar usuario - UUID inexistente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              {
+                "key": "X-User-Id",
+                "value": "00000000-0000-0000-0000-000000000000"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"ghost_user\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/update",
+              "host": ["{{base_url}}"],
+              "path": ["users", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Actualizar usuario - userName ya tomado por otro",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-User-Id", "value": "{{valid_user_id}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userName\": \"john_doe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/update",
+              "host": ["{{base_url}}"],
+              "path": ["users", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Actualizar usuario - X-User-Id formato inválido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-User-Id", "value": "no-es-uuid" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+521111111111\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/update",
+              "host": ["{{base_url}}"],
+              "path": ["users", "update"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Get User by ID",
+      "item": [
+        {
+          "name": "✅ Obtener usuario - ID válido existente",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/{{valid_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "{{valid_user_id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tiene userId y userName', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('userId');",
+                  "  pm.expect(json).to.have.property('userName');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Obtener usuario - UUID inexistente",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/00000000-0000-0000-0000-000000000000",
+              "host": ["{{base_url}}"],
+              "path": ["users", "00000000-0000-0000-0000-000000000000"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "❌ Obtener usuario - ID con formato inválido",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/abc-123-xyz",
+              "host": ["{{base_url}}"],
+              "path": ["users", "abc-123-xyz"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
