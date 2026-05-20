@@ -1,5 +1,6 @@
 package com.api.Users.service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -15,7 +16,6 @@ import com.api.Users.exception.UserNotFoundException;
 import com.api.Users.repository.UserRepository;
 import com.common_request_context_starter.context.RequestContext;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -82,7 +82,7 @@ public class UserService {
         if (userIdHeader == null) {
             throw new UnauthorizedUserException("Usuario no autenticado");
         }
-        
+
         UUID userId;
         try {
             userId = UUID.fromString(userIdHeader);
@@ -90,7 +90,7 @@ public class UserService {
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Formato invalido del userId");
         }
-        
+
         String userEmail = authClient.getEmail(userId);
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
@@ -114,7 +114,15 @@ public class UserService {
      * @param userDTO
      * @return
      */
-    public MessageResponseDTO updateUser(UUID userId, UserDTO userDTO) {
+    public MessageResponseDTO updateUser(UserDTO userDTO) {
+        String userIdHeader = RequestContext.getHeader("x-user-id");
+
+        UUID userId;
+        try{
+            userId = UUID.fromString(userIdHeader);
+        } catch(Exception e){
+            throw new RuntimeException("Formato de id invalido " + e.getMessage());
+        }
 
         User userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
@@ -152,18 +160,35 @@ public class UserService {
      * @param userId
      * @return datos básicos del usuario encontrado
      */
-    public UserDTO getUserById(UUID userId) {
+    public UserResponseDTO getUserById(UUID userId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+        if(userId == null){
+            throw new RuntimeException("El id del usuario es obligatorio");
+        }
 
-        UserDTO response = new UserDTO();
-        response.setUserId(user.getUserId());
+        String userEmail = authClient.getEmail(userId);
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        UserResponseDTO response = new UserResponseDTO();
+
+        response.setUserId(userId);
         response.setUserName(user.getUserName());
         response.setPhone(user.getPhone());
+        response.setUserEmail(userEmail);
         response.setImageProfile(user.getImageProfile());
 
         return response;
+    }
+
+    public Boolean existUser(UUID id){
+        Optional<User> user = userRepository.findById(id);
+
+        if(user.isEmpty()){
+            return false;
+        }
+
+        return true;
     }
 
 }

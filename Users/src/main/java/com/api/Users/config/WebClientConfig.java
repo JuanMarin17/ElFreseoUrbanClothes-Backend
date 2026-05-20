@@ -10,7 +10,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 public class WebClientConfig {
     
     @Bean
-    public WebClient userWebClient(WebClient.Builder builder, @Value("${auth.service.url}") String baseUrl){
+    public WebClient authWebClient(WebClient.Builder builder, @Value("${auth.service.url}") String baseUrl){
         return builder
                 .baseUrl(baseUrl)
                 .build();
