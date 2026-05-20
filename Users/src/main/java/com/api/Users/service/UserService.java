@@ -9,6 +9,7 @@ import com.api.Users.dto.UserDTO;
 import com.api.Users.entity.User;
 import com.api.Users.exception.BadRequestException;
 import com.api.Users.exception.UnauthorizedUserException;
+import com.api.Users.exception.UserNotFoundException;
 import com.api.Users.repository.UserRepository;
 import com.common_request_context_starter.context.RequestContext;
 
@@ -29,7 +30,7 @@ public class UserService {
      */
     public MessageResponseDTO createUser(UserDTO user) {
         if (userRepository.findByUserName(user.getUserName()).isPresent()) {
-            throw new RuntimeException("Nombre de usuario ya existente");
+            throw new BadRequestException("Nombre de usuario ya existente");
         }
 
         User userEntity = new User();
@@ -58,7 +59,8 @@ public class UserService {
      * @return nombre del usuario encontrado
      */
     public String getNameById(UUID userId) {
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
         String userName = user.getUserName();
 
         return userName;
@@ -107,13 +109,13 @@ public class UserService {
     public MessageResponseDTO updateUser(UUID userId, UserDTO userDTO) {
 
         User userEntity = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         if (userDTO.getUserName() != null &&
                 !userDTO.getUserName().equals(userEntity.getUserName())) {
 
             if (userRepository.findByUserName(userDTO.getUserName()).isPresent()) {
-                throw new RuntimeException("El nombre de usuario ya existe");
+                throw new BadRequestException("El nombre de usuario ya existe");
             }
 
             userEntity.setUserName(userDTO.getUserName());
@@ -139,13 +141,13 @@ public class UserService {
     /**
      * Obtiene la información de un usuario a partir de su ID.
      *
-     * @param userId 
+     * @param userId
      * @return datos básicos del usuario encontrado
      */
     public UserDTO getUserById(UUID userId) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         UserDTO response = new UserDTO();
         response.setUserId(user.getUserId());
@@ -155,6 +157,5 @@ public class UserService {
 
         return response;
     }
-    
-    
+
 }
