@@ -57,10 +57,10 @@ public class StoreSettings {
     @Column(name = "payment", columnDefinition = "jsonb")
     private Map<String, Object> payment;
 
-    // Configuración de preview del builder
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "preview", columnDefinition = "jsonb")
-    private Map<String, Object> preview;
+    // // Configuración de preview del builder
+    // @JdbcTypeCode(SqlTypes.JSON)
+    // @Column(name = "preview", columnDefinition = "jsonb")
+    // private Map<String, Object> preview;
 
     // Estilos visuales (colores, fuentes, bordes, etc.)
     @JdbcTypeCode(SqlTypes.JSON)
