@@ -9,6 +9,8 @@ import com.api.Store.exception.StoreNotFoundException;
 import com.api.Store.exception.UserAlreadyInStoreException;
 import com.api.Store.repository.StoreRepository;
 import com.api.Store.repository.StoreUserRepository;
+import com.api.Store.util.HeaderUtil;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +24,19 @@ public class StoreUserService {
 
     private final StoreRepository storeRepository;
     private final StoreUserRepository storeUserRepository;
+    private final HeaderUtil headerUtil;
 
     // ── 1. Agregar usuario a tienda ──────────────────────────────────────────
     @Transactional
     public StoreUserResponseDTO addUserToStore(StoreUserRequestDTO dto) {
+
+        UUID userId = headerUtil.getUserIdFromHeader().orElseThrow(() -> new RuntimeException("Usuario no autenticado"));
+        dto.setUserId(userId);
+
+        UUID storeId = headerUtil.getStoreIdFromHeader().orElseThrow(()-> new RuntimeException("El id de la tienda es obligatorio"));
+
+        dto.setStoreId(storeId);
+
         if (!storeRepository.existsById(dto.getStoreId()))
             throw new StoreNotFoundException("Tienda no encontrada con id: " + dto.getStoreId());
 
