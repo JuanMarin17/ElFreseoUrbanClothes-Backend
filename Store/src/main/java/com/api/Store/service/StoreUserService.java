@@ -1,5 +1,6 @@
 package com.api.Store.service;
 
+import com.api.Store.client.UserClient;
 import com.api.Store.dto.StoreUserRequestDTO;
 import com.api.Store.dto.StoreUserResponseDTO;
 import com.api.Store.entity.StoreUser;
@@ -25,6 +26,7 @@ public class StoreUserService {
     private final StoreRepository storeRepository;
     private final StoreUserRepository storeUserRepository;
     private final HeaderUtil headerUtil;
+    private final UserClient userClient;
 
     // ── 1. Agregar usuario a tienda ──────────────────────────────────────────
     @Transactional
@@ -32,6 +34,10 @@ public class StoreUserService {
 
         UUID userId = headerUtil.getUserIdFromHeader().orElseThrow(() -> new RuntimeException("Usuario no autenticado"));
         dto.setUserId(userId);
+
+        if(!userClient.existUser(userId)){
+            throw new RuntimeException("Usuario no encontrado");
+        }
 
         UUID storeId = headerUtil.getStoreIdFromHeader().orElseThrow(()-> new RuntimeException("El id de la tienda es obligatorio"));
 

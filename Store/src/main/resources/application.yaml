@@ -39,3 +39,7 @@ logging:
 security:
     jwt:
       secret-key: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+
+users:
+  service:
+    url: http://localhost:8083/api/v1
