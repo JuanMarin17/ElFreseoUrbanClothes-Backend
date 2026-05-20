@@ -32,7 +32,7 @@ spring:
 
 users:
   service:
-    url: http://localhost:8083
+    url: http://localhost:8083/api/v1
 
 security:
     jwt:

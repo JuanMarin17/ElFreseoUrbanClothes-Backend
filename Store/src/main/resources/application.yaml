@@ -1,8 +1,6 @@
-spring:
-  application:
-    name: Store
 server:
-  port: 8081   # cambia si usas gateway u otros servicios
+  port: 8081
+
 
 spring:
   application:
