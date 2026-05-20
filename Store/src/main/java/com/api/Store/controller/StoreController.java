@@ -6,6 +6,7 @@ import com.api.Store.service.StoreService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,5 +35,10 @@ public class StoreController {
     @GetMapping("/{storeId}")
     public ResponseEntity<StoreResponseDTO> getStore(@PathVariable UUID storeId) {
         return ResponseEntity.ok(storeService.getStoreById(storeId));
+    }
+
+    @GetMapping("/existStore/{id}")
+    public ResponseEntity<Boolean> existStore(@PathVariable UUID storeId){
+        return ResponseEntity.status(HttpStatus.OK).body(storeService.existStore(storeId));
     }
 }
