@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,10 +44,12 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
     
-    @PutMapping("/update/{id}")
-    public ResponseEntity<MessageResponseDTO> updateUser(@PathVariable("id") UUID id, @RequestBody UserDTO userDTO) {
+    @PutMapping("/update")
+    public ResponseEntity<MessageResponseDTO> updateUser(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody UserDTO userDTO) {
 
-        MessageResponseDTO response = userService.updateUser(id, userDTO);
+        MessageResponseDTO response = userService.updateUser(UUID.fromString(userId), userDTO);
         return ResponseEntity.status(response.getStatus()).body(response);
     }
     @GetMapping("/{id}")

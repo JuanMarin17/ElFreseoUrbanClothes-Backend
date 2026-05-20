@@ -21,6 +21,12 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
     private final UserRepository userRepository;
 
+    /**
+     * Metodo para crear usuario con foto de perfil
+     * 
+     * @param user
+     * @return
+     */
     public MessageResponseDTO createUser(UserDTO user) {
         if (userRepository.findByUserName(user.getUserName()).isPresent()) {
             throw new RuntimeException("Nombre de usuario ya existente");
@@ -45,6 +51,12 @@ public class UserService {
         return response;
     }
 
+    /**
+     * Obtiene el nombre de un usuario a partir de su ID.
+     *
+     * @param userId identificador único del usuario
+     * @return nombre del usuario encontrado
+     */
     public String getNameById(UUID userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         String userName = user.getUserName();
@@ -52,6 +64,12 @@ public class UserService {
         return userName;
     }
 
+    /**
+     * Obtiene la información del perfil del usuario autenticado
+     * usando el ID enviado en el header X-User-Id.
+     *
+     * @return datos básicos del usuario autenticado
+     */
     public UserDTO myProfile() {
         String userIdHeader = RequestContext.getHeader("X-User-Id");
 
@@ -77,6 +95,15 @@ public class UserService {
         return response;
     }
 
+    /**
+     * Metodo para actualizar la información del usuario, verifica que se haya
+     * enviado una iamgen
+     * si no se envia imagen toma la anterior
+     * 
+     * @param userId
+     * @param userDTO
+     * @return
+     */
     public MessageResponseDTO updateUser(UUID userId, UserDTO userDTO) {
 
         User userEntity = userRepository.findById(userId)
@@ -109,6 +136,12 @@ public class UserService {
         return response;
     }
 
+    /**
+     * Obtiene la información de un usuario a partir de su ID.
+     *
+     * @param userId 
+     * @return datos básicos del usuario encontrado
+     */
     public UserDTO getUserById(UUID userId) {
 
         User user = userRepository.findById(userId)
@@ -122,4 +155,6 @@ public class UserService {
 
         return response;
     }
+    
+    
 }
