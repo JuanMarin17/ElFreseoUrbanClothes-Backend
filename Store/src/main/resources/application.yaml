@@ -1,6 +1,3 @@
-spring:
-  application:
-    name: Store
 server:
   port: 8081
 
