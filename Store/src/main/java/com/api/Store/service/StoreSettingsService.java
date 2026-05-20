@@ -88,9 +88,6 @@ public class StoreSettingsService {
         if (dto.getPayment() != null)
             settings.setPayment(toMap(dto.getPayment()));
 
-        if (dto.getPreview() != null)
-            settings.setPreview(dto.getPreview());
-
         if (dto.getStyles() != null)
             settings.setStyles(dto.getStyles());
     }
@@ -106,7 +103,6 @@ public class StoreSettingsService {
                 .layout(s.getLayout())
                 .legal(s.getLegal())
                 .payment(s.getPayment())
-                .preview(s.getPreview())
                 .styles(s.getStyles())
                 .updatedAt(s.getUpdatedAt())
                 .build();
