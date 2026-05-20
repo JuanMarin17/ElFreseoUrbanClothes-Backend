@@ -5,28 +5,33 @@ spring:
   cloud:
     gateway:
       routes:
-
         # Rutas públicas — no requieren JWT
         - id: auth-routes
           uri: http://localhost:8082
           predicates:
             - Path=/api/v1/auth/register,
-                    /api/v1/auth/registerSecondStep,
-                    /api/v1/auth/resendVerificationCode,
-                    /api/v1/auth/login,
-                    /api/v1/auth/loginSecondStep
-                    /api/v1/auth/forgotPassword
-                    /api/v1/auth/forgotPaswswordSecondStep
+              /api/v1/auth/registerSecondStep,
+              /api/v1/auth/resendVerificationCode,
+              /api/v1/auth/login,
+              /api/v1/auth/loginSecondStep,
+              /api/v1/auth/forgotPassword,
+              /api/v1/auth/forgotPasswordSecondStep,
+
+        - id: store-routes
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/stores,
+              /api/stores/**
 
         - id: users-routes
           uri: http://localhost:8083
           predicates:
-            - Path=/users/me
+            - Path=/api/v1/users/me
           filters:
             - JwtValidationFilter
 server:
   port: 8080
 
 security:
-    jwt:
-      secret-key: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+  jwt:
+    secret-key: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=

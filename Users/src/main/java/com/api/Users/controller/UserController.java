@@ -1,5 +1,6 @@
 package com.api.Users.controller;
 
+import java.util.Enumeration;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import com.api.Users.dto.MessageResponseDTO;
@@ -33,14 +35,13 @@ public class UserController {
     }
 
     @GetMapping("/myUserName/{id}")
-    public ResponseEntity<String> getNameById(@PathVariable("id") UUID id){
+    public ResponseEntity<String> getNameById(@PathVariable("id") UUID id) {
         String userName = userService.getNameById(id);
         return ResponseEntity.status(HttpStatus.OK).body(userName);
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserDTO> myProfile(){
-        UserDTO response = userService.myProfile();
-        return ResponseEntity.status(HttpStatus.OK).body(response);
+    public ResponseEntity<UserDTO> myProfile(HttpServletRequest request) {
+        return ResponseEntity.ok(userService.myProfile());
     }
 }
