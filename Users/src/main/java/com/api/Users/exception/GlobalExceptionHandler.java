@@ -1,8 +1,6 @@
 
 package com.api.Users.exception;
 
-import com.api.Users.dto.MessageResponseDTO;
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,5 +60,10 @@ public class GlobalExceptionHandler {
         }
 
         return ResponseEntity.status(status).body(body);
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleUserNotFound(UserNotFoundException e) {
+        return buildResponse(HttpStatus.NOT_FOUND, e.getMessage(), null);
     }
 }

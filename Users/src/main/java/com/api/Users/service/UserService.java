@@ -9,6 +9,7 @@ import com.api.Users.dto.UserDTO;
 import com.api.Users.entity.User;
 import com.api.Users.exception.BadRequestException;
 import com.api.Users.exception.UnauthorizedUserException;
+import com.api.Users.exception.UserNotFoundException;
 import com.api.Users.repository.UserRepository;
 import com.common_request_context_starter.context.RequestContext;
 
@@ -21,20 +22,26 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
     private final UserRepository userRepository;
 
-    public MessageResponseDTO createUser(UserDTO user){
-        if(userRepository.findByUserName(user.getUserName()).isPresent()){
-            throw new RuntimeException("Nombre de usuario ya existente");
+    /**
+     * Metodo para crear usuario con foto de perfil
+     * 
+     * @param user
+     * @return
+     */
+    public MessageResponseDTO createUser(UserDTO user) {
+        if (userRepository.findByUserName(user.getUserName()).isPresent()) {
+            throw new BadRequestException("Nombre de usuario ya existente");
         }
 
         User userEntity = new User();
         userEntity.setUserId(user.getUserId());
         userEntity.setUserName(user.getUserName());
         userEntity.setPhone(user.getPhone());
-        userEntity.setImageProfile(user.getImageProfile()); 
+        userEntity.setImageProfile(user.getImageProfile());
 
         User createdUser = userRepository.save(userEntity);
 
-        if(createdUser == null){
+        if (createdUser == null) {
             throw new RuntimeException("No se creo el usuario correctamente");
         }
 
@@ -45,30 +52,41 @@ public class UserService {
         return response;
     }
 
-    public String getNameById(UUID userId){
-        User user = userRepository.findById(userId).orElseThrow(()-> new RuntimeException("Usuario no encontrado"));
+    /**
+     * Obtiene el nombre de un usuario a partir de su ID.
+     *
+     * @param userId identificador único del usuario
+     * @return nombre del usuario encontrado
+     */
+    public String getNameById(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
         String userName = user.getUserName();
 
         return userName;
     }
+  
+    /**
+     * Obtiene la información del perfil del usuario autenticado
+     * usando el ID enviado en el header X-User-Id.
+     *
+     * @return datos básicos del usuario autenticado
+     */
+    public UserDTO myProfile() {
+        String userIdHeader = RequestContext.getHeader("X-User-Id");
 
-    public UserDTO myProfile(){
-        String userIdHeader = RequestContext.getHeader("x-user-id");
-
-        System.out.println(userIdHeader);
-
-        if(userIdHeader == null){
+        if (userIdHeader == null) {
             throw new UnauthorizedUserException("Usuario no autenticado");
         }
 
         UUID userId;
-        try{
+        try {
             userId = UUID.fromString(userIdHeader);
-        } catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             throw new BadRequestException("Formato invalido del userId");
         }
-        User user = userRepository.findById(userId).orElseThrow(()-> new RuntimeException("Usuario no encontrado"));
-        
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
         UserDTO response = new UserDTO();
 
         response.setUserId(userId);
@@ -78,4 +96,66 @@ public class UserService {
 
         return response;
     }
+
+    /**
+     * Metodo para actualizar la información del usuario, verifica que se haya
+     * enviado una iamgen
+     * si no se envia imagen toma la anterior
+     * 
+     * @param userId
+     * @param userDTO
+     * @return
+     */
+    public MessageResponseDTO updateUser(UUID userId, UserDTO userDTO) {
+
+        User userEntity = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+
+        if (userDTO.getUserName() != null &&
+                !userDTO.getUserName().equals(userEntity.getUserName())) {
+
+            if (userRepository.findByUserName(userDTO.getUserName()).isPresent()) {
+                throw new BadRequestException("El nombre de usuario ya existe");
+            }
+
+            userEntity.setUserName(userDTO.getUserName());
+        }
+
+        if (userDTO.getPhone() != null) {
+            userEntity.setPhone(userDTO.getPhone());
+        }
+
+        if (userDTO.getImageProfile() != null) {
+            userEntity.setImageProfile(userDTO.getImageProfile());
+        }
+
+        userRepository.save(userEntity);
+
+        MessageResponseDTO response = new MessageResponseDTO();
+        response.setMessage("Usuario actualizado correctamente");
+        response.setStatus(200);
+
+        return response;
+    }
+
+    /**
+     * Obtiene la información de un usuario a partir de su ID.
+     *
+     * @param userId
+     * @return datos básicos del usuario encontrado
+     */
+    public UserDTO getUserById(UUID userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+
+        UserDTO response = new UserDTO();
+        response.setUserId(user.getUserId());
+        response.setUserName(user.getUserName());
+        response.setPhone(user.getPhone());
+        response.setImageProfile(user.getImageProfile());
+
+        return response;
+    }
+
 }

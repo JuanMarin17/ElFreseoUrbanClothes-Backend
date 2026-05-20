@@ -1,146 +1,533 @@
 package com.api.product.service;
 
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.api.product.dto.ProductRequestDTO;
 import com.api.product.dto.ProductResponseDTO;
+import com.api.product.dto.StockAlertDTO;
+import com.api.product.entity.Brand;
+import com.api.product.entity.Category;
 import com.api.product.entity.Product;
+import com.api.product.entity.ProductImage;
+import com.api.product.entity.ProductVariant;
+import com.api.product.exception.BadRequestException;
+import com.api.product.exception.ConflictException;
+import com.api.product.exception.ResourceNotFoundException;
+import com.api.product.repository.BrandRepository;
+import com.api.product.repository.CategoryRepository;
 import com.api.product.repository.ProductRepository;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ *Servicio para gestionar productos.
+ * Incluye métodos para crear, actualizar, listar, buscar, activar, desactivar y paginar productos.
+ * 
+ * Las imágenes NO se suben desde el backend. El frontend debe subirlas previamente a Cloudinary
+ * y enviar las URLs (máximo 6 por producto).
+ * 
+ * Adicionalmente implementa alertas SSE (Server-Sent Events) cuando el stock llega
+ * o baja del mínimo definido por el emprendedor.
+ */
 @Service
 @RequiredArgsConstructor
 public class ProductService {
-    // Se define variable constante (final), de repository con tipo de dato ProductRepository, para poder usar los métodos de la interfaz repository
+
     private final ProductRepository productRepository;
+    private final BrandRepository brandRepository;
+    private final CategoryRepository categoryRepository;
+    private final StockAlertService stockAlertService;
 
-    // Metodo de nuestro servicio para crear producto, respondiendo con ProductResponseDTO y recibiendo ProductRequestDTO
-    public ProductResponseDTO createProduct (ProductRequestDTO productRequestDTO){
-        Product product = new Product();
+    /**
+     *  Crea un nuevo producto en la base de datos.
+    * Valida campos obligatorios, crea variantes, imágenes y categorías.
+    * 
+    * Las imágenes se reciben como URLs (subidas previamente desde el frontend a Cloudinary).
+    * Se permite un máximo de 6 imágenes por producto.
+    * 
+    * También verifica si alguna variante está en stock mínimo y dispara una alerta SSE.
+    *
+    * @param dto DTO con los datos del producto a crear
+    * @return ProductResponseDTO con los datos del producto creado
+     */
+    @Transactional
+    public ProductResponseDTO createProduct(ProductRequestDTO dto) {
+        try {
+            validateProductRequest(dto);
 
-        product.setName_product(productRequestDTO.getName_product());
-        product.setDescription_product(productRequestDTO.getDescription_product());
-        product.setSize_product(productRequestDTO.getSize_product());
-        product.setSale_price_product(productRequestDTO.getSale_price_product());
-        product.setSupplier_price_product(productRequestDTO.getSupplier_price_product());
-        product.setStock_product(productRequestDTO.getStock_product());
-        product.setId_category(productRequestDTO.getId_category());
-        product.setState_product(productRequestDTO.getState_product());
-        
+            // Verificar si existe producto con mismo nombre
+            if (productRepository.existsByNameIgnoreCase(dto.getName())) {
+                throw new ConflictException("El producto ya existe");
+            }
+
+            // Buscar marca si existe
+            Brand brand = findBrand(dto.getBrandId());
+
+            // Crear producto
+            Product product = Product.builder()
+                    .name(dto.getName())
+                    .description(dto.getDescription())
+                    .brand(brand)
+                    .active(true) // al crearse, siempre activo
+                    .build();
+
+            // Crear variantes
+            product.setVariants(buildVariants(dto, product));
+
+            // Subir imágenes a Cloudinary y guardar URLs
+            product.setImages(buildImages(dto, product));
+
+            // Asignar categorías
+            product.setCategories(buildCategories(dto));
+
+            // Guardar producto
+            Product savedProduct = productRepository.save(product);
+
+            // ALERTA SSE: si stock <= minStock
+            checkAndSendStockAlerts(savedProduct);
+
+            return mapToResponse(savedProduct);
+
+        } catch (BadRequestException | ConflictException | ResourceNotFoundException e) {
+            throw e; 
+        } catch (Exception e) {
+            throw new RuntimeException("Error al crear producto: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Actualiza un producto existente.
+     *
+     * @param id  ID del producto
+     * @param dto DTO con los datos actualizados
+     * @return Optional con ProductResponseDTO actualizado si existe
+     */
+    @Transactional
+    public Optional<ProductResponseDTO> updateProduct(UUID id, ProductRequestDTO dto) {
+
+        Optional<Product> optional = productRepository.findById(id);
+        if (optional.isEmpty())
+            return Optional.empty();
+
+        Product product = optional.get();
+
+        try {
+            // Validaciones
+            validateProductRequest(dto);
+
+            // Validar nombre repetido
+            if (!product.getName().equalsIgnoreCase(dto.getName()) &&
+                    productRepository.existsByNameIgnoreCase(dto.getName())) {
+                throw new ConflictException("Ya existe otro producto con el mismo nombre");
+            }
+
+            product.setName(dto.getName());
+            product.setDescription(dto.getDescription());
+
+            // Marca
+            product.setBrand(findBrand(dto.getBrandId()));
+
+            // Variantes
+            product.setVariants(buildVariants(dto, product));
+
+            // Imágenes
+            // Imágenes (solo si llegan nuevas imágenes)
+            if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+
+                if (product.getImages() == null) {
+                    product.setImages(new ArrayList<>());
+                }
+
+                int currentImages = product.getImages().size();
+                int newImagesCount = dto.getImages().size();
+
+                if (currentImages + newImagesCount > 6) {
+                    throw new BadRequestException("No se pueden tener más de 6 imágenes por producto");
+                }
+
+                List<ProductImage> newImages = buildImages(dto, product);
+                product.getImages().addAll(newImages);
+            }
+            // Categorías
+            product.setCategories(buildCategories(dto));
+
+            Product savedProduct = productRepository.save(product);
+
+            // ALERTA SSE: si stock <= minStock
+            checkAndSendStockAlerts(savedProduct);
+
+            return Optional.of(mapToResponse(savedProduct));
+
+        } catch (BadRequestException | ConflictException | ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al actualizar producto: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Lista productos con paginación.
+     *
+     * @param page número de página
+     * @param size cantidad de registros por página
+     * @return lista paginada de productos
+     */
+    @Transactional(readOnly=true)
+    public List<ProductResponseDTO> listProducts(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Product> productPage = productRepository.findAll(pageable);
+
+        return productPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Lista solo productos activos con paginación.
+     *
+     * @param page número de página
+     * @param size cantidad de registros por página
+     * @return lista paginada de productos activos
+     */
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> listActiveProducts(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Product> productPage = productRepository.findByActiveTrue(pageable);
+
+        return productPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Busca producto por ID.
+     *
+     * @param id UUID del producto
+     * @return Optional con producto si existe
+     */
+    @Transactional(readOnly = true)
+    public Optional<ProductResponseDTO> getById(UUID id) {
+        return productRepository.findById(id)
+                .map(this::mapToResponse);
+    }
+
+    /**
+     * Desactiva un producto.
+     *
+     * @param id UUID del producto
+     * @return Optional con producto desactivado si existe
+     */
+    @Transactional
+    public Optional<ProductResponseDTO> inactiveProduct(UUID id) {
+        Optional<Product> optional = productRepository.findById(id);
+        if (optional.isEmpty())
+            return Optional.empty();
+
+        Product product = optional.get();
+        product.setActive(false);
+
         productRepository.save(product);
-
-        ProductResponseDTO response = new ProductResponseDTO();
-        response.setId_product(product.getId_product());
-        response.setName_product(productRequestDTO.getName_product());
-        response.setDescription_product(productRequestDTO.getDescription_product());
-        response.setSize_product(productRequestDTO.getSize_product());
-        response.setSale_price_product(productRequestDTO.getSale_price_product());
-        response.setSupplier_price_product(productRequestDTO.getSupplier_price_product());
-        response.setStock_product(productRequestDTO.getStock_product());
-        response.setId_category(productRequestDTO.getId_category());
-
-        return response;
+        return Optional.of(mapToResponse(product));
     }
 
-    public List<ProductResponseDTO> ListProducts(){
-        List<Product> products = productRepository.findAll();
-        List<ProductResponseDTO> list = new ArrayList<>();
-
-        for(Product product: products){
-            ProductResponseDTO responseDTO = new ProductResponseDTO();
-            responseDTO.setId_product(product.getId_product());
-            responseDTO.setName_product(product.getName_product());
-            responseDTO.setDescription_product(product.getDescription_product());
-            responseDTO.setSize_product(product.getSize_product());
-            responseDTO.setSale_price_product(product.getSale_price_product());
-            responseDTO.setSupplier_price_product(product.getSupplier_price_product());
-            responseDTO.setStock_product(product.getStock_product());
-            responseDTO.setId_category(product.getId_category());
-            list.add(responseDTO);
-        }
-        return list;
-
-    }
-
-    public Optional<ProductResponseDTO> listProdcut(Long id_product){
-        Optional<Product> optionalProduct = productRepository.findById(id_product);
-        
-        if (optionalProduct.isPresent()){
-            Product product = optionalProduct.get();
-            ProductResponseDTO responseDTO = new ProductResponseDTO();
-            responseDTO.setId_product(product.getId_product());
-            responseDTO.setName_product(product.getName_product());
-            responseDTO.setDescription_product(product.getDescription_product());
-            responseDTO.setSize_product(product.getSize_product());
-            responseDTO.setSale_price_product(product.getSale_price_product());
-            responseDTO.setSupplier_price_product(product.getSupplier_price_product());
-            responseDTO.setStock_product(product.getStock_product());
-            responseDTO.setId_category(product.getId_category());
-            return Optional.of(responseDTO);
-        } else {
-
+    /**
+     * Activa un producto.
+     *
+     * @param id UUID del producto
+     * @return Optional con producto activado si existe
+     */
+    @Transactional
+    public Optional<ProductResponseDTO> activeProduct(UUID id) {
+        Optional<Product> optional = productRepository.findById(id);
+        if (optional.isEmpty())
             return Optional.empty();
+
+        Product product = optional.get();
+        product.setActive(true);
+
+        productRepository.save(product);
+        return Optional.of(mapToResponse(product));
+    }
+
+    /**
+     * Listar todos los productos sin restricción.
+     *
+     * @return lista completa de productos
+     */
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> listAllProducts() {
+        return productRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Listar productos que únicamente estén activos en el sistema.
+     *
+     * @return lista completa de productos activos
+     */
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> listAllActiveProducts() {
+        return productRepository.findByActiveTrue().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Listar todos los productos que se hayan creado en un lapso de tiempo de 7 días.
+     *
+     * @return lista de productos nuevos
+     */
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> listNewProducts() {
+        OffsetDateTime oneWeekAgo = OffsetDateTime.now().minusDays(7);
+
+        return productRepository.findByCreatedAtAfter(oneWeekAgo).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Listar los productos nuevos pero que además estén activos en el momento.
+     *
+     * @return lista de productos nuevos activos
+     */
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> listNewActiveProducts() {
+        OffsetDateTime oneWeekAgo = OffsetDateTime.now().minusDays(7);
+
+        return productRepository.findByActiveTrueAndCreatedAtAfter(oneWeekAgo).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Valida campos obligatorios y consistencia del ProductRequestDTO.
+     *
+     * @param dto DTO a validar
+     */
+    private void validateProductRequest(ProductRequestDTO dto) {
+
+        if (dto == null ||
+                dto.getName() == null || dto.getName().isBlank() ||
+                dto.getVariants() == null || dto.getVariants().isEmpty()) {
+
+            throw new BadRequestException("Datos obligatorios faltantes");
         }
-    }
-
-    public Optional<ProductResponseDTO> updateProduct(Long id_product, ProductRequestDTO productRequestDTO){
-        Optional<Product> optionalProduct = productRepository.findById(id_product);
-        
-        if (optionalProduct.isPresent()){
-            Product product = optionalProduct.get();
-            product.setName_product(productRequestDTO.getName_product());
-            product.setDescription_product(productRequestDTO.getDescription_product());
-            product.setSize_product(productRequestDTO.getSize_product());
-            product.setSale_price_product(productRequestDTO.getSale_price_product());
-            product.setSupplier_price_product(productRequestDTO.getSupplier_price_product());
-            product.setStock_product(productRequestDTO.getStock_product());
-            product.setId_category(productRequestDTO.getId_category());
-            product.setState_product(productRequestDTO.getState_product());
-
-            Product updateProduct = productRepository.save(product);
-
-            ProductResponseDTO responseDTO = new ProductResponseDTO();
-            responseDTO.setId_product(updateProduct.getId_product());
-            responseDTO.setName_product(updateProduct.getName_product());
-            responseDTO.setDescription_product(updateProduct.getDescription_product());
-            responseDTO.setSize_product(updateProduct.getSize_product());
-            responseDTO.setSale_price_product(updateProduct.getSale_price_product());
-            responseDTO.setSupplier_price_product(updateProduct.getSupplier_price_product());
-            responseDTO.setStock_product(updateProduct.getStock_product());
-            responseDTO.setId_category(updateProduct.getId_category());
-
-            return Optional.of(responseDTO);
-        } else {
-            return Optional.empty();
+        if (dto.getImages() != null && dto.getImages().size() > 6) {
+            throw new BadRequestException("Solo se permiten máximo 6 imágenes por producto");
         }
+        if (dto.getImages() != null &&
+        dto.getImages().stream().distinct().count() != dto.getImages().size()) {
+        throw new ConflictException("No se permiten imágenes repetidas");
+        }
+
+        dto.getVariants().forEach(v -> {
+
+            if (v.getSku() == null || v.getSku().isBlank()) {
+                throw new BadRequestException("SKU inválido en variantes");
+            }
+
+            if (v.getPrice() == null || v.getPrice().doubleValue() <= 0) {
+                throw new BadRequestException("Precio inválido en variantes");
+            }
+
+            if (v.getStock() == null || v.getStock() < 0) {
+                throw new BadRequestException("Stock inválido en variantes");
+            }
+
+            if (v.getMinStock() == null || v.getMinStock() < 0) {
+                throw new BadRequestException("minStock inválido en variantes");
+            }
+        });
     }
-    
-    public Optional<ProductResponseDTO> deleteProduct(Long id_product){
-    Optional<Product> optionalProduct = productRepository.findById(id_product);
 
-    if(optionalProduct.isPresent()){
-        Product product = optionalProduct.get();
+    /**
+     * Busca y retorna la marca asociada a un producto.
+     *
+     * @param brandId UUID de la marca
+     * @return Brand si existe, o null si no se envió brandId
+     */
+    private Brand findBrand(UUID brandId) {
+        if (brandId == null)
+            return null;
 
-        ProductResponseDTO responseDTO = new ProductResponseDTO();
-        responseDTO.setId_product(product.getId_product());
-        responseDTO.setName_product(product.getName_product());
-        responseDTO.setDescription_product(product.getDescription_product());
-        responseDTO.setSize_product(product.getSize_product());
-        responseDTO.setSale_price_product(product.getSale_price_product());
-        responseDTO.setSupplier_price_product(product.getSupplier_price_product());
-        responseDTO.setStock_product(product.getStock_product());
-        responseDTO.setId_category(product.getId_category());
-
-        productRepository.delete(product);
-
-        return Optional.of(responseDTO);
-    } else {
-        return Optional.empty();
+        return brandRepository.findById(brandId)
+                .orElseThrow(() -> new ResourceNotFoundException("Marca no encontrada"));
     }
+
+    /**
+     * Construye la lista de variantes del producto.
+     *
+     * @param dto DTO de entrada
+     * @param product producto padre
+     * @return lista de variantes
+     */
+    private List<ProductVariant> buildVariants(ProductRequestDTO dto, Product product) {
+
+        return dto.getVariants().stream()
+                .map(v -> ProductVariant.builder()
+                        .sku(v.getSku())
+                        .price(v.getPrice())
+                        .stock(v.getStock())
+                        .minStock(v.getMinStock())
+                        .product(product)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /**
+    * Construye la lista de imágenes del producto.
+    * 
+    * Las imágenes se reciben como URLs (Cloudinary) desde el frontend.
+    * Máximo permitido: 6 imágenes por producto.
+    *
+    * @param dto DTO de entrada
+    * @param product producto padre
+    * @return lista de imágenes
+    */
+    private List<ProductImage> buildImages(ProductRequestDTO dto, Product product) {
+
+    List<ProductImage> images = new ArrayList<>();
+
+    if (dto.getImages() == null || dto.getImages().isEmpty()) {
+        return images;
+    }
+
+    if (dto.getImages().size() > 6) {
+        throw new BadRequestException("Solo se permiten máximo 6 imágenes por producto");
+    }
+
+    dto.getImages().forEach(url -> {
+
+        if (url == null || url.isBlank()) {
+            throw new BadRequestException("URL de imagen inválida");
+        }
+        if (!url.startsWith("https://res.cloudinary.com/")) {
+        throw new BadRequestException("La imagen no pertenece a Cloudinary");
+    }
+
+        ProductImage image = ProductImage.builder()
+                .url(url)
+                .product(product)
+                .build();
+
+        images.add(image);
+    });
+
+    return images;
 }
+
+    /**
+     * Construye la lista de categorías del producto a partir de los IDs enviados.
+     *
+     * @param dto DTO de entrada
+     * @return lista de categorías
+     */
+    private List<Category> buildCategories(ProductRequestDTO dto) {
+
+        if (dto.getCategoryIds() == null || dto.getCategoryIds().isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<Category> categories = categoryRepository.findAllById(dto.getCategoryIds());
+
+        if (categories.isEmpty()) {
+            throw new ResourceNotFoundException("Categorías no encontradas");
+        }
+
+        return categories;
+    }
+
+    /**
+     * Verifica si el producto tiene variantes en stock bajo.
+     * Si el stock es menor o igual al mínimo definido, se dispara una alerta SSE.
+     *
+     * @param product producto guardado
+     */
+    private void checkAndSendStockAlerts(Product product) {
+
+        if (product.getVariants() == null || product.getVariants().isEmpty()) {
+            return;
+        }
+
+        product.getVariants().forEach(variant -> {
+
+            if (variant.getStock() <= variant.getMinStock()) {
+
+                stockAlertService.sendAlert(
+                        StockAlertDTO.builder()
+                                .productId(product.getProductId())
+                                .productName(product.getName())
+                                .variantId(variant.getVariantId())
+                                .sku(variant.getSku())
+                                .stock(variant.getStock())
+                                .minStock(variant.getMinStock())
+                                .message("⚠️ Stock bajo: " + product.getName()
+                                        + " (SKU: " + variant.getSku() + ")")
+                                .timestamp(OffsetDateTime.now())
+                                .build()
+                );
+            }
+        });
+    }
+
+
+
+    /**
+     * Convierte entidad Product a ProductResponseDTO.
+     *
+     * @param product entidad Product
+     * @return ProductResponseDTO
+     */
+    private ProductResponseDTO mapToResponse(Product product) {
+
+        List<ProductVariant> variantList = product.getVariants() == null
+                ? new ArrayList<>()
+                : product.getVariants();
+
+        List<ProductResponseDTO.VariantDTO> variants = variantList.stream()
+                .map(v -> ProductResponseDTO.VariantDTO.builder()
+                        .sku(v.getSku())
+                        .price(v.getPrice())
+                        .stock(v.getStock())
+                        .minStock(v.getMinStock())
+                        .build())
+                .collect(Collectors.toList());
+
+        List<ProductResponseDTO.ImageDTO> images = product.getImages() != null
+                ? product.getImages().stream()
+                        .map(i -> ProductResponseDTO.ImageDTO.builder()
+                                .url(i.getUrl())
+                                .build())
+                        .collect(Collectors.toList())
+                : new ArrayList<>();
+
+        List<String> categories = product.getCategories() != null
+                ? product.getCategories().stream().map(Category::getName).collect(Collectors.toList())
+                        : new ArrayList<>();
+
+        return ProductResponseDTO.builder()
+                .productId(product.getProductId())
+                .name(product.getName())
+                .description(product.getDescription())
+                .brandName(product.getBrand() != null ? product.getBrand().getName() : null)
+                .createdAt(product.getCreatedAt())
+                .status(product.getActive() ? "ACTIVE" : "INACTIVE")
+                .variants(variants)
+                .images(images)
+                .categories(categories)
+                .build();
+    }
 }
