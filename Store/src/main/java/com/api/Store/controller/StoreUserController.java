@@ -16,10 +16,10 @@ import java.util.UUID;
 /**
  * Gestión de usuarios en tiendas.
  *
- * POST   /api/stores/{storeId}/users           → Agregar usuario a la tienda
- * GET    /api/stores/{storeId}/users           → Listar usuarios de una tienda
- * GET    /api/stores/users/{userId}            → Listar tiendas de un usuario
- * GET    /api/stores/{storeId}/access/{userId} → Validar acceso de usuario
+ * POST /api/stores/{storeId}/users → Agregar usuario a la tienda
+ * GET /api/stores/{storeId}/users → Listar usuarios de una tienda
+ * GET /api/stores/users/{userId} → Listar tiendas de un usuario
+ * GET /api/stores/{storeId}/access/{userId} → Validar acceso de usuario
  */
 @RestController
 @RequestMapping("/api/stores")
@@ -29,13 +29,9 @@ public class StoreUserController {
     private final StoreUserService storeUserService;
 
     /** Agregar un usuario a una tienda con un rol específico (ADMIN o STAFF) */
-    @PostMapping("/{storeId}/users")
+    @PostMapping("/users")
     public ResponseEntity<StoreUserResponseDTO> addUserToStore(
-            @PathVariable UUID storeId,
             @Valid @RequestBody StoreUserRequestDTO dto) {
-
-        // El storeId siempre viene del path para evitar inconsistencias
-        dto.setStoreId(storeId);
         return ResponseEntity.status(HttpStatus.CREATED).body(storeUserService.addUserToStore(dto));
     }
 

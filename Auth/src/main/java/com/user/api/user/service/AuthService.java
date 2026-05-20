@@ -372,4 +372,13 @@ public class AuthService {
 
         return response;
     }
+
+    public String getEmailByUserId(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario con ese id no encontrado"));
+
+        String email = user.getEmail();
+
+        return email;
+    }
 }
