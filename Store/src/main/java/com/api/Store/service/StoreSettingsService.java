@@ -53,7 +53,6 @@ public class StoreSettingsService {
     /**
      * Aplica solo los campos no nulos del DTO sobre la entidad (PATCH semántico).
      */
-    @SuppressWarnings("unchecked")
     private void applyChanges(StoreSettings settings, StoreSettingsRequestDTO dto) {
         if (dto.getCompletedStep() != null)
             settings.setCompletedStep(dto.getCompletedStep());

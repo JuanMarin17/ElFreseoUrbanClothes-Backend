@@ -35,4 +35,8 @@ public class Store {
 
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
+
+    @OneToOne(mappedBy = "store", cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = true)
+    private StoreSettings storeSettings;
+
 }

@@ -12,20 +12,26 @@ import java.util.Map;
  *
  * Ejemplo Postman (POST /api/stores/{storeId}/settings):
  * {
- *   "completedStep": 7,
- *   "plan":       { "id": "basico", "name": "BÁSICO", "price": "$19", "features": ["..."] },
- *   "basic":      { "name": "urbana", "description": "...", "logoPreview": "blob:..." },
- *   "components": {
- *     "banner": { "title": "...", "font": "...", "size": "77", "color": "#ff0f0f", "bg": "#c10b0b", "images": [] },
- *     "header": { "logo": "...", "items": ["HOME","SHOP"], "font": "Inter", "size": 16, "color": "#fff", "bg": "#000" },
- *     "footer": { "text": "...", "font": "Montserrat", "size": 14, "color": "#888888", "bg": "#080808" }
- *   },
- *   "layout":  { "id": "clasico", "title": "CLÁSICO ECOMMERCE", "description": "..." },
- *   "legal":   { "legalName": "...", "idNumber": "...", "documentName": "..." },
- *   "payment": { "paymentMethod": "mercadopago", "shipping": "ambos" },
- *   "preview": { ... },
- *   "styles":  { ... },
- *   "store":   { "name": "urbana", "subdomain": "...", "accepted": true }
+ * "completedStep": 7,
+ * "plan": { "id": "basico", "name": "BÁSICO", "price": "$19", "features":
+ * ["..."] },
+ * "basic": { "name": "urbana", "description": "...", "logoPreview": "blob:..."
+ * },
+ * "components": {
+ * "banner": { "title": "...", "font": "...", "size": "77", "color": "#ff0f0f",
+ * "bg": "#c10b0b", "images": [] },
+ * "header": { "logo": "...", "items": ["HOME","SHOP"], "font": "Inter", "size":
+ * 16, "color": "#fff", "bg": "#000" },
+ * "footer": { "text": "...", "font": "Montserrat", "size": 14, "color":
+ * "#888888", "bg": "#080808" }
+ * },
+ * "layout": { "id": "clasico", "title": "CLÁSICO ECOMMERCE", "description":
+ * "..." },
+ * "legal": { "legalName": "...", "idNumber": "...", "documentName": "..." },
+ * "payment": { "paymentMethod": "mercadopago", "shipping": "ambos" },
+ * "preview": { ... },
+ * "styles": { ... },
+ * "store": { "name": "urbana", "subdomain": "...", "accepted": true }
  * }
  */
 @Data
@@ -81,7 +87,10 @@ public class StoreSettingsRequestDTO {
         @NotNull(message = "El nombre básico de la tienda es obligatorio")
         private String name;
         private String description;
-        /** Preview de logo en base64 o blob URL (solo para referencia, no se persiste tal cual) */
+        /**
+         * Preview de logo en base64 o blob URL (solo para referencia, no se persiste
+         * tal cual)
+         */
         private String logoPreview;
     }
 
@@ -120,7 +129,7 @@ public class StoreSettingsRequestDTO {
     public static class FooterSettingsDTO {
         private String text;
         private String font;
-        private Object size;   // puede llegar como int o String desde el frontend
+        private String size; // Unificado a String
         private String color;
         private String bg;
     }

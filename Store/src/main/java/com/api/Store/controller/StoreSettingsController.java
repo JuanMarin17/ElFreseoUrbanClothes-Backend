@@ -103,6 +103,7 @@ public class StoreSettingsController {
     }
 
     /**
+    private final com.api.Store.util.HeaderUtil headerUtil;
      * Guardar o actualizar la configuración de la tienda.
      * Semántica PATCH: solo se actualizan los campos que vengan en el body.
      */

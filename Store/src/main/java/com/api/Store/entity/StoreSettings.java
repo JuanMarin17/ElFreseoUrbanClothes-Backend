@@ -69,4 +69,9 @@ public class StoreSettings {
 
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    @OneToOne
+    @MapsId
+    @JoinColumn(name = "store_id")
+    private Store store;
 }
