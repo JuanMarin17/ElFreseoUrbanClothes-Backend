@@ -1,6 +1,5 @@
 package com.api.Users.controller;
 
-import java.util.Enumeration;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -11,9 +10,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
-
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -47,7 +43,7 @@ public class UserController {
         UserDTO response = userService.myProfile();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
-    
+
     @PutMapping("/update")
     public ResponseEntity<MessageResponseDTO> updateUser(
             @RequestHeader("X-User-Id") String userId,
@@ -56,6 +52,7 @@ public class UserController {
         MessageResponseDTO response = userService.updateUser(UUID.fromString(userId), userDTO);
         return ResponseEntity.status(response.getStatus()).body(response);
     }
+
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> getUserById(@PathVariable("id") UUID id) {
         UserDTO response = userService.getUserById(id);
