@@ -22,8 +22,9 @@ spring:
           uri: http://localhost:8083
           predicates:
             - Path=/api/v1/users/me,
-                  /api/v1/users/update,
-                  /api/v1/users/{id}
+              /api/v1/users/createUser,
+              /api/v1/users/update,
+              /api/v1/users/{id}
           filters:
             - JwtValidationFilter
 server:
