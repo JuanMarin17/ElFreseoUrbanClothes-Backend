@@ -1,5 +1,6 @@
 package com.api.Users.controller;
 
+import java.util.Enumeration;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -10,6 +11,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,7 +37,7 @@ public class UserController {
     }
 
     @GetMapping("/myUserName/{id}")
-    public ResponseEntity<String> getNameById(@PathVariable("id") UUID id){
+    public ResponseEntity<String> getNameById(@PathVariable("id") UUID id) {
         String userName = userService.getNameById(id);
         return ResponseEntity.status(HttpStatus.OK).body(userName);
     }
