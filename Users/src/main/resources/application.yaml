@@ -1,5 +1,7 @@
 server:
   port: 8083
+  servlet:
+    context-path: /api/v1
 
 spring:
   application:
@@ -20,10 +22,10 @@ spring:
         format_sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka
+# eureka:
+#   client:
+#     service-url:
+#       defaultZone: http://localhost:8761/eureka
 
   instance:
     prefer-ip-address: true
@@ -37,3 +39,7 @@ management:
   endpoint:
     health:
       show-details: always
+
+auth:
+  service:
+    url: http://localhost:8082/api/v1

@@ -120,6 +120,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Agregar antes del cierre de </dependencies> -->
+        <dependency>
+            <groupId>common-request-context-starter</groupId>
+            <artifactId>request-context-starter</artifactId>
+            <version>1.0.0</version>
+        </dependency>
 
     </dependencies>
 
