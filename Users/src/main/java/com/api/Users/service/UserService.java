@@ -1,11 +1,14 @@
 package com.api.Users.service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.api.Users.client.AuthClient;
 import com.api.Users.dto.MessageResponseDTO;
 import com.api.Users.dto.UserDTO;
+import com.api.Users.dto.UserResponseDTO;
 import com.api.Users.entity.User;
 import com.api.Users.exception.BadRequestException;
 import com.api.Users.exception.UnauthorizedUserException;
@@ -21,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 @Data
 public class UserService {
     private final UserRepository userRepository;
+    private final AuthClient authClient;
 
     /**
      * Metodo para crear usuario con foto de perfil
@@ -65,15 +69,15 @@ public class UserService {
 
         return userName;
     }
-  
+
     /**
      * Obtiene la información del perfil del usuario autenticado
      * usando el ID enviado en el header X-User-Id.
      *
      * @return datos básicos del usuario autenticado
      */
-    public UserDTO myProfile() {
-        String userIdHeader = RequestContext.getHeader("X-User-Id");
+    public UserResponseDTO myProfile() {
+        String userIdHeader = RequestContext.getHeader("x-user-id");
 
         if (userIdHeader == null) {
             throw new UnauthorizedUserException("Usuario no autenticado");
@@ -82,16 +86,20 @@ public class UserService {
         UUID userId;
         try {
             userId = UUID.fromString(userIdHeader);
+            System.out.println(userId);
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Formato invalido del userId");
         }
+
+        String userEmail = authClient.getEmail(userId);
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        UserDTO response = new UserDTO();
+        UserResponseDTO response = new UserResponseDTO();
 
         response.setUserId(userId);
         response.setUserName(user.getUserName());
         response.setPhone(user.getPhone());
+        response.setUserEmail(userEmail);
         response.setImageProfile(user.getImageProfile());
 
         return response;
@@ -106,7 +114,15 @@ public class UserService {
      * @param userDTO
      * @return
      */
-    public MessageResponseDTO updateUser(UUID userId, UserDTO userDTO) {
+    public MessageResponseDTO updateUser(UserDTO userDTO) {
+        String userIdHeader = RequestContext.getHeader("x-user-id");
+
+        UUID userId;
+        try{
+            userId = UUID.fromString(userIdHeader);
+        } catch(Exception e){
+            throw new RuntimeException("Formato de id invalido " + e.getMessage());
+        }
 
         User userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
@@ -144,18 +160,35 @@ public class UserService {
      * @param userId
      * @return datos básicos del usuario encontrado
      */
-    public UserDTO getUserById(UUID userId) {
+    public UserResponseDTO getUserById(UUID userId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+        if(userId == null){
+            throw new RuntimeException("El id del usuario es obligatorio");
+        }
 
-        UserDTO response = new UserDTO();
-        response.setUserId(user.getUserId());
+        String userEmail = authClient.getEmail(userId);
+
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        UserResponseDTO response = new UserResponseDTO();
+
+        response.setUserId(userId);
         response.setUserName(user.getUserName());
         response.setPhone(user.getPhone());
+        response.setUserEmail(userEmail);
         response.setImageProfile(user.getImageProfile());
 
         return response;
+    }
+
+    public Boolean existUser(UUID id){
+        Optional<User> user = userRepository.findById(id);
+
+        if(user.isEmpty()){
+            return false;
+        }
+
+        return true;
     }
 
 }

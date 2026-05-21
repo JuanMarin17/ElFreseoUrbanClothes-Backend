@@ -35,4 +35,9 @@ public class StoreController {
     public ResponseEntity<StoreResponseDTO> getStore(@PathVariable UUID storeId) {
         return ResponseEntity.ok(storeService.getStoreById(storeId));
     }
+
+    @GetMapping("/existStore/{id}")
+    public ResponseEntity<Boolean> existStore(@PathVariable UUID storeId){
+        return ResponseEntity.status(HttpStatus.OK).body(storeService.existStore(storeId));
+    }
 }
