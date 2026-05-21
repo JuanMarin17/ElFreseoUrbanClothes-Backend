@@ -15,12 +15,9 @@ spring:
               /api/v1/auth/login,
               /api/v1/auth/loginSecondStep,
               /api/v1/auth/forgotPassword,
-<<<<<<< HEAD
               /api/v1/auth/forgotPasswordSecondStep
-=======
               /api/v1/auth/forgotPasswordSecondStep,
               /api/v1/auth/deactivateAccount,
->>>>>>> 39a86a44966c35c642d5a12aa1f80ebdb32484d7
 
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
@@ -61,6 +58,36 @@ spring:
           filters:
             - JwtValidationFilter
 
+        - id: supplier-routes
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/v1/suppliers/**
+          filters:
+            - JwtValidationFilter
+
+        - id: support-routes
+          uri: http://localhost:8088
+          predicates:
+            - Path=/api/v1/support/**
+          filters:
+            - JwtValidationFilter
+
+        - id: preferences-routes
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/v1/reviews/**,
+              /api/v1/wishlist/**,
+              /api/v1/preferences/**
+          filters:
+            - JwtValidationFilter
+
+        - id: inventory-routes
+          uri: http://localhost:8089
+          predicates:
+            - Path=/api/v1/inventory/**,
+              /api/v1/locations/**
+          filters:
+            - JwtValidationFilter
 server:
   port: 8080
 

@@ -12,8 +12,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import jakarta.validation.Valid;
 
-import org.springframework.web.bind.annotation.RequestHeader;
-
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -60,10 +58,6 @@ public class UserController {
     @GetMapping("/getUserById/{id}")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable("id") UUID id) {
         UserResponseDTO response = userService.getUserById(id);
-
-    @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable("id") UUID id) {
-        UserDTO response = userService.getUserById(id);
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
