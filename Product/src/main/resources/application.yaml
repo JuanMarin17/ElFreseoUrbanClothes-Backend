@@ -3,10 +3,10 @@ spring:
     name: product
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/product
-    username: postgres
-    password: root
     driver-class-name: org.postgresql.Driver
+    url: ${DB_URL} # Se lee desde .env
+    username: ${DB_USER} # Se lee desde .env
+    password: ${DB_PASSWORD} # Se lee desde .env
 
   jpa:
     hibernate:
@@ -18,6 +18,11 @@ spring:
         format_sql: true
 
 server:
-  port: 8084 # Se lee desde .env
+  port: ${SERVER_PORT} # Se lee desde .env
   servlet:
     context-path: /api/v1
+
+cloudinary:
+  cloud_name: ${NAME_CLOUD} # Se lee desde .env
+  api_key: ${KEY_CLOUD} # Se lee desde .env
+  api_secret: ${SECRET_CLOUD} # Se lee desde .env

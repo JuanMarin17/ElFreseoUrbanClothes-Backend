@@ -44,39 +44,60 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final StockAlertService stockAlertService;
 
-    // ─── Crear producto ───────────────────────────────────────────────────────
-
+    /**
+     * Crea un nuevo producto en la base de datos.
+     * Valida campos obligatorios, crea variantes, imágenes y categorías.
+     *
+     * Las imágenes se reciben como URLs (subidas previamente desde el frontend a Cloudinary).
+     * Se permite un máximo de 6 imágenes por producto.
+     *
+     * También verifica si alguna variante está en stock mínimo y dispara una alerta SSE.
+     *
+     * @param dto DTO con los datos del producto a crear
+     * @return ProductResponseDTO con los datos del producto creado
+     */
     @Transactional
     public ProductResponseDTO createProduct(ProductRequestDTO dto) {
+        try {
+            validateProductRequest(dto);
 
-        validateProductRequest(dto);
+            if (productRepository.existsByNameIgnoreCase(dto.getName())) {
+                throw new ConflictException("Ya existe un producto con ese nombre");
+            }
 
-        if (productRepository.existsByNameIgnoreCase(dto.getName())) {
-            throw new ConflictException("Ya existe un producto con ese nombre");
+            Brand brand = findBrand(dto.getBrandId());
+
+            Product product = Product.builder()
+                    .name(dto.getName())
+                    .description(dto.getDescription())
+                    .brand(brand)
+                    .active(true)
+                    .build();
+
+            product.setVariants(buildVariants(dto, product));
+            product.setImages(buildImages(dto, product));
+            product.setCategories(buildCategories(dto));
+
+            Product savedProduct = productRepository.save(product);
+
+            sendStockAlertsIfNeeded(savedProduct);
+
+            return mapToResponse(savedProduct);
+
+        } catch (BadRequestException | ConflictException | ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al crear producto: " + e.getMessage(), e);
         }
-
-        Brand brand = findBrand(dto.getBrandId());
-
-        Product product = Product.builder()
-                .name(dto.getName())
-                .description(dto.getDescription())
-                .brand(brand)
-                .active(true)
-                .build();
-
-        product.setVariants(buildVariants(dto, product));
-        product.setImages(buildImages(dto, product));
-        product.setCategories(buildCategories(dto));
-
-        Product saved = productRepository.save(product);
-
-        sendStockAlertsIfNeeded(saved);
-
-        return mapToResponse(saved);
     }
 
-    // ─── Actualizar producto ──────────────────────────────────────────────────
-
+    /**
+     * Actualiza un producto existente.
+     *
+     * @param id  ID del producto
+     * @param dto DTO con los datos actualizados
+     * @return Optional con ProductResponseDTO actualizado si existe
+     */
     @Transactional
     public Optional<ProductResponseDTO> updateProduct(UUID id, ProductRequestDTO dto) {
 
@@ -86,47 +107,59 @@ public class ProductService {
 
         Product product = optional.get();
 
-        validateProductRequest(dto);
+        try {
+            validateProductRequest(dto);
 
-        // Verificar nombre duplicado solo si cambió
-        if (!product.getName().equalsIgnoreCase(dto.getName()) &&
-                productRepository.existsByNameIgnoreCase(dto.getName())) {
-            throw new ConflictException("Ya existe otro producto con ese nombre");
-        }
-
-        product.setName(dto.getName());
-        product.setDescription(dto.getDescription());
-        product.setBrand(findBrand(dto.getBrandId()));
-        product.setVariants(buildVariants(dto, product));
-        product.setCategories(buildCategories(dto));
-
-        // Imágenes: solo agregar las nuevas, sin superar el límite de 6
-        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
-            if (product.getImages() == null) {
-                product.setImages(new ArrayList<>());
+            if (!product.getName().equalsIgnoreCase(dto.getName()) &&
+                    productRepository.existsByNameIgnoreCase(dto.getName())) {
+                throw new ConflictException("Ya existe otro producto con el mismo nombre");
             }
 
-            int actuales = product.getImages().size();
-            int nuevas = dto.getImages().size();
+            product.setName(dto.getName());
+            product.setDescription(dto.getDescription());
+            product.setBrand(findBrand(dto.getBrandId()));
+            product.setVariants(buildVariants(dto, product));
 
-            if (actuales + nuevas > 6) {
-                throw new BadRequestException(
-                        "No se pueden tener más de 6 imágenes por producto. " +
-                                "Actualmente tiene " + actuales + " y estás agregando " + nuevas + ".");
+            // Imágenes: solo agregar las nuevas, sin superar el límite de 6
+            if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+                if (product.getImages() == null) {
+                    product.setImages(new ArrayList<>());
+                }
+
+                int currentImages = product.getImages().size();
+                int newImagesCount = dto.getImages().size();
+
+                if (currentImages + newImagesCount > 6) {
+                    throw new BadRequestException(
+                            "No se pueden tener más de 6 imágenes por producto. " +
+                                    "Actualmente tiene " + currentImages + " y estás agregando " + newImagesCount + ".");
+                }
+
+                product.getImages().addAll(buildImages(dto, product));
             }
 
-            product.getImages().addAll(buildImages(dto, product));
+            product.setCategories(buildCategories(dto));
+
+            Product savedProduct = productRepository.save(product);
+
+            sendStockAlertsIfNeeded(savedProduct);
+
+            return Optional.of(mapToResponse(savedProduct));
+
+        } catch (BadRequestException | ConflictException | ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al actualizar producto: " + e.getMessage(), e);
         }
-
-        Product saved = productRepository.save(product);
-
-        sendStockAlertsIfNeeded(saved);
-
-        return Optional.of(mapToResponse(saved));
     }
 
-    // ─── Consultas ────────────────────────────────────────────────────────────
-
+    /**
+     * Lista productos con paginación.
+     *
+     * @param page número de página
+     * @param size cantidad de registros por página
+     * @return lista paginada de productos
+     */
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> listProducts(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -136,6 +169,13 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Lista solo productos activos con paginación.
+     *
+     * @param page número de página
+     * @param size cantidad de registros por página
+     * @return lista paginada de productos activos
+     */
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> listActiveProducts(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -144,27 +184,61 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Busca producto por ID.
+     *
+     * @param id UUID del producto
+     * @return Optional con producto si existe
+     */
     @Transactional(readOnly = true)
     public Optional<ProductResponseDTO> getById(UUID id) {
-        return productRepository.findById(id).map(this::mapToResponse);
+        return productRepository.findById(id)
+                .map(this::mapToResponse);
     }
 
+    /**
+     * Desactiva un producto.
+     *
+     * @param id UUID del producto
+     * @return Optional con producto desactivado si existe
+     */
     @Transactional
     public Optional<ProductResponseDTO> inactiveProduct(UUID id) {
-        return productRepository.findById(id).map(product -> {
-            product.setActive(false);
-            return mapToResponse(productRepository.save(product));
-        });
+        Optional<Product> optional = productRepository.findById(id);
+        if (optional.isEmpty())
+            return Optional.empty();
+
+        Product product = optional.get();
+        product.setActive(false);
+
+        productRepository.save(product);
+        return Optional.of(mapToResponse(product));
     }
 
+    /**
+     * Activa un producto.
+     *
+     * @param id UUID del producto
+     * @return Optional con producto activado si existe
+     */
     @Transactional
     public Optional<ProductResponseDTO> activeProduct(UUID id) {
-        return productRepository.findById(id).map(product -> {
-            product.setActive(true);
-            return mapToResponse(productRepository.save(product));
-        });
+        Optional<Product> optional = productRepository.findById(id);
+        if (optional.isEmpty())
+            return Optional.empty();
+
+        Product product = optional.get();
+        product.setActive(true);
+
+        productRepository.save(product);
+        return Optional.of(mapToResponse(product));
     }
 
+    /**
+     * Listar todos los productos sin restricción.
+     *
+     * @return lista completa de productos
+     */
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> listAllProducts() {
         return productRepository.findAll().stream()
@@ -172,6 +246,11 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Listar productos que únicamente estén activos en el sistema.
+     *
+     * @return lista completa de productos activos
+     */
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> listAllActiveProducts() {
         return productRepository.findByActiveTrue().stream()
@@ -179,24 +258,39 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Listar todos los productos creados en los últimos 7 días.
+     *
+     * @return lista de productos nuevos
+     */
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> listNewProducts() {
-        OffsetDateTime hace7Dias = OffsetDateTime.now().minusDays(7);
-        return productRepository.findByCreatedAtAfter(hace7Dias).stream()
+        OffsetDateTime oneWeekAgo = OffsetDateTime.now().minusDays(7);
+        return productRepository.findByCreatedAtAfter(oneWeekAgo).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Listar los productos nuevos que además estén activos.
+     *
+     * @return lista de productos nuevos activos
+     */
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> listNewActiveProducts() {
-        OffsetDateTime hace7Dias = OffsetDateTime.now().minusDays(7);
-        return productRepository.findByActiveTrueAndCreatedAtAfter(hace7Dias).stream()
+        OffsetDateTime oneWeekAgo = OffsetDateTime.now().minusDays(7);
+        return productRepository.findByActiveTrueAndCreatedAtAfter(oneWeekAgo).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     // ─── Helpers privados ─────────────────────────────────────────────────────
 
+    /**
+     * Valida campos obligatorios y consistencia del ProductRequestDTO.
+     *
+     * @param dto DTO a validar
+     */
     private void validateProductRequest(ProductRequestDTO dto) {
 
         if (dto == null ||
@@ -226,6 +320,12 @@ public class ProductService {
         });
     }
 
+    /**
+     * Busca y retorna la marca asociada a un producto.
+     *
+     * @param brandId UUID de la marca
+     * @return Brand si existe, o null si no se envió brandId
+     */
     private Brand findBrand(UUID brandId) {
         if (brandId == null)
             return null;
@@ -233,6 +333,13 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Marca no encontrada con ID: " + brandId));
     }
 
+    /**
+     * Construye la lista de variantes del producto.
+     *
+     * @param dto     DTO de entrada
+     * @param product producto padre
+     * @return lista de variantes
+     */
     private List<ProductVariant> buildVariants(ProductRequestDTO dto, Product product) {
         return dto.getVariants().stream()
                 .map(v -> ProductVariant.builder()
@@ -245,14 +352,27 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Construye la lista de imágenes del producto.
+     *
+     * Las imágenes se reciben como URLs (Cloudinary) desde el frontend.
+     * Máximo permitido: 6 imágenes por producto.
+     *
+     * @param dto     DTO de entrada
+     * @param product producto padre
+     * @return lista de imágenes
+     */
     private List<ProductImage> buildImages(ProductRequestDTO dto, Product product) {
         if (dto.getImages() == null || dto.getImages().isEmpty()) {
             return new ArrayList<>();
         }
+
         return dto.getImages().stream()
                 .map(url -> {
                     if (url == null || url.isBlank())
                         throw new BadRequestException("Se recibió una URL de imagen vacía");
+                    if (!url.startsWith("https://res.cloudinary.com/"))
+                        throw new BadRequestException("La imagen no pertenece a Cloudinary");
                     return ProductImage.builder()
                             .url(url)
                             .product(product)
@@ -261,6 +381,12 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Construye la lista de categorías del producto a partir de los IDs enviados.
+     *
+     * @param dto DTO de entrada
+     * @return lista de categorías
+     */
     private List<Category> buildCategories(ProductRequestDTO dto) {
         if (dto.getCategoryIds() == null || dto.getCategoryIds().isEmpty()) {
             return new ArrayList<>();
@@ -273,9 +399,10 @@ public class ProductService {
     }
 
     /**
-     * Envía alertas de stock bajo de forma segura:
-     * si el servicio de alertas falla, solo loguea el error y no rompe la
-     * transacción.
+     * Envía alertas de stock bajo de forma segura.
+     * Si el servicio de alertas falla, solo loguea el error y no rompe la transacción.
+     *
+     * @param product producto guardado
      */
     private void sendStockAlertsIfNeeded(Product product) {
         if (product.getVariants() == null || product.getVariants().isEmpty())
@@ -305,18 +432,26 @@ public class ProductService {
         });
     }
 
+    /**
+     * Convierte entidad Product a ProductResponseDTO.
+     *
+     * @param product entidad Product
+     * @return ProductResponseDTO
+     */
     private ProductResponseDTO mapToResponse(Product product) {
 
-        List<ProductResponseDTO.VariantDTO> variants = product.getVariants() != null
-                ? product.getVariants().stream()
-                        .map(v -> ProductResponseDTO.VariantDTO.builder()
-                                .sku(v.getSku())
-                                .price(v.getPrice())
-                                .stock(v.getStock())
-                                .minStock(v.getMinStock())
-                                .build())
-                        .collect(Collectors.toList())
-                : new ArrayList<>();
+        List<ProductVariant> variantList = product.getVariants() == null
+                ? new ArrayList<>()
+                : product.getVariants();
+
+        List<ProductResponseDTO.VariantDTO> variants = variantList.stream()
+                .map(v -> ProductResponseDTO.VariantDTO.builder()
+                        .sku(v.getSku())
+                        .price(v.getPrice())
+                        .stock(v.getStock())
+                        .minStock(v.getMinStock())
+                        .build())
+                .collect(Collectors.toList());
 
         List<ProductResponseDTO.ImageDTO> images = product.getImages() != null
                 ? product.getImages().stream()
