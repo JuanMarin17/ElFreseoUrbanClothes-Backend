@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: cart
+
+server:
+  port: 8086
+  servlet:
+    context-path: /api/v1
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cart
+    username: postgres
+    password: root
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  jackson:
+    serialization:
+      INDENT_OUTPUT: true
+
+  sql:
+    init:
+      mode: always
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+security:
+  jwt:
+    secret-key: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
