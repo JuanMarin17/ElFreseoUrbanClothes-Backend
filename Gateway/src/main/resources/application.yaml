@@ -56,6 +56,14 @@ spring:
               /api/v1/preferences/**
           filters:
             - JwtValidationFilter
+
+        - id: inventory-routes
+          uri: http://localhost:8089
+          predicates:
+            - Path=/api/v1/inventory/**,
+              /api/v1/locations/**
+          filters:
+            - JwtValidationFilter
 server:
   port: 8080
 
