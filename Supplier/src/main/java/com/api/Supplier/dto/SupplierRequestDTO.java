@@ -1,14 +1,14 @@
 package com.api.Supplier.dto;
 
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class UpdateSupplierRequest {
+public class SupplierRequestDTO {
+
+    @NotBlank(message = "El nombre es obligatorio")
     private String name;
+
     private String contactName;
     private String phone;
     private String email;
