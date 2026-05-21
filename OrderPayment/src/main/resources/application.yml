@@ -6,7 +6,7 @@ spring:
     name: order-payment-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/order_payment_db
+    url: jdbc:postgresql://localhost:5432/order_payment
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
