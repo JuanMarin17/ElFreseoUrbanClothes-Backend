@@ -15,7 +15,12 @@ spring:
               /api/v1/auth/login,
               /api/v1/auth/loginSecondStep,
               /api/v1/auth/forgotPassword,
+<<<<<<< HEAD
               /api/v1/auth/forgotPasswordSecondStep
+=======
+              /api/v1/auth/forgotPasswordSecondStep,
+              /api/v1/auth/deactivateAccount,
+>>>>>>> 39a86a44966c35c642d5a12aa1f80ebdb32484d7
 
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
@@ -49,7 +54,10 @@ spring:
         - id: users-routes
           uri: http://localhost:8083
           predicates:
-            - Path=/api/v1/users/me
+            - Path=/api/v1/users/me,
+              /api/v1/users/createUser,
+              /api/v1/users/update,
+              /api/v1/users/{id}
           filters:
             - JwtValidationFilter
 
