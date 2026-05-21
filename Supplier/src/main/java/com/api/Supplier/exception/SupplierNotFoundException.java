@@ -5,7 +5,4 @@ public class SupplierNotFoundException extends RuntimeException {
         super(message);
     }
 
-    public SupplierNotFoundException(String message) {
-        super(message);
-    }
 }
