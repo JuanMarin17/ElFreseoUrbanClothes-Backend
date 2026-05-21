@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import jakarta.validation.Valid;
+
+import org.springframework.web.bind.annotation.RequestHeader;
+
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -44,7 +47,7 @@ public class UserController {
         UserResponseDTO response = userService.myProfile();
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
-    
+
     @PutMapping("/update")
     public ResponseEntity<MessageResponseDTO> updateUser(
             @RequestBody UserDTO userDTO) {
@@ -53,9 +56,15 @@ public class UserController {
         return ResponseEntity.status(response.getStatus()).body(response);
     }
 
+
     @GetMapping("/getUserById/{id}")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable("id") UUID id) {
         UserResponseDTO response = userService.getUserById(id);
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDTO> getUserById(@PathVariable("id") UUID id) {
+        UserDTO response = userService.getUserById(id);
+
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
