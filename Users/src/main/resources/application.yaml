@@ -39,3 +39,7 @@ management:
   endpoint:
     health:
       show-details: always
+
+auth:
+  service:
+    url: http://localhost:8082/api/v1

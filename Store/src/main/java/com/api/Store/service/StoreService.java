@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -69,5 +70,15 @@ public class StoreService {
                 .message(message)
                 .status(status)
                 .build();
+    }
+
+    public Boolean existStore(UUID storeId) {
+        Optional<Store> store = storeRepository.findById(storeId);
+
+        if (store.isEmpty()) {
+            return false;
+        }
+
+        return true; 
     }
 }
