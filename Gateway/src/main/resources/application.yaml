@@ -5,7 +5,7 @@ spring:
   cloud:
     gateway:
       routes:
-        # Rutas públicas — no requieren JWT
+        # ── Auth (público) ────────────────────────────────────────────────────
         - id: auth-routes
           uri: http://localhost:8082
           predicates:
@@ -15,15 +15,39 @@ spring:
               /api/v1/auth/login,
               /api/v1/auth/loginSecondStep,
               /api/v1/auth/forgotPassword,
+              /api/v1/auth/forgotPasswordSecondStep
               /api/v1/auth/forgotPasswordSecondStep,
               /api/v1/auth/deactivateAccount,
 
+        # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
           uri: http://localhost:8081
           predicates:
             - Path=/api/stores,
               /api/stores/**
 
+        - id: product-routes
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/products,
+              /api/v1/products/**,
+              /api/v1/categories/**,
+              /api/v1/brands/**
+
+        # ── Alertas de stock SSE ──────────────────────────────────────────────
+        - id: stock-alert-routes
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/alerts/stock/stream
+
+        # ── Variantes ─────────────────────────────────────────────────────────
+        - id: variant-routes
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/variants,
+              /api/v1/variants/**
+
+        # ── Usuarios (requiere JWT) ───────────────────────────────────────────
         - id: users-routes
           uri: http://localhost:8083
           predicates:

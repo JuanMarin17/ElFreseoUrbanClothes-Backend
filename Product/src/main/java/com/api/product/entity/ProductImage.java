@@ -28,6 +28,9 @@ public class ProductImage {
     @Column(name = "image_id")
     private UUID imageId;
 
+    // TEXT en PostgreSQL no tiene límite de caracteres.
+    // Soporta tanto URLs de Cloudinary (cortas) como base64 (largas).
+    @Column(name = "url", columnDefinition = "TEXT", nullable = false)
     private String url;
 
     @ManyToOne
