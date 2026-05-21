@@ -1,18 +1,15 @@
-package com.apiSupport.dto;
+package com.api.Support.dto;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
-import lombok.Builder;
 import lombok.Data;
 
 @Data
-@Builder
-public class MessageResponse {
-
+public class MessageResponseDTO {
     private UUID messageId;
     private UUID ticketId;
     private UUID senderId;
     private String message;
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 }

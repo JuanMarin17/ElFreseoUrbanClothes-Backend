@@ -33,6 +33,13 @@ spring:
               /api/v1/users/{id}
           filters:
             - JwtValidationFilter
+
+        - id: supplier-routes
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/v1/suppliers/**
+          filters:
+            - JwtValidationFilter
 server:
   port: 8080
 

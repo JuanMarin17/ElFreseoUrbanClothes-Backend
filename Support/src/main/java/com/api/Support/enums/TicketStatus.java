@@ -1,8 +1,7 @@
-package com.apiSupport.entity;
+package com.api.Support.enums;
 
 public enum TicketStatus {
     OPEN,
     IN_PROGRESS,
-    RESOLVED,
     CLOSED
 }
