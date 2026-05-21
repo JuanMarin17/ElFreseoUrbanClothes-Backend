@@ -1,4 +1,4 @@
-package com.apiPreferences;
+package com.api.Preferences;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
