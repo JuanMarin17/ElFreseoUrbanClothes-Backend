@@ -1,8 +1,6 @@
-spring:
-  application:
-    name: Store
 server:
-  port: 8081   # cambia si usas gateway u otros servicios
+  port: 8081
+
 
 spring:
   application:
@@ -41,3 +39,7 @@ logging:
 security:
     jwt:
       secret-key: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+
+users:
+  service:
+    url: http://localhost:8083/api/v1

@@ -32,7 +32,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
 
         request.setAttribute("userName", userName);
         request.setAttribute("user_id", UUID.fromString(userId));
-        request.setAttribute("role_id", roleId);
+        request.setAttribute("role", roleId);
 
         filterChain.doFilter(request, response);
     }
@@ -47,6 +47,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
                 path.contains("/refreshToken") ||
                 path.contains("/resendVerificationCode") || 
                 path.contains("/forgotPassword") ||
-                path.contains("/forgotPasswordSecondStep");
+                path.contains("/forgotPasswordSecondStep") ||
+                path.contains("/getEmailById");
     }
 }

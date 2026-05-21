@@ -43,7 +43,7 @@ public class JwtService {
         return Jwts.builder()
                 .claims(Map.of(
                         "user_id", userId,
-                        "rol", rolId)) // Playload
+                        "role", rolId)) // Playload
                 .subject(fullName) // Quien es el usuario
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + tokenExpiration))
@@ -118,7 +118,7 @@ public class JwtService {
      * @return
      */
     public String extractRol(String token) {
-        return extractClaims(token, claims -> claims.get("rol_id", String.class));
+        return extractClaims(token, claims -> claims.get("role", String.class));
     }
 
     /**
@@ -140,7 +140,7 @@ public class JwtService {
             throw new RuntimeException("Token is invalid " + e.getMessage());
         }
 
-        return generateToken(claims.get("user_id", UUID.class), claims.getSubject(), claims.get("rol_id", String.class));
+        return generateToken(claims.get("user_id", UUID.class), claims.getSubject(), claims.get("role", String.class));
     }
 
 }

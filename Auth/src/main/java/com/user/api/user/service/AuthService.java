@@ -3,6 +3,7 @@ package com.user.api.user.service;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -10,6 +11,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.common_request_context_starter.context.RequestContext;
 import com.user.api.user.client.UsersClient;
 import com.user.api.user.dto.EmailRequestDTO;
 import com.user.api.user.dto.ForgotPasswordRequestDTO;
@@ -19,18 +21,17 @@ import com.user.api.user.dto.MessageResponseDTO;
 import com.user.api.user.dto.UserRegisterDTO;
 import com.user.api.user.dto.UserRequestDTO;
 import com.user.api.user.dto.ValidationCodeDTO;
+import com.user.api.user.entity.Role;
+import com.user.api.user.entity.SecretKey;
 import com.user.api.user.entity.User;
 import com.user.api.user.exception.IncorrectCredentialsException;
 import com.user.api.user.exception.InvalidOtpException;
 import com.user.api.user.exception.RoleNotFoundException;
 import com.user.api.user.exception.UserAlreadyExistsException;
 import com.user.api.user.exception.UserNotFoundException;
-import com.user.api.user.entity.Role;
-import com.user.api.user.entity.SecretKey;
-import com.user.api.user.repository.UserRepository;
-
 import com.user.api.user.repository.RoleRepository;
 import com.user.api.user.repository.SecretKeyRepository;
+import com.user.api.user.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -106,11 +107,13 @@ public class AuthService {
         return true;
     }
 
-    public MessageResponseDTO resendVerificationCode(EmailRequestDTO email){
+    public MessageResponseDTO resendVerificationCode(EmailRequestDTO email) {
 
-        User user = userRepository.findByEmail(email.getEmail()).orElseThrow(() -> new UserAlreadyExistsException("Usuario con este correo inexistente"));
+        User user = userRepository.findByEmail(email.getEmail())
+                .orElseThrow(() -> new UserAlreadyExistsException("Usuario con este correo inexistente"));
 
-        SecretKey secretKey = secretKeyRepository.findByUser(user).orElseThrow(()-> new RuntimeException("Este usuario no tiene una llave de configuración"));
+        SecretKey secretKey = secretKeyRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Este usuario no tiene una llave de configuración"));
 
         String newCode = otpService.generateOtp(secretKey.getSecretKey());
         secretKey.setCode(passwordEncoder.encode(newCode));
@@ -224,10 +227,9 @@ public class AuthService {
         String userName = usersClient.getUserName(user.getUser_id());
 
         String token = jwtService.generateToken(
-            user.getUser_id(),
-            userName,
-            role.getName()
-        );
+                user.getUser_id(),
+                userName,
+                role.getName());
 
         mailSender.send(sendEmail);
 
@@ -276,20 +278,21 @@ public class AuthService {
      * @param validationCodeDTO
      * @return
      */
-    public JwtResponseDTO loginSecondStep(ValidationCodeDTO validationCodeDTO){
-        User user = userRepository.findByEmail(validationCodeDTO.getEmail()).orElseThrow(()-> new UserNotFoundException("Usuario no encontrado"));
+    public JwtResponseDTO loginSecondStep(ValidationCodeDTO validationCodeDTO) {
+        User user = userRepository.findByEmail(validationCodeDTO.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         Role role = user.getRoles().iterator().next();
 
         Boolean isValid = validateCode(validationCodeDTO);
 
-        if(!isValid){
+        if (!isValid) {
             throw new InvalidOtpException("El codigo que ingreso es incorrecto o ya expiro");
         }
 
         String userName = usersClient.getUserName(user.getUser_id());
 
-        String token = jwtService.generateToken(user.getUser_id(), userName , role.getName());
+        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName());
 
         JwtResponseDTO response = new JwtResponseDTO();
 
@@ -299,10 +302,11 @@ public class AuthService {
         return response;
     }
 
-    public MessageResponseDTO forgotPassword(String email){
+    public MessageResponseDTO forgotPassword(String email) {
         MessageResponseDTO response = new MessageResponseDTO();
 
-        User user = userRepository.findByEmail(email).orElseThrow(()-> new UserNotFoundException("Usuario no encontrado"));
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         String secretKey = user.getSecretKey().getSecretKey();
 
@@ -310,19 +314,20 @@ public class AuthService {
 
         sendEmail(email, code);
 
-        response.setMessage("Se envio un codigo de verificació al correo: " +  email);
+        response.setMessage("Se envio un codigo de verificació al correo: " + email);
         return response;
     }
 
-    public MessageResponseDTO forgotPasswordSecondStep(ForgotPasswordRequestDTO fPRequest){
-        User user = userRepository.findByEmail(fPRequest.getEmail()).orElseThrow(()-> new UserNotFoundException("Usuario no encontrado"));
+    public MessageResponseDTO forgotPasswordSecondStep(ForgotPasswordRequestDTO fPRequest) {
+        User user = userRepository.findByEmail(fPRequest.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         String secretKey = user.getSecretKey().getSecretKey();
 
         Boolean isValid = otpService.validateOtp(secretKey, fPRequest.getCode());
 
         System.out.println(isValid);
-        if(!isValid){
+        if (!isValid) {
             throw new InvalidOtpException("El codigo ingresado es incorrecto o ya expiro");
         }
 
@@ -342,4 +347,38 @@ public class AuthService {
         return responseDTO;
     }
 
+    public MessageResponseDTO deactivateAccount() {
+        String userIdHeader = RequestContext.getHeader("X-User-Id");
+
+        if (userIdHeader == null) {
+            throw new UserNotFoundException("Usuario no autenticado");
+        }
+
+        UUID userId;
+        try {
+            userId = UUID.fromString(userIdHeader);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Formato inválido del userId");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+
+        user.setIsActive(false);
+        userRepository.save(user);
+
+        MessageResponseDTO response = new MessageResponseDTO();
+        response.setMessage("Cuenta desactivada correctamente");
+
+        return response;
+    }
+
+    public String getEmailByUserId(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario con ese id no encontrado"));
+
+        String email = user.getEmail();
+
+        return email;
+    }
 }
