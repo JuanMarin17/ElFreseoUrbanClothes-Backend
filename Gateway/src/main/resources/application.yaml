@@ -99,6 +99,13 @@ spring:
               /api/v1/coupons/**
           filters:
             - JwtValidationFilter
+        # ── Returns ─────────────────────────────────────────────────────────
+        - id: returns-routes
+          uri: http://localhost:8092
+          predicates:
+            - Path=/api/v1/returns/**
+          filters:
+            - JwtValidationFilter
 server:
   port: 8080
 
