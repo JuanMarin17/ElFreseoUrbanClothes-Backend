@@ -26,3 +26,7 @@ cloudinary:
   cloud_name: ${NAME_CLOUD} # Se lee desde .env
   api_key: ${KEY_CLOUD} # Se lee desde .env
   api_secret: ${SECRET_CLOUD} # Se lee desde .env
+
+store:
+  service:
+    url: http://localhost:8081/api/v1

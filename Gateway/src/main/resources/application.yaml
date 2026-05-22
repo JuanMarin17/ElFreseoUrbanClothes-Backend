@@ -25,16 +25,19 @@ spring:
           predicates:
             - Path=/api/stores,
               /api/stores/**
-
+        # ── Product ───────────────────────────────────────────────────────────────
         - id: product-routes
           uri: http://localhost:8084
           predicates:
-            - Path=/api/v1/products,
-              /api/v1/products/**,
+            - Path=/api/v1/products/**,
               /api/v1/categories/**,
-              /api/v1/brands/**
+              /api/v1/brands/**,
+              /api/v1/variants/**,
+              /api/v1/cloudinary/**
+          filters:
+            - JwtValidationFilter
 
-        # ── Alertas de stock SSE ──────────────────────────────────────────────
+        # ── Alertas de stock SSE (sin JWT para que el frontend pueda conectarse) ──
         - id: stock-alert-routes
           uri: http://localhost:8084
           predicates:
@@ -57,21 +60,21 @@ spring:
               /api/v1/users/{id}
           filters:
             - JwtValidationFilter
-        # ── Supplier
+        # ── Supplier ─────────────────────────────────────────────────────────
         - id: supplier-routes
           uri: http://localhost:8085
           predicates:
             - Path=/api/v1/suppliers/**
           filters:
             - JwtValidationFilter
-        # ── Support
+        # ── Support ─────────────────────────────────────────────────────────
         - id: support-routes
           uri: http://localhost:8088
           predicates:
             - Path=/api/v1/support/**
           filters:
             - JwtValidationFilter
-        # ── Preferences
+        # ── Preferences ─────────────────────────────────────────────────────────
         - id: preferences-routes
           uri: http://localhost:8086
           predicates:
@@ -80,7 +83,7 @@ spring:
               /api/v1/preferences/**
           filters:
             - JwtValidationFilter
-        # ── Inventory
+        # ── Inventory ─────────────────────────────────────────────────────────
         - id: inventory-routes
           uri: http://localhost:8089
           predicates:
@@ -88,7 +91,7 @@ spring:
               /api/v1/locations/**
           filters:
             - JwtValidationFilter
-        # ── Promotion
+        # ── Promotion ─────────────────────────────────────────────────────────
         - id: promotion-routes
           uri: http://localhost:8091
           predicates:

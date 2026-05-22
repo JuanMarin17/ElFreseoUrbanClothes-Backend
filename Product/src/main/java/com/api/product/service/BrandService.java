@@ -3,72 +3,53 @@ package com.api.product.service;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.api.product.client.StoreClient;
 import com.api.product.dto.BrandRequestDTO;
 import com.api.product.dto.BrandResponseDTO;
 import com.api.product.entity.Brand;
+import com.api.product.exception.BadRequestException;
+import com.api.product.exception.ConflictException;
+import com.api.product.exception.UnauthorizedException;
 import com.api.product.repository.BrandRepository;
+import com.common_request_context_starter.context.RequestContext;
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Servicio para gestionar marcas (Brand).
- * Incluye métodos para crear, actualizar, listar, buscar, activar y desactivar marcas.
- */
 @Service
 @RequiredArgsConstructor
 public class BrandService {
 
     private final BrandRepository brandRepository;
+    private final StoreClient storeClient;
 
-    /**
-     * Crea una nueva marca en la base de datos.
-     * Valida campos obligatorios y verifica que no exista otra marca con el mismo nombre.
-     *
-     * @param dto DTO con los datos de la marca a crear
-     * @return BrandResponseDTO con los datos de la marca creada
-     */
     @Transactional
     public BrandResponseDTO createBrand(BrandRequestDTO dto) {
+        validateAdminOrOwner();
+        UUID storeId = getStoreIdFromHeader();
 
-        try {
-            validateBrandRequest(dto);
+        if (dto == null || dto.getName() == null || dto.getName().isBlank())
+            throw new BadRequestException("El nombre de la marca es obligatorio");
 
-            // Validar si existe marca con el mismo nombre
-            if (brandRepository.existsByNameIgnoreCase(dto.getName())) {
-                throw new RuntimeException("La marca ya existe");
-            }
+        if (brandRepository.existsByNameIgnoreCaseAndStoreId(dto.getName(), storeId))
+            throw new ConflictException("Ya existe una marca con ese nombre en esta tienda");
 
-            // Crear entidad Brand
-            Brand brand = Brand.builder()
-                    .name(dto.getName())
-                    .active(dto.getActive() != null ? dto.getActive() : true)
-                    .build();
+        Brand brand = Brand.builder()
+                .name(dto.getName())
+                .storeId(storeId)
+                .active(dto.getActive() != null ? dto.getActive() : true)
+                .build();
 
-            // Guardar marca
-            Brand saved = brandRepository.save(brand);
-
-            return mapToResponse(saved);
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException("Error al crear marca: " + e.getMessage());
-        }
+        return mapToResponse(brandRepository.save(brand));
     }
 
-    /**
-     * Actualiza una marca existente.
-     * Valida campos obligatorios y verifica que no se repita el nombre con otra marca.
-     *
-     * @param id  UUID de la marca
-     * @param dto DTO con los datos actualizados
-     * @return Optional con BrandResponseDTO actualizado si existe
-     */
     @Transactional
     public Optional<BrandResponseDTO> updateBrand(UUID id, BrandRequestDTO dto) {
+        validateAdminOrOwner();
+        UUID storeId = getStoreIdFromHeader();
 
         Optional<Brand> optional = brandRepository.findById(id);
         if (optional.isEmpty())
@@ -76,134 +57,99 @@ public class BrandService {
 
         Brand brand = optional.get();
 
-        try {
-            validateBrandRequest(dto);
+        if (!brand.getStoreId().equals(storeId))
+            throw new UnauthorizedException("Esta marca no pertenece a tu tienda");
 
-            // Validar nombre repetido
-            if (!brand.getName().equalsIgnoreCase(dto.getName())
-                    && brandRepository.existsByNameIgnoreCase(dto.getName())) {
-                throw new RuntimeException("Ya existe otra marca con el mismo nombre");
-            }
+        if (dto == null || dto.getName() == null || dto.getName().isBlank())
+            throw new BadRequestException("El nombre de la marca es obligatorio");
 
-            brand.setName(dto.getName());
+        if (!brand.getName().equalsIgnoreCase(dto.getName()) &&
+                brandRepository.existsByNameIgnoreCaseAndStoreId(dto.getName(), storeId))
+            throw new ConflictException("Ya existe otra marca con ese nombre en esta tienda");
 
-            // Actualizar active si viene en el DTO
-            if (dto.getActive() != null) {
-                brand.setActive(dto.getActive());
-            }
+        brand.setName(dto.getName());
+        if (dto.getActive() != null)
+            brand.setActive(dto.getActive());
 
-            Brand saved = brandRepository.save(brand);
-
-            return Optional.of(mapToResponse(saved));
-
-        } catch (RuntimeException e) {
-            throw new RuntimeException("Error al actualizar marca: " + e.getMessage());
-        }
+        return Optional.of(mapToResponse(brandRepository.save(brand)));
     }
 
-    /**
-     * Lista todas las marcas registradas en el sistema.
-     *
-     * @return lista completa de marcas
-     */
     @Transactional(readOnly = true)
     public List<BrandResponseDTO> listAllBrands() {
-        return brandRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        UUID storeId = getStoreIdFromHeader();
+        return brandRepository.findByStoreIdAndActiveTrue(storeId)
+                .stream().map(this::mapToResponse).toList();
     }
 
-    /**
-     * Lista todas las marcas activas en el sistema.
-     *
-     * @return lista completa de marcas activas
-     */
     @Transactional(readOnly = true)
     public List<BrandResponseDTO> listAllActiveBrands() {
-        return brandRepository.findByActiveTrue().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        UUID storeId = getStoreIdFromHeader();
+        return brandRepository.findByStoreIdAndActiveTrue(storeId)
+                .stream().map(this::mapToResponse).toList();
     }
 
-    /**
-     * Busca una marca por su ID.
-     *
-     * @param id UUID de la marca
-     * @return Optional con la marca encontrada si existe
-     */
     @Transactional(readOnly = true)
     public Optional<BrandResponseDTO> getById(UUID id) {
-        return brandRepository.findById(id)
-                .map(this::mapToResponse);
+        return brandRepository.findById(id).map(this::mapToResponse);
     }
 
-    /**
-     * Desactiva una marca del sistema (Soft Delete).
-     * Cambia el campo active a false.
-     *
-     * @param id UUID de la marca
-     * @return Optional con la marca desactivada si existe
-     */
     @Transactional
     public Optional<BrandResponseDTO> inactiveBrand(UUID id) {
+        validateAdminOrOwner();
+        UUID storeId = getStoreIdFromHeader();
 
         Optional<Brand> optional = brandRepository.findById(id);
         if (optional.isEmpty())
             return Optional.empty();
 
         Brand brand = optional.get();
+        if (!brand.getStoreId().equals(storeId))
+            throw new UnauthorizedException("Esta marca no pertenece a tu tienda");
+
         brand.setActive(false);
-
-        brandRepository.save(brand);
-
-        return Optional.of(mapToResponse(brand));
+        return Optional.of(mapToResponse(brandRepository.save(brand)));
     }
 
-    /**
-     * Activa una marca del sistema.
-     * Cambia el campo active a true.
-     *
-     * @param id UUID de la marca
-     * @return Optional con la marca activada si existe
-     */
     @Transactional
     public Optional<BrandResponseDTO> activeBrand(UUID id) {
+        validateAdminOrOwner();
+        UUID storeId = getStoreIdFromHeader();
 
         Optional<Brand> optional = brandRepository.findById(id);
         if (optional.isEmpty())
             return Optional.empty();
 
         Brand brand = optional.get();
+        if (!brand.getStoreId().equals(storeId))
+            throw new UnauthorizedException("Esta marca no pertenece a tu tienda");
+
         brand.setActive(true);
-
-        brandRepository.save(brand);
-
-        return Optional.of(mapToResponse(brand));
+        return Optional.of(mapToResponse(brandRepository.save(brand)));
     }
 
-    /**
-     * Valida campos obligatorios del BrandRequestDTO.
-     *
-     * @param dto DTO a validar
-     */
-    private void validateBrandRequest(BrandRequestDTO dto) {
-
-        if (dto == null || dto.getName() == null || dto.getName().isBlank()) {
-            throw new RuntimeException("El nombre de la marca es obligatorio");
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    private UUID getStoreIdFromHeader() {
+        String storeIdHeader = RequestContext.getHeader("X-Store-Id");
+        if (storeIdHeader == null || storeIdHeader.isBlank())
+            throw new BadRequestException("No se encontró el X-Store-Id en el header");
+        try {
+            return UUID.fromString(storeIdHeader);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Formato inválido del storeId");
         }
     }
 
-    /**
-     * Convierte entidad Brand a BrandResponseDTO.
-     *
-     * @param brand entidad Brand
-     * @return BrandResponseDTO
-     */
+    private void validateAdminOrOwner() {
+        String role = RequestContext.getHeader("X-User-Role");
+        if (!"ADMIN".equals(role) && !"OWNER".equals(role))
+            throw new UnauthorizedException("Solo el ADMIN u OWNER pueden realizar esta acción");
+    }
+
     private BrandResponseDTO mapToResponse(Brand brand) {
         return BrandResponseDTO.builder()
                 .brandId(brand.getBrandId())
                 .name(brand.getName())
-                .status(brand.getActive()? "ACTIVE":"INACTIVE")
+                .status(Boolean.TRUE.equals(brand.getActive()) ? "ACTIVE" : "INACTIVE")
                 .build();
     }
 }
