@@ -9,5 +9,10 @@ import com.api.product.entity.Category;
 
 public interface CategoryRepository extends JpaRepository<Category, UUID> {
     List<Category> findByActiveTrue();
+
+    List<Category> findByStoreIdAndActiveTrue(UUID storeId);
+
     boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCaseAndStoreId(String name, UUID storeId);
 }

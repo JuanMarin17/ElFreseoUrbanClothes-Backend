@@ -9,5 +9,10 @@ import com.api.product.entity.Brand;
 
 public interface BrandRepository extends JpaRepository<Brand, UUID> {
     List<Brand> findByActiveTrue();
+
+    List<Brand> findByStoreIdAndActiveTrue(UUID storeId);
+
     boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCaseAndStoreId(String name, UUID storeId);
 }
