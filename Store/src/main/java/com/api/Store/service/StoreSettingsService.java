@@ -7,6 +7,7 @@ import com.api.Store.entity.StoreSettings;
 import com.api.Store.exception.StoreNotFoundException;
 import com.api.Store.repository.StoreRepository;
 import com.api.Store.repository.StoreSettingsRepository;
+import com.api.Store.util.HeaderUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,9 +24,11 @@ public class StoreSettingsService {
     private final StoreSettingsRepository storeSettingsRepository;
     private final StoreRepository storeRepository;
     private final ObjectMapper objectMapper;
+    private final HeaderUtil headerUtil;
 
     // ── 1. Obtener settings de una tienda ────────────────────────────────────
-    public StoreSettingsResponseDTO getSettings(UUID storeId) {
+    public StoreSettingsResponseDTO getSettings() {
+        UUID storeId = headerUtil.getStoreIdFromHeader().orElseThrow(()-> new RuntimeException("No se envio el id de la tienda"));
         verifyStoreExists(storeId);
 
         StoreSettings settings = storeSettingsRepository.findById(storeId)
@@ -37,7 +40,10 @@ public class StoreSettingsService {
 
     // ── 2. Guardar / actualizar settings ─────────────────────────────────────
     @Transactional
-    public StoreSettingsResponseDTO saveSettings(UUID storeId, StoreSettingsRequestDTO dto) {
+    public StoreSettingsResponseDTO saveSettings(StoreSettingsRequestDTO dto) {
+        UUID storeId = headerUtil.getStoreIdFromHeader().orElseThrow(()-> new RuntimeException("No se envio el id de la tienda"));
+
+
         verifyStoreExists(storeId);
 
         StoreSettings settings = storeSettingsRepository.findById(storeId)

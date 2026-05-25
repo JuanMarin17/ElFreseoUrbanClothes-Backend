@@ -23,8 +23,8 @@ spring:
         - id: store-routes
           uri: http://localhost:8081
           predicates:
-            - Path=/api/stores,
-              /api/stores/**
+            - Path=/api/v1/stores,
+              /api/v1/stores/**
         # ── Product ───────────────────────────────────────────────────────────────
         - id: product-routes
           uri: http://localhost:8084

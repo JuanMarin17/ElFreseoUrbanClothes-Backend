@@ -18,7 +18,7 @@ import java.util.UUID;
  * GET    /api/stores/{storeId}    → Obtener tienda por ID
  */
 @RestController
-@RequestMapping("/api/stores")
+@RequestMapping("/stores")
 @RequiredArgsConstructor
 public class StoreController {
 
