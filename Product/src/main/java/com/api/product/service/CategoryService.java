@@ -13,6 +13,7 @@ import com.api.product.dto.CategoryResponseDTO;
 import com.api.product.entity.Category;
 import com.api.product.exception.BadRequestException;
 import com.api.product.exception.ConflictException;
+import com.api.product.exception.ResourceNotFoundException;
 import com.api.product.exception.UnauthorizedException;
 import com.api.product.repository.CategoryRepository;
 import com.common_request_context_starter.context.RequestContext;
@@ -30,6 +31,9 @@ public class CategoryService {
     public CategoryResponseDTO createCategory(CategoryRequestDTO dto) {
         validateAdminOrOwner();
         UUID storeId = getStoreIdFromHeader();
+
+        if (!storeClient.existsStore(storeId))
+            throw new ResourceNotFoundException("La tienda no existe con id: " + storeId);
 
         if (dto == null || dto.getName() == null || dto.getName().isBlank())
             throw new BadRequestException("El nombre de la categoría es obligatorio");
