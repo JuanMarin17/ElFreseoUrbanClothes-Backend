@@ -106,6 +106,20 @@ spring:
             - Path=/api/v1/returns/**
           filters:
             - JwtValidationFilter
+        # ── LoyalCustomer ─────────────────────────────────────────────────────────
+        # Rutas públicas de loyalty (internas entre microservicios)
+        - id: loyalty-internal-routes
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/v1/loyalty/internal/**
+
+        # Rutas protegidas de loyalty
+        - id: loyalty-routes
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/v1/loyalty/**
+          filters:
+            - JwtValidationFilter
 server:
   port: 8080
 
