@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -85,6 +87,15 @@ public class StoreService {
             return false;
         }
 
-        return true; 
+        return true;
+    }
+
+    /** Obtener todas las tiendas */
+    public List<StoreResponseDTO> getAllStores() {
+        List<Store> stores = storeRepository.findAll();
+        return stores.stream()
+                .map(store -> toResponse(store, "Tienda encontrada", 200))
+                .collect(Collectors.toList());
     }
 }
+

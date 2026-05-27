@@ -10,12 +10,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.List;
 
 /**
  * Gestión de tiendas.
  *
- * POST   /api/stores              → Crear tienda
- * GET    /api/stores/{storeId}    → Obtener tienda por ID
+ * POST /api/stores → Crear tienda
+ * GET /api/stores/{storeId} → Obtener tienda por ID
  */
 @RestController
 @RequestMapping("/stores")
@@ -31,19 +32,26 @@ public class StoreController {
     }
 
     /** Obtener una tienda por su ID */
-    @GetMapping("/{storeId}")
-    public ResponseEntity<StoreResponseDTO> getStore(@PathVariable UUID storeId) {
+    @GetMapping("/getByStoreId/{storeId}")
+    public ResponseEntity<StoreResponseDTO> getStore(@PathVariable("storeId") UUID storeId) {
         return ResponseEntity.ok(storeService.getStoreById(storeId));
     }
 
-    @GetMapping("/{slug}")
+    @GetMapping("/getBySlug/{slug}")
     public ResponseEntity<StoreResponseDTO> getStoreBySlug(@PathVariable String slug) {
         return ResponseEntity.ok(storeService.getBySlug(slug));
     }
 
 
     @GetMapping("/existStore/{id}")
-    public ResponseEntity<Boolean> existStore(@PathVariable UUID storeId){
+    public ResponseEntity<Boolean> existStore(@PathVariable UUID storeId) {
         return ResponseEntity.status(HttpStatus.OK).body(storeService.existStore(storeId));
     }
+
+    /** Obtener todas las tiendas */
+    @GetMapping
+    public ResponseEntity<List<StoreResponseDTO>> getAllStores() {
+        return ResponseEntity.ok(storeService.getAllStores());
+    }
 }
+
