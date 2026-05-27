@@ -25,21 +25,23 @@ public class PreferenceController {
 
     private final PreferenceService preferenceService;
 
-    @GetMapping("/getMyPreferences")
+    @GetMapping
     public ResponseEntity<List<UserPreferenceResponseDTO>> getMyPreferences() {
         return ResponseEntity.ok(preferenceService.getMyPreferences());
     }
 
-    @PostMapping("/savePreference")
+    @PostMapping
     public ResponseEntity<UserPreferenceResponseDTO> savePreference(
             @RequestBody UserPreferenceRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(preferenceService.savePreference(dto));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(preferenceService.savePreference(dto));
     }
 
     @PostMapping("/behavior")
     public ResponseEntity<UserBehaviorResponseDTO> trackBehavior(
             @RequestBody UserBehaviorRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(preferenceService.trackBehavior(dto));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(preferenceService.trackBehavior(dto));
     }
 
     @GetMapping("/behavior")
