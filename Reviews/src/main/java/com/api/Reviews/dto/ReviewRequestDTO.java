@@ -1,8 +1,8 @@
-package com.api.Preferences.dto;
-
-import lombok.Data;
+package com.api.Reviews.dto;
 
 import java.util.UUID;
+
+import lombok.Data;
 
 @Data
 public class ReviewRequestDTO {
