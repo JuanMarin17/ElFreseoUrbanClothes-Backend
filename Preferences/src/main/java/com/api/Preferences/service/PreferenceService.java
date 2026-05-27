@@ -26,16 +26,17 @@ public class PreferenceService {
     private final UserPreferenceRepository preferenceRepository;
     private final UserBehaviorRepository behaviorRepository;
 
-    // ── Obtener preferencias ──────────────────────────────────────────────────
     public List<UserPreferenceResponseDTO> getMyPreferences() {
         UUID userId = getUserIdFromHeader();
         return preferenceRepository.findByUserId(userId)
                 .stream().map(this::toPreferenceResponse).toList();
     }
 
-    // ── Guardar preferencia ───────────────────────────────────────────────────
     public UserPreferenceResponseDTO savePreference(UserPreferenceRequestDTO dto) {
         UUID userId = getUserIdFromHeader();
+
+        if (dto.getPreferenceType() == null || dto.getPreferenceType().isBlank())
+            throw new BadRequestException("El tipo de preferencia es obligatorio");
 
         UserPreference preference = new UserPreference();
         preference.setUserId(userId);
@@ -45,9 +46,11 @@ public class PreferenceService {
         return toPreferenceResponse(preferenceRepository.save(preference));
     }
 
-    // ── Registrar comportamiento ──────────────────────────────────────────────
     public UserBehaviorResponseDTO trackBehavior(UserBehaviorRequestDTO dto) {
         UUID userId = getUserIdFromHeader();
+
+        if (dto.getEventType() == null || dto.getEventType().isBlank())
+            throw new BadRequestException("El tipo de evento es obligatorio");
 
         UserBehavior behavior = new UserBehavior();
         behavior.setUserId(userId);
@@ -57,14 +60,12 @@ public class PreferenceService {
         return toBehaviorResponse(behaviorRepository.save(behavior));
     }
 
-    // ── Obtener comportamientos ───────────────────────────────────────────────
     public List<UserBehaviorResponseDTO> getMyBehaviors() {
         UUID userId = getUserIdFromHeader();
         return behaviorRepository.findByUserId(userId)
                 .stream().map(this::toBehaviorResponse).toList();
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────────
     private UUID getUserIdFromHeader() {
         String userIdHeader = RequestContext.getHeader("X-User-Id");
         if (userIdHeader == null || userIdHeader.isBlank())
@@ -76,7 +77,6 @@ public class PreferenceService {
         }
     }
 
-    // ── Mappers ───────────────────────────────────────────────────────────────
     private UserPreferenceResponseDTO toPreferenceResponse(UserPreference p) {
         UserPreferenceResponseDTO dto = new UserPreferenceResponseDTO();
         dto.setPreferenceId(p.getPreferenceId());

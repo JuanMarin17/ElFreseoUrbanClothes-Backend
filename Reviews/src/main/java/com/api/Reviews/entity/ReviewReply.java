@@ -1,4 +1,4 @@
-package com.api.Preferences.entity;
+package com.api.Reviews.entity;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -12,26 +12,21 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "product_review")
-public class ProductReview {
+@Table(name = "review_reply")
+public class ReviewReply {
 
     @Id
     @GeneratedValue
+    @Column(name = "reply_id")
+    private UUID replyId;
+
     @Column(name = "review_id")
     private UUID reviewId;
-
-    @Column(name = "product_id")
-    private UUID productId;
 
     @Column(name = "user_id")
     private UUID userId;
 
-    private Integer rating;
-    private String title;
     private String body;
-
-    @Column(name = "is_verified")
-    private Boolean isVerified = false;
 
     @Column(name = "created_at")
     private OffsetDateTime createdAt = OffsetDateTime.now();

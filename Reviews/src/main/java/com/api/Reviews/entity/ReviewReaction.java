@@ -1,8 +1,8 @@
-package com.api.Preferences.entity;
+package com.api.Reviews.entity;
 
 import java.util.UUID;
 
-import com.api.Preferences.enums.ReactionType;
+import com.api.Reviews.enums.ReactionType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

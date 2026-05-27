@@ -1,4 +1,4 @@
-package com.api.Preferences.exception;
+package com.api.Reviews.exception;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(PreferenceNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleNotFound(PreferenceNotFoundException e) {
+    @ExceptionHandler(ReviewNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNotFound(ReviewNotFoundException e) {
         return buildResponse(HttpStatus.NOT_FOUND, e.getMessage(), null);
     }
 

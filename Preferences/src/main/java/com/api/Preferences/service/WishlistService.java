@@ -13,7 +13,7 @@ import com.api.Preferences.dto.WishlistResponseDTO;
 import com.api.Preferences.entity.Wishlist;
 import com.api.Preferences.entity.WishlistItem;
 import com.api.Preferences.exception.BadRequestException;
-import com.api.Preferences.exception.ReviewNotFoundException;
+import com.api.Preferences.exception.PreferenceNotFoundException;
 import com.api.Preferences.exception.UnauthorizedException;
 import com.api.Preferences.repository.WishlistItemRepository;
 import com.api.Preferences.repository.WishlistRepository;
@@ -28,20 +28,19 @@ public class WishlistService {
     private final WishlistRepository wishlistRepository;
     private final WishlistItemRepository wishlistItemRepository;
 
-    // ── Obtener wishlist del usuario ──────────────────────────────────────────
     public WishlistResponseDTO getMyWishlist() {
         UUID userId = getUserIdFromHeader();
         Wishlist wishlist = getOrCreateWishlist(userId);
         return toWishlistResponse(wishlist);
     }
 
-    // ── Agregar item a wishlist ───────────────────────────────────────────────
     @Transactional
     public WishlistResponseDTO addItem(WishlistItemRequestDTO dto) {
         UUID userId = getUserIdFromHeader();
         Wishlist wishlist = getOrCreateWishlist(userId);
 
-        if (wishlistItemRepository.existsByWishlistIdAndVariantId(wishlist.getWishlistId(), dto.getVariantId()))
+        if (wishlistItemRepository.existsByWishlistIdAndVariantId(
+                wishlist.getWishlistId(), dto.getVariantId()))
             throw new BadRequestException("El producto ya está en tu wishlist");
 
         WishlistItem item = new WishlistItem();
@@ -52,14 +51,14 @@ public class WishlistService {
         return toWishlistResponse(wishlist);
     }
 
-    // ── Eliminar item de wishlist ─────────────────────────────────────────────
     @Transactional
     public ApiResponseDTO removeItem(UUID wishlistItemId) {
         UUID userId = getUserIdFromHeader();
         Wishlist wishlist = getOrCreateWishlist(userId);
 
         WishlistItem item = wishlistItemRepository.findById(wishlistItemId)
-                .orElseThrow(() -> new ReviewNotFoundException("Item no encontrado con id: " + wishlistItemId));
+                .orElseThrow(() -> new PreferenceNotFoundException(
+                        "Item no encontrado con id: " + wishlistItemId));
 
         if (!item.getWishlistId().equals(wishlist.getWishlistId()))
             throw new UnauthorizedException("No tienes permisos para eliminar este item");
@@ -72,7 +71,6 @@ public class WishlistService {
         return response;
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────────
     private Wishlist getOrCreateWishlist(UUID userId) {
         return wishlistRepository.findByUserId(userId).orElseGet(() -> {
             Wishlist wishlist = new Wishlist();
@@ -92,7 +90,6 @@ public class WishlistService {
         }
     }
 
-    // ── Mappers ───────────────────────────────────────────────────────────────
     private WishlistResponseDTO toWishlistResponse(Wishlist w) {
         List<WishlistItemResponseDTO> items = wishlistItemRepository
                 .findByWishlistId(w.getWishlistId())

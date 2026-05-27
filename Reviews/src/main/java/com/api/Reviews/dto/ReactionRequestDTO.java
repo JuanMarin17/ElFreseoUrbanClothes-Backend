@@ -1,6 +1,6 @@
-package com.api.Preferences.dto;
+package com.api.Reviews.dto;
 
-import com.api.Preferences.enums.ReactionType;
+import com.api.Reviews.enums.ReactionType;
 
 import lombok.Data;
 

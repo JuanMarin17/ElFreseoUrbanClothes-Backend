@@ -1,4 +1,4 @@
-package com.api.Preferences.exception;
+package com.api.Reviews.exception;
 
 public class ReviewNotFoundException extends RuntimeException {
     public ReviewNotFoundException(String message) {

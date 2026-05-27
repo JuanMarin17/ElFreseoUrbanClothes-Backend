@@ -1,4 +1,4 @@
-package com.api.Preferences.dto;
+package com.api.Reviews.dto;
 
 import lombok.Data;
 
