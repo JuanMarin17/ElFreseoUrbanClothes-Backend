@@ -22,7 +22,7 @@ import java.util.UUID;
  * GET /api/stores/{storeId}/access/{userId} → Validar acceso de usuario
  */
 @RestController
-@RequestMapping("/api/stores")
+@RequestMapping("/stores")
 @RequiredArgsConstructor
 public class StoreUserController {
 
