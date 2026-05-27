@@ -10,12 +10,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.List;
 
 /**
  * Gestión de tiendas.
  *
- * POST   /api/stores              → Crear tienda
- * GET    /api/stores/{storeId}    → Obtener tienda por ID
+ * POST /api/stores → Crear tienda
+ * GET /api/stores/{storeId} → Obtener tienda por ID
  */
 @RestController
 @RequestMapping("/stores")
@@ -37,7 +38,14 @@ public class StoreController {
     }
 
     @GetMapping("/existStore/{id}")
-    public ResponseEntity<Boolean> existStore(@PathVariable UUID storeId){
+    public ResponseEntity<Boolean> existStore(@PathVariable UUID storeId) {
         return ResponseEntity.status(HttpStatus.OK).body(storeService.existStore(storeId));
     }
+
+    /** Obtener todas las tiendas */
+    @GetMapping
+    public ResponseEntity<List<StoreResponseDTO>> getAllStores() {
+        return ResponseEntity.ok(storeService.getAllStores());
+    }
 }
+
