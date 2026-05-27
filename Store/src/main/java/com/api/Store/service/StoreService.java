@@ -59,6 +59,12 @@ public class StoreService {
         return toResponse(store, "Tienda encontrada", 200);
     }
 
+    public StoreResponseDTO getBySlug(String slug){
+        Store store = storeRepository.findBySlug(slug)
+                .orElseThrow(() -> new StoreNotFoundException("Tienda no encontrada con el slug: " + slug));
+        return toResponse(store, "Tienda encontrada", 200);
+    }
+
     // ── Mapper ───────────────────────────────────────────────────────────────
     private StoreResponseDTO toResponse(Store store, String message, int status) {
         return StoreResponseDTO.builder()
