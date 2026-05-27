@@ -27,6 +27,9 @@ public class SupportTicket {
     @Column(name = "user_id")
     private UUID userId;
 
+    @Column(name = "user_email")
+    private String userEmail;
+
     private String subject;
 
     @Enumerated(EnumType.STRING)

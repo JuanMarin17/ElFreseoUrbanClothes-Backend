@@ -1,5 +1,5 @@
 server:
-  port: 8093
+  port: ${SERVER_PORT:8093}
   servlet:
     context-path: /api/v1
 
@@ -8,9 +8,9 @@ spring:
     name: loyalty
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/loyalty
-    username: postgres
-    password: root
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/loyalty}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:root}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -23,5 +23,14 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
 loyalty:
-  points-per-amount: 4000
-  expiry-days: 90
+  points-per-amount: ${LOYALTY_POINTS_PER_AMOUNT:4000}
+  expiry-days: ${LOYALTY_EXPIRY_DAYS:90}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"
+  endpoint:
+    health:
+      show-details: always

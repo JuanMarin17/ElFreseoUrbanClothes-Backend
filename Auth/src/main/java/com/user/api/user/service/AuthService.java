@@ -229,7 +229,8 @@ public class AuthService {
         String token = jwtService.generateToken(
                 user.getUser_id(),
                 userName,
-                role.getName());
+                role.getName(),
+                user.getEmail());
 
         mailSender.send(sendEmail);
 
@@ -292,7 +293,7 @@ public class AuthService {
 
         String userName = usersClient.getUserName(user.getUser_id());
 
-        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName());
+        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail());
 
         JwtResponseDTO response = new JwtResponseDTO();
 
