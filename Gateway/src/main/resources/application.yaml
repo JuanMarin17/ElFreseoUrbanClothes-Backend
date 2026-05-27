@@ -76,10 +76,9 @@ spring:
             - JwtValidationFilter
         # ── Preferences ─────────────────────────────────────────────────────────
         - id: preferences-routes
-          uri: http://localhost:8086
+          uri: http://localhost:8094
           predicates:
-            - Path=/api/v1/reviews/**,
-              /api/v1/wishlist/**,
+            - Path=/api/v1/wishlist/**,
               /api/v1/preferences/**
           filters:
             - JwtValidationFilter
@@ -118,6 +117,13 @@ spring:
           uri: http://localhost:8093
           predicates:
             - Path=/api/v1/loyalty/**
+          filters:
+            - JwtValidationFilter
+        # Rutas protegidas de loyalty
+        - id: reviews-routes
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/reviews/**
           filters:
             - JwtValidationFilter
 server:

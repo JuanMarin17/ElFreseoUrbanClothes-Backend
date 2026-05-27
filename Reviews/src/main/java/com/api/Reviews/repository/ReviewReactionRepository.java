@@ -1,4 +1,4 @@
-package com.api.Preferences.repository;
+package com.api.Reviews.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -6,7 +6,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.api.Preferences.entity.ReviewReaction;
+import com.api.Reviews.entity.ReviewReaction;
 
 public interface ReviewReactionRepository extends JpaRepository<ReviewReaction, UUID> {
     List<ReviewReaction> findByReviewId(UUID reviewId);

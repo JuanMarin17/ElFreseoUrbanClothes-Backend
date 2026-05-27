@@ -1,8 +1,8 @@
-package com.api.Preferences.dto;
+package com.api.Reviews.dto;
 
 import java.util.UUID;
 
-import com.api.Preferences.enums.ReactionType;
+import com.api.Reviews.enums.ReactionType;
 
 import lombok.Data;
 
