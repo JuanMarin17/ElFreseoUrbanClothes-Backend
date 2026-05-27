@@ -12,12 +12,14 @@ import com.api.OrderPayment.exception.OrderNotFoundException;
 import com.api.OrderPayment.repository.OrderRepository;
 import com.api.OrderPayment.service.OrderService;
 import com.api.OrderPayment.util.OrderMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -33,8 +35,14 @@ public class OrderServiceImpl implements OrderService {
     private final CartClient cartClient;
     private final OrderMapper orderMapper;
 
-    // Contador simple para el número de orden (en producción usar secuencia DB)
     private final AtomicLong orderCounter = new AtomicLong(1);
+
+    @PostConstruct
+    void initOrderCounter() {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        long ordensHoy = orderRepository.countByCreatedAtGreaterThanEqual(startOfDay);
+        orderCounter.set(ordensHoy + 1);
+    }
 
     @Override
     @Transactional
@@ -146,14 +154,10 @@ public class OrderServiceImpl implements OrderService {
 
     // ─── Helpers ────────────────────────────────────────────────────────────────
 
-    private Order findOrderForUser(UUID orderId, UUID userId) {
-        Order order = orderRepository.findById(orderId)
+    @Override
+    public Order findOrderForUser(UUID orderId, UUID userId) {
+        return orderRepository.findByIdAndUserId(orderId, userId)
                 .orElseThrow(() -> new OrderNotFoundException("Orden no encontrada: " + orderId));
-
-        if (!order.getUserId().equals(userId)) {
-            throw new OrderNotFoundException("Orden no encontrada: " + orderId);
-        }
-        return order;
     }
 
     /**

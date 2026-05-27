@@ -23,4 +23,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     Optional<Order> findByOrderNumber(String orderNumber);
 
     boolean existsByOrderNumber(String orderNumber);
+
+    Optional<Order> findByIdAndUserId(UUID id, UUID userId);
+
+    long countByCreatedAtGreaterThanEqual(java.time.LocalDateTime from);
 }

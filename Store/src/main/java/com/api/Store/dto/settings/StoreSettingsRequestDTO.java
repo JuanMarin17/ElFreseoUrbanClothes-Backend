@@ -112,7 +112,7 @@ public class StoreSettingsRequestDTO {
         private String color;
         private String bg;
         /** Lista de imágenes del banner: [{ id, width, radius }] */
-        private List<Map<String, Object>> images;
+        private String image;
     }
 
     @Data

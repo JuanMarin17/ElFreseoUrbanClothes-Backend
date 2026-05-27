@@ -3,9 +3,9 @@ spring:
     name: api
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/auth
-    username: postgres
-    password: root
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/auth}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:root}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -20,8 +20,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: elfreseouc@gmail.com
-    password: zbca pmwl ovnt swod
+    username: ${MAIL_USERNAME:elfreseouc@gmail.com}
+    password: ${MAIL_PASSWORD:zbca pmwl ovnt swod}
     properties:
       mail:
         smtp:
@@ -32,16 +32,15 @@ spring:
 
 users:
   service:
-    url: http://localhost:8083/api/v1
+    url: ${USERS_SERVICE_URL:http://localhost:8083/api/v1}
 
 security:
-    jwt:
-      secret-key: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
-      token-expiration: 3600000 # 1 hora en milisegundos
-
+  jwt:
+    secret-key: ${JWT_SECRET:Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=}
+    token-expiration: ${JWT_EXPIRATION:3600000}
 
 server:
-  port: 8082
+  port: ${SERVER_PORT:8082}
   servlet:
     context-path: /api/v1
 
@@ -50,3 +49,12 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.security: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"
+  endpoint:
+    health:
+      show-details: always
