@@ -1,5 +1,5 @@
 server:
-  port: 8087
+  port: ${SERVER_PORT:8087}
   servlet:
     context-path: /api/v1
 
@@ -8,9 +8,9 @@ spring:
     name: order-payment-service
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/order_payment
-    username: postgres
-    password: root
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/order_payment}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:root}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -22,7 +22,15 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
-# URL del módulo de carrito
 cart:
   service:
-    base-url: http://localhost:8086/api/v1
+    base-url: ${CART_SERVICE_URL:http://localhost:8086/api/v1}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"
+  endpoint:
+    health:
+      show-details: always

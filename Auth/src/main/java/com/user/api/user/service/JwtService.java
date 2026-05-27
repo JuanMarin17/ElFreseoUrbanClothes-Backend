@@ -38,12 +38,13 @@ public class JwtService {
      * @param rolId
      * @return
      */
-    public String generateToken(UUID userId, String fullName, String rolId) {
+    public String generateToken(UUID userId, String fullName, String rolId, String email) {
 
         return Jwts.builder()
                 .claims(Map.of(
                         "user_id", userId,
-                        "role", rolId)) // Playload
+                        "role", rolId,
+                        "email", email)) // Playload
                 .subject(fullName) // Quien es el usuario
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + tokenExpiration))
@@ -140,7 +141,7 @@ public class JwtService {
             throw new RuntimeException("Token is invalid " + e.getMessage());
         }
 
-        return generateToken(claims.get("user_id", UUID.class), claims.getSubject(), claims.get("role", String.class));
+        return generateToken(claims.get("user_id", UUID.class), claims.getSubject(), claims.get("role", String.class), claims.get("email", String.class));
     }
 
 }

@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +61,12 @@ public class StoreService {
         return toResponse(store, "Tienda encontrada", 200);
     }
 
+    public StoreResponseDTO getBySlug(String slug){
+        Store store = storeRepository.findBySlug(slug)
+                .orElseThrow(() -> new StoreNotFoundException("Tienda no encontrada con el slug: " + slug));
+        return toResponse(store, "Tienda encontrada", 200);
+    }
+
     // ── Mapper ───────────────────────────────────────────────────────────────
     private StoreResponseDTO toResponse(Store store, String message, int status) {
         return StoreResponseDTO.builder()
@@ -79,6 +87,15 @@ public class StoreService {
             return false;
         }
 
-        return true; 
+        return true;
+    }
+
+    /** Obtener todas las tiendas */
+    public List<StoreResponseDTO> getAllStores() {
+        List<Store> stores = storeRepository.findAll();
+        return stores.stream()
+                .map(store -> toResponse(store, "Tienda encontrada", 200))
+                .collect(Collectors.toList());
     }
 }
+

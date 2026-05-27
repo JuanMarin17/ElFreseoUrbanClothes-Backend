@@ -17,12 +17,12 @@ import java.util.UUID;
  *
  * El userId se lee del header "x-user-id" (UUID).
  *
- * POST  /api/stores/{storeId}/orders/{orderId}/payment         → Procesar pago
- * GET   /api/stores/{storeId}/orders/{orderId}/payment         → Ver detalle del pago
- * POST  /api/stores/{storeId}/orders/{orderId}/payment/refund  → Solicitar reembolso
+ * POST  /api/v1/stores/{storeId}/orders/{orderId}/payment         → Procesar pago
+ * GET   /api/v1/stores/{storeId}/orders/{orderId}/payment         → Ver detalle del pago
+ * POST  /api/v1/stores/{storeId}/orders/{orderId}/payment/refund  → Solicitar reembolso
  */
 @RestController
-@RequestMapping("/api/stores/{storeId}/orders/{orderId}/payment")
+@RequestMapping("/stores/{storeId}/orders/{orderId}/payment")
 @RequiredArgsConstructor
 public class PaymentController {
 
@@ -36,7 +36,7 @@ public class PaymentController {
             @PathVariable UUID orderId,
             @Valid @RequestBody ProcessPaymentRequestDTO dto) {
 
-        UUID userId = requireUserId();
+        UUID userId = headerUtil.requireUserId();
         return ResponseEntity.ok(paymentService.processPayment(orderId, userId, dto));
     }
 
@@ -46,7 +46,7 @@ public class PaymentController {
             @PathVariable UUID storeId,
             @PathVariable UUID orderId) {
 
-        UUID userId = requireUserId();
+        UUID userId = headerUtil.requireUserId();
         return ResponseEntity.ok(paymentService.getPaymentByOrder(orderId, userId));
     }
 
@@ -57,16 +57,8 @@ public class PaymentController {
             @PathVariable UUID orderId,
             @Valid @RequestBody(required = false) RefundRequestDTO dto) {
 
-        UUID userId = requireUserId();
+        UUID userId = headerUtil.requireUserId();
         if (dto == null) dto = new RefundRequestDTO();
         return ResponseEntity.ok(paymentService.refundPayment(orderId, userId, dto));
-    }
-
-    // ─── Helpers ────────────────────────────────────────────────────────────────
-
-    private UUID requireUserId() {
-        return headerUtil.getUserIdFromHeader()
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "El header 'x-user-id' es obligatorio"));
     }
 }

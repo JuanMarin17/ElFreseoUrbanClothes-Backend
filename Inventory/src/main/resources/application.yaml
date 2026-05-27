@@ -1,5 +1,5 @@
 server:
-  port: 8089
+  port: ${SERVER_PORT:8089}
   servlet:
     context-path: /api/v1
 
@@ -8,9 +8,9 @@ spring:
     name: inventory
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/inventory
-    username: postgres
-    password: root
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/inventory}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:root}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -24,4 +24,13 @@ spring:
 
 product:
   service:
-    url: http://localhost:8084
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"
+  endpoint:
+    health:
+      show-details: always

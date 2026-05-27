@@ -29,16 +29,21 @@ public class SupportService {
 
     private final SupportTicketRepository ticketRepository;
     private final SupportMessageRepository messageRepository;
+    private final EmailService emailService;
 
     // ── Crear ticket ─────────────────────────────────────────────────────────
     public TicketResponseDTO createTicket(TicketRequestDTO dto) {
         UUID userId = getUserIdFromHeader();
+        String userEmail = getUserEmailFromHeader();
 
         SupportTicket ticket = new SupportTicket();
         ticket.setUserId(userId);
+        ticket.setUserEmail(userEmail);
         ticket.setSubject(dto.getSubject());
 
-        return toTicketResponse(ticketRepository.save(ticket));
+        SupportTicket saved = ticketRepository.save(ticket);
+        emailService.sendTicketCreatedEmail(userEmail, saved.getSubject(), saved.getTicketId());
+        return toTicketResponse(saved);
     }
 
     // ── Obtener mis tickets (usuario autenticado) ─────────────────────────────
@@ -98,7 +103,11 @@ public class SupportService {
         ticket.setStatus(TicketStatus.IN_PROGRESS);
         ticketRepository.save(ticket);
 
-        return toMessageResponse(messageRepository.save(message));
+        SupportMessage saved = messageRepository.save(message);
+        if (ticket.getUserEmail() != null) {
+            emailService.sendTicketRepliedEmail(ticket.getUserEmail(), ticket.getSubject(), ticketId, dto.getMessage());
+        }
+        return toMessageResponse(saved);
     }
 
     // ── Obtener mensajes de un ticket ─────────────────────────────────────────
@@ -132,6 +141,10 @@ public class SupportService {
         ticket.setStatus(TicketStatus.CLOSED);
         ticketRepository.save(ticket);
 
+        if (ticket.getUserEmail() != null) {
+            emailService.sendTicketClosedEmail(ticket.getUserEmail(), ticket.getSubject(), ticketId);
+        }
+
         ApiResponseDTO response = new ApiResponseDTO();
         response.setMessage("Ticket cerrado correctamente");
         response.setStatus(200);
@@ -148,6 +161,13 @@ public class SupportService {
         } catch (IllegalArgumentException e) {
             throw new BadRequestException("Formato inválido del userId");
         }
+    }
+
+    private String getUserEmailFromHeader() {
+        String email = RequestContext.getHeader("X-User-Email");
+        if (email == null || email.isBlank())
+            throw new UnauthorizedException("No se pudo obtener el email del usuario autenticado");
+        return email;
     }
 
     private void validateOwner() {

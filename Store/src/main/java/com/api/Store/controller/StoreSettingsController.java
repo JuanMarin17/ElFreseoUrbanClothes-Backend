@@ -90,16 +90,16 @@ import java.util.UUID;
  * }
  */
 @RestController
-@RequestMapping("/api/stores/{storeId}/settings")
+@RequestMapping("/stores/settings")
 @RequiredArgsConstructor
 public class StoreSettingsController {
 
     private final StoreSettingsService storeSettingsService;
 
     /** Obtener la configuración actual de la tienda */
-    @GetMapping
-    public ResponseEntity<StoreSettingsResponseDTO> getSettings(@PathVariable UUID storeId) {
-        return ResponseEntity.ok(storeSettingsService.getSettings(storeId));
+    @GetMapping("/getSettings")
+    public ResponseEntity<StoreSettingsResponseDTO> getSettings() {
+        return ResponseEntity.ok(storeSettingsService.getSettings());
     }
 
     /**
@@ -107,11 +107,10 @@ public class StoreSettingsController {
      * Guardar o actualizar la configuración de la tienda.
      * Semántica PATCH: solo se actualizan los campos que vengan en el body.
      */
-    @PostMapping
+    @PostMapping("/createSettings")
     public ResponseEntity<StoreSettingsResponseDTO> saveSettings(
-            @PathVariable UUID storeId,
             @Valid @RequestBody StoreSettingsRequestDTO dto) {
 
-        return ResponseEntity.ok(storeSettingsService.saveSettings(storeId, dto));
+        return ResponseEntity.ok(storeSettingsService.saveSettings(dto));
     }
 }
