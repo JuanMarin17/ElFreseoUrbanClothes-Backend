@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -29,11 +30,16 @@ public class StoreSettingsService {
     // ── 1. Obtener settings de una tienda ────────────────────────────────────
     public StoreSettingsResponseDTO getSettings() {
         UUID storeId = headerUtil.getStoreIdFromHeader().orElseThrow(()-> new RuntimeException("No se envio el id de la tienda"));
+        System.out.println(storeId);
         verifyStoreExists(storeId);
 
-        StoreSettings settings = storeSettingsRepository.findById(storeId)
-                .orElseThrow(() -> new StoreNotFoundException(
-                        "La tienda con id " + storeId + " aún no tiene configuración"));
+        Optional<StoreSettings> optionalSettings = storeSettingsRepository.findById(storeId);
+
+        if (optionalSettings.isEmpty()) {
+            return null;
+        }
+
+        StoreSettings settings = optionalSettings.get();
 
         return toResponse(settings);
     }
