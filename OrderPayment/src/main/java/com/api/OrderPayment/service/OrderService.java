@@ -3,6 +3,7 @@ package com.api.OrderPayment.service;
 import com.api.OrderPayment.dto.order.CreateOrderRequestDTO;
 import com.api.OrderPayment.dto.order.OrderResponseDTO;
 import com.api.OrderPayment.dto.order.UpdateOrderStatusRequestDTO;
+import com.api.OrderPayment.entity.Order;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,4 +30,7 @@ public interface OrderService {
 
     /** Cancela una orden (solo si está en PENDING o CONFIRMED) */
     OrderResponseDTO cancelOrder(UUID orderId, UUID userId);
+
+    /** Busca una orden validando que pertenece al usuario. Lanza OrderNotFoundException si no. */
+    Order findOrderForUser(UUID orderId, UUID userId);
 }

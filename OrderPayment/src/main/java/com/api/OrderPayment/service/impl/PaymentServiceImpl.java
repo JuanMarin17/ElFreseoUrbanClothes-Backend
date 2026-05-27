@@ -7,10 +7,10 @@ import com.api.OrderPayment.entity.Order;
 import com.api.OrderPayment.entity.Payment;
 import com.api.OrderPayment.enums.OrderStatus;
 import com.api.OrderPayment.enums.PaymentStatus;
-import com.api.OrderPayment.exception.OrderNotFoundException;
 import com.api.OrderPayment.exception.PaymentException;
 import com.api.OrderPayment.repository.OrderRepository;
 import com.api.OrderPayment.repository.PaymentRepository;
+import com.api.OrderPayment.service.OrderService;
 import com.api.OrderPayment.service.PaymentService;
 import com.api.OrderPayment.util.OrderMapper;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +28,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final OrderService orderService;
     private final OrderMapper orderMapper;
 
     @Override
@@ -138,15 +139,7 @@ public class PaymentServiceImpl implements PaymentService {
         return orderMapper.toPaymentDTO(payment);
     }
 
-    // ─── Helpers ────────────────────────────────────────────────────────────────
-
     private Order findOrderForUser(UUID orderId, UUID userId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new OrderNotFoundException("Orden no encontrada: " + orderId));
-
-        if (!order.getUserId().equals(userId)) {
-            throw new OrderNotFoundException("Orden no encontrada: " + orderId);
-        }
-        return order;
+        return orderService.findOrderForUser(orderId, userId);
     }
 }
