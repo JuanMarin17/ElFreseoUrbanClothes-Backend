@@ -30,6 +30,11 @@ spring:
     init:
       mode: always
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 logging:
   level:
     org.hibernate.SQL: DEBUG
@@ -42,6 +47,11 @@ security:
 users:
   service:
     url: ${USERS_SERVICE_URL:http://localhost:8083/api/v1}
+
+cloudinary:
+  cloud_name: ${NAME_CLOUD}
+  api_key: ${KEY_CLOUD}
+  api_secret: ${SECRET_CLOUD}
 
 management:
   endpoints:

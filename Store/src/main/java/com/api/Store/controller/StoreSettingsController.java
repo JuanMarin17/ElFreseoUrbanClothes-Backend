@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -103,7 +104,6 @@ public class StoreSettingsController {
     }
 
     /**
-    private final com.api.Store.util.HeaderUtil headerUtil;
      * Guardar o actualizar la configuración de la tienda.
      * Semántica PATCH: solo se actualizan los campos que vengan en el body.
      */
@@ -112,5 +112,23 @@ public class StoreSettingsController {
             @Valid @RequestBody StoreSettingsRequestDTO dto) {
 
         return ResponseEntity.ok(storeSettingsService.saveSettings(dto));
+    }
+
+    /**
+     * Sube el logo de la tienda a Cloudinary y guarda la URL resultante.
+     *
+     * POST /api/v1/stores/settings/logo
+     * Content-Type: multipart/form-data
+     * Body: image (file)
+     */
+    @PostMapping("/logo")
+    public ResponseEntity<StoreSettingsResponseDTO> uploadLogo(
+            @RequestParam("image") MultipartFile image) {
+
+        if (image.isEmpty()) {
+            throw new RuntimeException("El archivo de imagen está vacío");
+        }
+
+        return ResponseEntity.ok(storeSettingsService.uploadLogo(image));
     }
 }
