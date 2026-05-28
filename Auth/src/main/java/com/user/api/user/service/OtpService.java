@@ -47,6 +47,7 @@ public class OtpService {
      */
     public String generateOtp(String userSecretKey) {
         Integer code = gAuth.getTotpPassword(userSecretKey);
+        String otp = String.format("%06d", code);
 
         Optional<SecretKey> optionalSecret = secretKeyRepository.findBySecretKey(userSecretKey);
 
@@ -56,11 +57,11 @@ public class OtpService {
 
         SecretKey secret = optionalSecret.get();
 
-        secret.setCode(passwordEncoder.encode(code.toString()));
+        secret.setCode(passwordEncoder.encode(otp));
         secret.setExpiresAt(LocalDateTime.now().plusMinutes(5));
         secretKeyRepository.save(secret);
 
-        return code.toString();
+        return otp;
     }
 
     /**
