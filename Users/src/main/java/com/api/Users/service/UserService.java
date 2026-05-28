@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
     private final UserRepository userRepository;
     private final AuthClient authClient;
+    private final CloudinaryService cloudinaryService;
 
     /**
      * Metodo para crear usuario con foto de perfil
@@ -189,6 +190,34 @@ public class UserService {
         }
 
         return true;
+    }
+
+    /**
+     * Sube la foto de perfil del usuario autenticado a Cloudinary,
+     * guarda la URL en la base de datos y la devuelve.
+     */
+    public String uploadProfileImage(org.springframework.web.multipart.MultipartFile file) {
+        String userIdHeader = RequestContext.getHeader("x-user-id");
+
+        if (userIdHeader == null) {
+            throw new UnauthorizedUserException("Usuario no autenticado");
+        }
+
+        UUID userId;
+        try {
+            userId = UUID.fromString(userIdHeader);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Formato inválido del userId");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+
+        String imageUrl = cloudinaryService.upload(file, "users/profiles");
+        user.setImageProfile(imageUrl);
+        userRepository.save(user);
+
+        return imageUrl;
     }
 
 }

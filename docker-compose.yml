@@ -1,0 +1,440 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Vexio — Docker Compose
+#
+# ANTES DE USAR:
+#   1. Ejecuta build-all.ps1 para compilar todos los JARs
+#   2. Crea un archivo .env en esta carpeta con tus variables secretas:
+#        NAME_CLOUD=tu_cloudinary_name
+#        KEY_CLOUD=tu_cloudinary_key
+#        SECRET_CLOUD=tu_cloudinary_secret
+#   3. Levanta todo con: docker-compose up -d
+#   4. Para ver los logs: docker-compose logs -f
+#   5. Para detener: docker-compose down
+# ─────────────────────────────────────────────────────────────────────────────
+
+networks:
+  vexio-net:
+    driver: bridge   # Red interna compartida por todos los contenedores
+
+volumes:
+  postgres-data:     # Volumen persistente: los datos de la BD sobreviven reinicios
+
+services:
+
+  # ── POSTGRESQL ──────────────────────────────────────────────────────────────
+  # Un solo contenedor de PostgreSQL aloja las 15 bases de datos.
+  # El archivo init.sql se ejecuta automáticamente la primera vez.
+  postgres:
+    image: postgres:16-alpine
+    container_name: vexio-postgres
+    command: postgres -c max_connections=300   # 15 servicios x 5 pool = 75, con margen
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"   # Sigue accesible desde DBeaver en localhost:5432
+    networks:
+      - vexio-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10     # Los servicios esperan a que Postgres esté listo antes de iniciar
+
+  # ── SERVICIOS SIN DEPENDENCIAS ENTRE MICROSERVICIOS ─────────────────────────
+  # Estos servicios solo dependen de la base de datos.
+
+  auth-service:
+    build:
+      context: ./Auth
+      dockerfile: ../Dockerfile   # Dockerfile genérico en la raíz del proyecto
+    container_name: auth-service
+    ports:
+      - "8082:8082"
+    environment:
+      SERVER_PORT: 8082
+      # SPRING_DATASOURCE_URL sobreescribe spring.datasource.url del application.yaml
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/auth   # por si el YAML usa ${DB_URL}
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      USERS_SERVICE_URL: http://users-service:8083/api/v1
+      JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+      MAIL_USERNAME: vexiomultistore@gmail.com
+      MAIL_PASSWORD: "fqqq kpuc qniw pwkb"
+    depends_on:
+      postgres:
+        condition: service_healthy   # Espera que Postgres pase el healthcheck
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  users-service:
+    build:
+      context: ./Users
+      dockerfile: ../Dockerfile
+    container_name: users-service
+    ports:
+      - "8083:8083"
+    environment:
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/users
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/users
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      AUTH_SERVICE_URL: http://auth-service:8082/api/v1
+      NAME_CLOUD: ${NAME_CLOUD}
+      KEY_CLOUD: ${KEY_CLOUD}
+      SECRET_CLOUD: ${SECRET_CLOUD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  store-service:
+    build:
+      context: ./Store
+      dockerfile: ../Dockerfile
+    container_name: store-service
+    ports:
+      - "8081:8081"
+    environment:
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/store
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/store
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      USERS_SERVICE_URL: http://users-service:8083/api/v1
+      JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+      NAME_CLOUD: ${NAME_CLOUD}
+      KEY_CLOUD: ${KEY_CLOUD}
+      SECRET_CLOUD: ${SECRET_CLOUD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  product-service:
+    build:
+      context: ./Product
+      dockerfile: ../Dockerfile
+    container_name: product-service
+    ports:
+      - "8084:8084"
+    environment:
+      SERVER_PORT: 8084
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/product
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/product
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      STORE_SERVICE_URL: http://store-service:8081/api/v1
+      # Credenciales de Cloudinary: define estas en el .env de esta carpeta
+      NAME_CLOUD: ${NAME_CLOUD}
+      KEY_CLOUD: ${KEY_CLOUD}
+      SECRET_CLOUD: ${SECRET_CLOUD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  cart-service:
+    build:
+      context: ./Cart
+      dockerfile: ../Dockerfile
+    container_name: cart-service
+    ports:
+      - "8086:8086"
+    environment:
+      SERVER_PORT: 8086
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cart
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/cart
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  supplier-service:
+    build:
+      context: ./Supplier
+      dockerfile: ../Dockerfile
+    container_name: supplier-service
+    ports:
+      - "8085:8085"
+    environment:
+      SERVER_PORT: 8085
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/supplier
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/supplier
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  support-service:
+    build:
+      context: ./Support
+      dockerfile: ../Dockerfile
+    container_name: support-service
+    ports:
+      - "8088:8088"
+    environment:
+      SERVER_PORT: 8088
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/support
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/support
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      MAIL_USERNAME: vexiomultistore@gmail.com
+      MAIL_PASSWORD: "fqqq kpuc qniw pwkb"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  promotion-service:
+    build:
+      context: ./Promotion
+      dockerfile: ../Dockerfile
+    container_name: promotion-service
+    ports:
+      - "8091:8091"
+    environment:
+      SERVER_PORT: 8091
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/promotion
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/promotion
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  loyal-customer-service:
+    build:
+      context: ./LoyalCustomer
+      dockerfile: ../Dockerfile
+    container_name: loyal-customer-service
+    ports:
+      - "8093:8093"
+    environment:
+      SERVER_PORT: 8093
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/loyalty
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/loyalty
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  preferences-service:
+    build:
+      context: ./Preferences
+      dockerfile: ../Dockerfile
+    container_name: preferences-service
+    ports:
+      - "8094:8094"
+    environment:
+      SERVER_PORT: 8094
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/preferences
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/preferences
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  reviews-service:
+    build:
+      context: ./Reviews
+      dockerfile: ../Dockerfile
+    container_name: reviews-service
+    ports:
+      - "8095:8095"
+    environment:
+      SERVER_PORT: 8095
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/reviews
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/reviews
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  # ── SERVICIOS CON DEPENDENCIAS ENTRE MICROSERVICIOS ──────────────────────────
+  # Estos necesitan que otro microservicio esté levantado (no solo la BD).
+  # condition: service_started = el contenedor corrió, no espera que el servicio
+  # esté 100% listo (Spring Boot tiene reintentos internos si falla al inicio).
+
+  inventory-service:
+    build:
+      context: ./Inventory
+      dockerfile: ../Dockerfile
+    container_name: inventory-service
+    ports:
+      - "8089:8089"
+    environment:
+      SERVER_PORT: 8089
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/inventory
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      PRODUCT_SERVICE_URL: http://product-service:8084
+    depends_on:
+      postgres:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  order-payment-service:
+    build:
+      context: ./OrderPayment
+      dockerfile: ../Dockerfile
+    container_name: order-payment-service
+    ports:
+      - "8087:8087"
+    environment:
+      SERVER_PORT: 8087
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_payment
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/order_payment
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      CART_SERVICE_URL: http://cart-service:8086/api/v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      cart-service:
+        condition: service_started
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  returns-service:
+    build:
+      context: ./Returns
+      dockerfile: ../Dockerfile
+    container_name: returns-service
+    ports:
+      - "8092:8092"
+    environment:
+      SERVER_PORT: 8092
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/returns
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/returns
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      ORDER_SERVICE_URL: http://order-payment-service:8087/api/v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      order-payment-service:
+        condition: service_started
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  # ── GATEWAY (último en levantar) ─────────────────────────────────────────────
+  # El Gateway enruta todas las peticiones externas a los microservicios.
+  # SPRING_PROFILES_ACTIVE=docker activa application-docker.yml, que reemplaza
+  # los "localhost" de application.yaml por los nombres de servicio de Docker.
+  gateway:
+    build:
+      context: ./Gateway
+      dockerfile: ../Dockerfile
+    container_name: gateway
+    ports:
+      - "8080:8080"   # Único puerto expuesto al exterior; todo pasa por aquí
+    environment:
+      SERVER_PORT: 8080
+      JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - auth-service
+      - users-service
+      - store-service
+      - product-service
+      - cart-service
+      - order-payment-service
+      - inventory-service
+      - support-service
+      - supplier-service
+      - promotion-service
+      - returns-service
+      - loyal-customer-service
+      - preferences-service
+      - reviews-service
+    networks:
+      - vexio-net
+    restart: unless-stopped
