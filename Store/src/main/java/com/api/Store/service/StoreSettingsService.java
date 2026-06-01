@@ -7,6 +7,7 @@ import com.api.Store.entity.StoreSettings;
 import com.api.Store.exception.StoreNotFoundException;
 import com.api.Store.repository.StoreRepository;
 import com.api.Store.repository.StoreSettingsRepository;
+import com.api.Store.client.MediaServiceClient;
 import com.api.Store.util.HeaderUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +27,7 @@ public class StoreSettingsService {
     private final StoreRepository storeRepository;
     private final ObjectMapper objectMapper;
     private final HeaderUtil headerUtil;
-    private final CloudinaryService cloudinaryService;
+    private final MediaServiceClient mediaServiceClient;
 
     // ── 1. Obtener settings de una tienda ────────────────────────────────────
     public StoreSettingsResponseDTO getSettings() {
@@ -129,7 +130,7 @@ public class StoreSettingsService {
 
         verifyStoreExists(storeId);
 
-        String logoUrl = cloudinaryService.upload(file, "stores/logos");
+        String logoUrl = mediaServiceClient.upload(file, "stores/logos");
 
         StoreSettings settings = storeSettingsRepository.findById(storeId)
                 .orElseGet(() -> {

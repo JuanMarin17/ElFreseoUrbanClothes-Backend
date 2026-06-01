@@ -46,13 +46,15 @@ public class JwtValidationFilter extends AbstractGatewayFilterFactory<Object>{
                         .parseSignedClaims(token)
                         .getPayload();
 
-                ServerHttpRequest enrichedRequest = request.mutate()
+                ServerHttpRequest.Builder builder = request.mutate()
                                             .header("X-User-Id", claims.get("user_id", String.class))
                                             .header("X-User-Name", claims.getSubject())
                                             .header("X-User-Role", claims.get("role", String.class))
-                                            .header("X-User-Email", claims.get("email", String.class))
-                                            .header("X-Store-Id", storeId)
-                                            .build();
+                                            .header("X-User-Email", claims.get("email", String.class));
+
+                if (storeId != null) builder.header("X-Store-Id", storeId);
+
+                ServerHttpRequest enrichedRequest = builder.build();
 
                 return chain.filter(exchange.mutate().request(enrichedRequest).build());
             } catch (Exception e){

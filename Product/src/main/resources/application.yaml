@@ -22,14 +22,13 @@ server:
   servlet:
     context-path: /api/v1
 
-cloudinary:
-  cloud_name: ${NAME_CLOUD}
-  api_key: ${KEY_CLOUD}
-  api_secret: ${SECRET_CLOUD}
-
 store:
   service:
     url: ${STORE_SERVICE_URL:http://localhost:8081/api/v1}
+
+media:
+  service:
+    url: ${MEDIA_SERVICE_URL:http://localhost:8096}
 
 management:
   endpoints:
