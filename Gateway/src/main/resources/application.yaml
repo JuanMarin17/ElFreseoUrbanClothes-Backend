@@ -19,6 +19,15 @@ spring:
               /api/v1/auth/deactivateAccount,
               /api/v1/auth/refresh-token
 
+        # ── Cart (antes de store-routes para mayor especificidad) ───────────────
+        - id: cart-routes
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/v1/stores/*/cart,
+              /api/v1/stores/*/cart/**
+          filters:
+            - JwtValidationFilter
+
         # ── Orders y Payments (antes de store-routes para mayor especificidad) ──
         - id: order-routes
           uri: http://localhost:8087
@@ -129,6 +138,30 @@ spring:
           uri: http://localhost:8092
           predicates:
             - Path=/api/v1/returns/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Reports (requiere JWT + X-Store-Id) ──────────────────────────────
+        - id: reports-routes
+          uri: http://localhost:8100
+          predicates:
+            - Path=/api/v1/reports/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Payment OAuth (callback público, MP no manda JWT) ────────────────
+        - id: payment-oauth-public-routes
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api/v1/oauth/callback,
+              /api/v1/payments/webhook
+
+        # ── Payment (protegido) ───────────────────────────────────────────────
+        - id: payment-routes
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api/v1/payments/**,
+              /api/v1/oauth/**
           filters:
             - JwtValidationFilter
 
