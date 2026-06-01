@@ -95,8 +95,8 @@ public class ProductController {
 
     @GetMapping
     public ResponseEntity<ApiResponseDTO<List<ProductResponseDTO>>> listProducts(
-            @RequestParam int page,
-            @RequestParam int size) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
         List<ProductResponseDTO> products = productService.listProducts(page, size);
 
@@ -121,8 +121,8 @@ public class ProductController {
 
     @GetMapping("/active")
     public ResponseEntity<ApiResponseDTO<List<ProductResponseDTO>>> listActiveProducts(
-            @RequestParam int page,
-            @RequestParam int size) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
 
         List<ProductResponseDTO> products = productService.listActiveProducts(page, size);
 

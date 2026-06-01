@@ -7,6 +7,14 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/product}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:root}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 600000        # cierra conexiones inactivas después de 10 min
+      max-lifetime: 1800000       # recicla conexiones cada 30 min (antes de que Postgres las cierre)
+      keepalive-time: 60000       # ping cada 1 min para mantener la conexión viva
+      connection-timeout: 30000
+      validation-timeout: 5000
 
   jpa:
     hibernate:

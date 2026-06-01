@@ -25,7 +25,7 @@ import java.util.UUID;
  * DELETE /api/stores/{storeId}/cart                         → Vaciar carrito
  */
 @RestController
-@RequestMapping("/api/stores/{storeId}/cart")
+@RequestMapping("/stores/{storeId}/cart")
 @RequiredArgsConstructor
 public class CartController {
 
