@@ -16,7 +16,8 @@ spring:
               /api/v1/auth/loginSecondStep,
               /api/v1/auth/forgotPassword,
               /api/v1/auth/forgotPasswordSecondStep,
-              /api/v1/auth/deactivateAccount
+              /api/v1/auth/deactivateAccount,
+              /api/v1/auth/refresh-token
 
         # ── Orders y Payments (antes de store-routes para mayor especificidad) ──
         - id: order-routes
@@ -34,14 +35,23 @@ spring:
             - Path=/api/v1/stores,
               /api/v1/stores/**
 
+        # ── Media service (centraliza todas las subidas de imágenes) ─────────
+        - id: media-routes
+          uri: http://localhost:8096
+          predicates:
+            - Path=/api/v1/upload,
+              /api/v1/upload/**,
+              /api/v1/cloudinary/**
+          filters:
+            - JwtValidationFilter
+
         # ── Product ───────────────────────────────────────────────────────────────
         - id: product-routes
           uri: http://localhost:8084
           predicates:
             - Path=/api/v1/products/**,
               /api/v1/categories/**,
-              /api/v1/brands/**,
-              /api/v1/cloudinary/**
+              /api/v1/brands/**
           filters:
             - JwtValidationFilter
 

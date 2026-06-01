@@ -153,7 +153,7 @@ public class SupportService {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     private UUID getUserIdFromHeader() {
-        String userIdHeader = RequestContext.getHeader("X-User-Id");
+        String userIdHeader = RequestContext.getHeader("x-user-id");
         if (userIdHeader == null || userIdHeader.isBlank())
             throw new UnauthorizedException("Usuario no autenticado");
         try {
@@ -164,14 +164,14 @@ public class SupportService {
     }
 
     private String getUserEmailFromHeader() {
-        String email = RequestContext.getHeader("X-User-Email");
+        String email = RequestContext.getHeader("x-user-email");
         if (email == null || email.isBlank())
             throw new UnauthorizedException("No se pudo obtener el email del usuario autenticado");
         return email;
     }
 
     private void validateOwner() {
-        String role = RequestContext.getHeader("X-User-Role");
+        String role = RequestContext.getHeader("x-user-role");
         if (!"OWNER".equals(role))
             throw new UnauthorizedException("Solo el OWNER puede realizar esta acción");
     }

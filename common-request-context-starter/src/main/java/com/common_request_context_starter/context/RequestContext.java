@@ -9,11 +9,11 @@ public final class RequestContext {
     private RequestContext() {}
 
     public static void setHeader(String name, String value){
-        HEADERS.get().put(name, value);
+        HEADERS.get().put(name.toLowerCase(), value);
     }
 
     public static String getHeader(String name){
-        return HEADERS.get().get(name);
+        return HEADERS.get().get(name.toLowerCase());
     }
 
     public static Map<String, String> getAllHeaders(){

@@ -34,7 +34,7 @@ public class EmailService {
                 "Asunto: " + subject + "\n" +
                 "ID del ticket: " + ticketId + "\n\n" +
                 "Nuestro equipo revisará tu caso y te responderá a la brevedad.\n\n" +
-                "El Freseo - Soporte"
+                "Vexio Multi Store - Soporte"
             );
             mailSender.send(message);
             log.info("Email de creación de ticket enviado a: {}", to);
@@ -57,7 +57,7 @@ public class EmailService {
                 "ID del ticket: " + ticketId + "\n\n" +
                 "Respuesta del equipo de soporte:\n" +
                 reply + "\n\n" +
-                "El Freseo - Soporte"
+                "Vexio Multi Store - Soporte"
             );
             mailSender.send(message);
             log.info("Email de respuesta enviado a: {}", to);
@@ -79,7 +79,7 @@ public class EmailService {
                 "Asunto: " + subject + "\n" +
                 "ID del ticket: " + ticketId + "\n\n" +
                 "Si el problema persiste o tienes nuevas dudas, no dudes en abrir un nuevo ticket.\n\n" +
-                "El Freseo - Soporte"
+                "Vexio Multi Store - Soporte"
             );
             mailSender.send(message);
             log.info("Email de cierre de ticket enviado a: {}", to);

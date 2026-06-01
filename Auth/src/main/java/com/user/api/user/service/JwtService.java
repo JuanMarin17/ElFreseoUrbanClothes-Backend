@@ -109,7 +109,7 @@ public class JwtService {
      * @return
      */
     public UUID extractUserId(String token) {
-        return extractClaims(token, claims -> claims.get("user_id", UUID.class));
+        return extractClaims(token, claims -> UUID.fromString(claims.get("user_id", String.class)));
     }
 
     /**
@@ -141,7 +141,7 @@ public class JwtService {
             throw new RuntimeException("Token is invalid " + e.getMessage());
         }
 
-        return generateToken(claims.get("user_id", UUID.class), claims.getSubject(), claims.get("role", String.class), claims.get("email", String.class));
+        return generateToken(UUID.fromString(claims.get("user_id", String.class)), claims.getSubject(), claims.get("role", String.class), claims.get("email", String.class));
     }
 
 }

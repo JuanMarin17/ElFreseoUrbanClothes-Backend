@@ -92,9 +92,12 @@ services:
       DB_PASSWORD: root
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       AUTH_SERVICE_URL: http://auth-service:8082/api/v1
+      USERS_SERVICE_URL: http://auth-service:8082/api/v1
       NAME_CLOUD: ${NAME_CLOUD}
       KEY_CLOUD: ${KEY_CLOUD}
       SECRET_CLOUD: ${SECRET_CLOUD}
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,6 +126,8 @@ services:
       NAME_CLOUD: ${NAME_CLOUD}
       KEY_CLOUD: ${KEY_CLOUD}
       SECRET_CLOUD: ${SECRET_CLOUD}
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
     depends_on:
       postgres:
         condition: service_healthy

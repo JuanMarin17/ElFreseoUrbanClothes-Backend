@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
     private final UserRepository userRepository;
     private final AuthClient authClient;
-    private final CloudinaryService cloudinaryService;
+    private final com.api.Users.client.MediaServiceClient mediaServiceClient;
 
     /**
      * Metodo para crear usuario con foto de perfil
@@ -213,7 +213,7 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
-        String imageUrl = cloudinaryService.upload(file, "users/profiles");
+        String imageUrl = mediaServiceClient.upload(file, "users/profiles");
         user.setImageProfile(imageUrl);
         userRepository.save(user);
 
