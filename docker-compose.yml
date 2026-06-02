@@ -327,6 +327,60 @@ services:
       - vexio-net
     restart: unless-stopped
 
+  media-service:
+    build:
+      context: ./media-service
+    container_name: media-service
+    ports:
+      - "8096:8096"
+    environment:
+      PORT: 8096
+      NAME_CLOUD: ${NAME_CLOUD}
+      KEY_CLOUD: ${KEY_CLOUD}
+      SECRET_CLOUD: ${SECRET_CLOUD}
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  ia-user-service:
+    build:
+      context: ./IaUser
+    container_name: ia-user-service
+    ports:
+      - "8099:8099"
+    environment:
+      DATABASE_URL: postgresql://postgres:root@postgres:5432/ia_user
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      PRODUCT_SERVICE_URL: http://product-service:8084
+      CART_SERVICE_URL: http://cart-service:8086
+      SUPPORT_SERVICE_URL: http://support-service:8088
+      STORE_SERVICE_URL: http://store-service:8081
+      PROMOTIONS_SERVICE_URL: http://promotion-service:8091
+      REVIEWS_SERVICE_URL: http://reviews-service:8095
+      CMS_SERVICE_URL: http://cms-service:8101
+      PREFERENCES_SERVICE_URL: http://preferences-service:8094
+    depends_on:
+      postgres:
+        condition: service_healthy
+      product-service:
+        condition: service_started
+      cart-service:
+        condition: service_started
+      support-service:
+        condition: service_started
+      store-service:
+        condition: service_started
+      promotion-service:
+        condition: service_started
+      reviews-service:
+        condition: service_started
+      preferences-service:
+        condition: service_started
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
   # ── SERVICIOS CON DEPENDENCIAS ENTRE MICROSERVICIOS ──────────────────────────
   # Estos necesitan que otro microservicio esté levantado (no solo la BD).
   # condition: service_started = el contenedor corrió, no espera que el servicio
@@ -440,6 +494,8 @@ services:
       - loyal-customer-service
       - preferences-service
       - reviews-service
+      - media-service
+      - ia-user-service
     networks:
       - vexio-net
     restart: unless-stopped
