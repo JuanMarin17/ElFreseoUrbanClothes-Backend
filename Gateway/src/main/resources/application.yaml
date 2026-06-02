@@ -186,6 +186,21 @@ spring:
             - Path=/api/v1/reviews/**
           filters:
             - JwtValidationFilter
+        # ── IA User ─────────────────────────────────────────────────────────
+
+        - id: ia-user-routes
+          uri: http://localhost:8097
+          predicates:
+            - Path=/api/v1/ia/user/**
+          filters:
+            - JwtValidationFilter
+        # ── IA Admin ─────────────────────────────────────────────────────────
+        - id: ia-admin-routes
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api/v1/ia/admin/**
+          filters:
+            - JwtValidationFilter
 
 server:
   port: ${SERVER_PORT:8080}
