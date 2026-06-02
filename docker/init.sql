@@ -16,3 +16,4 @@ CREATE DATABASE loyalty;
 CREATE DATABASE preferences;
 CREATE DATABASE reviews;
 CREATE DATABASE tuapp_db;
+CREATE DATABASE ia_user;

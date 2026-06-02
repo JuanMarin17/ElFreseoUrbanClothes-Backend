@@ -61,7 +61,7 @@ public class EmailService {
                         <!-- Brand header -->
                         <tr>
                           <td style="background-color:#111111;padding:36px 48px;text-align:center;">
-                            <p style="margin:0 0 4px;font-size:9px;letter-spacing:8px;color:#666666;text-transform:uppercase;font-weight:600;">Urban Clothes</p>
+                            <p style="margin:0 0 4px;font-size:9px;letter-spacing:8px;color:#666666;text-transform:uppercase;font-weight:600;">Global Multi Store</p>
                             <h1 style="margin:0;font-size:28px;font-weight:900;color:#ffffff;letter-spacing:6px;text-transform:uppercase;line-height:1.2;">Vexio Multi Store</h1>
                           </td>
                         </tr>
@@ -75,7 +75,7 @@ public class EmailService {
 
                         <!-- Body -->
                         <tr>
-                          <td style="padding:52px 56px 44px;text-align:center;">
+                          <td style="padding:52px 56px 44px;text-align:center; bsckground-color:#111111">
 
                             <h2 style="margin:0 0 14px;font-size:22px;font-weight:700;color:#0d0d0d;letter-spacing:-0.3px;">Tu código de acceso</h2>
                             <p style="margin:0 0 40px;font-size:15px;color:#666666;line-height:1.75;max-width:360px;margin-left:auto;margin-right:auto;">
