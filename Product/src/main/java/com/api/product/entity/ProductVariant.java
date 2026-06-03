@@ -33,10 +33,16 @@ public class ProductVariant {
     private BigDecimal price;
     private Integer stock;
 
+    @Column(nullable = true)
+    private String size;
+
+    @Column(nullable = true)
+    private String color;
+
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;
-    
+
     @Column(name = "min_stock")
     private Integer minStock;
 }

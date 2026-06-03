@@ -14,6 +14,8 @@ public class StockAlertDTO {
     private String productName;
     private UUID variantId;
     private String sku;
+    private String size;
+    private String color;
     private Integer stock;
     private Integer minStock;
     private String message;

@@ -55,7 +55,11 @@ Build-Service "Inventory"       "Inventory"
 Build-Service "OrderPayment"    "OrderPayment"
 Build-Service "Returns"         "Returns"
 
-# 4. Gateway al final (depende de que todos los demás estén listos)
+# 4. Servicios IA y auxiliares
+Build-Service "Cms"             "Cms"
+Build-Service "Reports"         "Reports"
+
+# 5. Gateway al final (depende de que todos los demás estén listos)
 Build-Service "Gateway"         "Gateway"
 
 Write-Host ""

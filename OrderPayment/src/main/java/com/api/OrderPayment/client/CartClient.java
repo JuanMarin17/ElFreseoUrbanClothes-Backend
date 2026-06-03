@@ -37,7 +37,7 @@ public class CartClient {
         log.info("Consultando carrito en Cart-Service: storeId={}, userId={}", storeId, userId);
 
         return webClient.get()
-                .uri(cartBaseUrl + "/api/stores/{storeId}/cart", storeId)
+                .uri(cartBaseUrl + "/stores/{storeId}/cart", storeId)
                 .header("x-user-id", userId.toString())
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, response ->
@@ -58,7 +58,7 @@ public class CartClient {
         log.info("Vaciando carrito en Cart-Service: storeId={}, userId={}", storeId, userId);
 
         webClient.delete()
-                .uri(cartBaseUrl + "/api/stores/{storeId}/cart", storeId)
+                .uri(cartBaseUrl + "/stores/{storeId}/cart", storeId)
                 .header("x-user-id", userId.toString())
                 .retrieve()
                 .onStatus(HttpStatusCode::is5xxServerError, response ->
