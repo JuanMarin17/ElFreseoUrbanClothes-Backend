@@ -186,6 +186,7 @@ spring:
             - Path=/api/v1/reviews/**
           filters:
             - JwtValidationFilter
+
         # ── CMS ─────────────────────────────────────────────────────────────
         - id: cms-routes
           uri: http://localhost:8101
@@ -204,7 +205,7 @@ spring:
 
         # ── IA Admin ─────────────────────────────────────────────────────────
         - id: ia-admin-routes
-          uri: http://localhost:8098
+          uri: http://localhost:8101
           predicates:
             - Path=/api/v1/ia/admin/**
           filters:
