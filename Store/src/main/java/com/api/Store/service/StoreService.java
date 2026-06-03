@@ -24,6 +24,7 @@ public class StoreService {
 
     private final StoreRepository storeRepository;
     private final StoreUserRepository storeUserRepository;
+    private final StoreCmsService cmsService;
 
     // ── 1. Crear tienda ──────────────────────────────────────────────────────
     @Transactional
@@ -50,6 +51,8 @@ public class StoreService {
                 .role(StoreRole.OWNER)
                 .build();
         storeUserRepository.save(ownerEntry);
+
+        cmsService.saveCms(saved.getStoreId(), dto.getCms());
 
         return toResponse(saved, "Tienda creada correctamente", 201);
     }

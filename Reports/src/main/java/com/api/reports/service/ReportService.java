@@ -368,7 +368,7 @@ public class ReportService {
                             .percentage(Math.round(pct * 10.0) / 10.0)
                             .build();
                 })
-                .sorted(Comparator.comparingDouble(SalesReportDTO.PaymentMethodDTO::getTotal)
+                .sorted(Comparator.comparing(SalesReportDTO.PaymentMethodDTO::getTotal)
                         .reversed())
                 .collect(Collectors.toList());
 

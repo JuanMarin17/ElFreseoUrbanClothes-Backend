@@ -32,6 +32,8 @@ public class ProductRequestDTO {
         private BigDecimal price;
         private Integer stock;
         private Integer minStock;
+        private String size;   // opcional — ropa: "S", "M", "XL" / ferretería: null
+        private String color;  // opcional — ropa: "Negro" / otros: null
     }
 
 }

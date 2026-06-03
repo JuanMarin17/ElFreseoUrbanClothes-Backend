@@ -29,10 +29,13 @@ public class ProductResponseDTO {
     @Data
     @Builder
     public static class VariantDTO {
+        private UUID variantId;
         private String sku;
         private BigDecimal price;
         private Integer stock;
         private Integer minStock;
+        private String size;
+        private String color;
     }
 
     @Data

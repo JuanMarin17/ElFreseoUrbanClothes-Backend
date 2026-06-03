@@ -9,8 +9,21 @@ cloudinary.config({
   api_secret: process.env.SECRET_CLOUD,
 });
 
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Tipo de archivo no permitido: ${file.mimetype}. Solo se aceptan imágenes.`));
+    }
+  },
+});
 
 const uploadToCloudinary = (buffer, folder) =>
   new Promise((resolve, reject) => {

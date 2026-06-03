@@ -180,9 +180,15 @@ services:
       DB_PASSWORD: root
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+      STORE_SERVICE_URL: http://store-service:8081/api/v1
+      PRODUCT_SERVICE_URL: http://product-service:8084/api/v1
     depends_on:
       postgres:
         condition: service_healthy
+      store-service:
+        condition: service_started
+      product-service:
+        condition: service_started
     networks:
       - vexio-net
     restart: unless-stopped
@@ -327,6 +333,56 @@ services:
       - vexio-net
     restart: unless-stopped
 
+  cms-service:
+    build:
+      context: ./Cms
+      dockerfile: ../Dockerfile
+    container_name: cms-service
+    ports:
+      - "8101:8101"
+    environment:
+      SERVER_PORT: 8101
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cms
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/cms
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      PREFERENCES_SERVICE_URL: http://preferences-service:8094
+      PRODUCT_SERVICE_URL: http://product-service:8084
+    depends_on:
+      postgres:
+        condition: service_healthy
+      preferences-service:
+        condition: service_started
+      product-service:
+        condition: service_started
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  reports-service:
+    build:
+      context: ./Reports
+      dockerfile: ../Dockerfile
+    container_name: reports-service
+    ports:
+      - "8100:8100"
+    environment:
+      SERVER_PORT: 8100
+      PRODUCT_SERVICE_URL: http://product-service:8084/api/v1
+      ORDER_SERVICE_URL: http://order-payment-service:8087/api/v1
+    depends_on:
+      product-service:
+        condition: service_started
+      order-payment-service:
+        condition: service_started
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
   media-service:
     build:
       context: ./media-service
@@ -376,6 +432,8 @@ services:
       reviews-service:
         condition: service_started
       preferences-service:
+        condition: service_started
+      cms-service:
         condition: service_started
     networks:
       - vexio-net
@@ -496,6 +554,8 @@ services:
       - reviews-service
       - media-service
       - ia-user-service
+      - cms-service
+      - reports-service
     networks:
       - vexio-net
     restart: unless-stopped

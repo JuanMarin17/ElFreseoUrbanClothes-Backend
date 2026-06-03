@@ -186,14 +186,22 @@ spring:
             - Path=/api/v1/reviews/**
           filters:
             - JwtValidationFilter
-        # ── IA User ─────────────────────────────────────────────────────────
+        # ── CMS ─────────────────────────────────────────────────────────────
+        - id: cms-routes
+          uri: http://localhost:8101
+          predicates:
+            - Path=/api/v1/cms/**
+          filters:
+            - JwtValidationFilter
 
+        # ── IA User ─────────────────────────────────────────────────────────
         - id: ia-user-routes
-          uri: http://localhost:8097
+          uri: http://localhost:8099
           predicates:
             - Path=/api/v1/ia/user/**
           filters:
             - JwtValidationFilter
+
         # ── IA Admin ─────────────────────────────────────────────────────────
         - id: ia-admin-routes
           uri: http://localhost:8098

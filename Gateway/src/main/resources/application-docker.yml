@@ -4,6 +4,7 @@ spring:
   cloud:
     gateway:
       routes:
+        # ── Auth (público) ────────────────────────────────────────────────────
         - id: auth-routes
           uri: http://auth-service:8082
           predicates:
@@ -14,8 +15,19 @@ spring:
               /api/v1/auth/loginSecondStep,
               /api/v1/auth/forgotPassword,
               /api/v1/auth/forgotPasswordSecondStep,
-              /api/v1/auth/deactivateAccount
+              /api/v1/auth/deactivateAccount,
+              /api/v1/auth/refresh-token
 
+        # ── Cart (antes de store-routes para mayor especificidad) ─────────────
+        - id: cart-routes
+          uri: http://cart-service:8086
+          predicates:
+            - Path=/api/v1/stores/*/cart,
+              /api/v1/stores/*/cart/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Orders (antes de store-routes para mayor especificidad) ──────────
         - id: order-routes
           uri: http://order-payment-service:8087
           predicates:
@@ -24,27 +36,40 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
           uri: http://store-service:8081
           predicates:
             - Path=/api/v1/stores,
               /api/v1/stores/**
 
+        # ── Media service (centraliza todas las subidas de imágenes) ─────────
+        - id: media-routes
+          uri: http://media-service:8096
+          predicates:
+            - Path=/api/v1/upload,
+              /api/v1/upload/**,
+              /api/v1/cloudinary/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Product ───────────────────────────────────────────────────────────
         - id: product-routes
           uri: http://product-service:8084
           predicates:
             - Path=/api/v1/products/**,
               /api/v1/categories/**,
-              /api/v1/brands/**,
-              /api/v1/cloudinary/**
+              /api/v1/brands/**
           filters:
             - JwtValidationFilter
 
+        # ── Alertas de stock SSE (sin JWT para que el frontend pueda conectarse)
         - id: stock-alert-routes
           uri: http://product-service:8084
           predicates:
             - Path=/api/v1/alerts/stock/stream
 
+        # ── Variantes ─────────────────────────────────────────────────────────
         - id: variant-routes
           uri: http://product-service:8084
           predicates:
@@ -53,6 +78,7 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Usuarios ──────────────────────────────────────────────────────────
         - id: users-routes
           uri: http://users-service:8083
           predicates:
@@ -63,6 +89,7 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Supplier ──────────────────────────────────────────────────────────
         - id: supplier-routes
           uri: http://supplier-service:8085
           predicates:
@@ -70,6 +97,7 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Support ───────────────────────────────────────────────────────────
         - id: support-routes
           uri: http://support-service:8088
           predicates:
@@ -77,6 +105,7 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Preferences ───────────────────────────────────────────────────────
         - id: preferences-routes
           uri: http://preferences-service:8094
           predicates:
@@ -85,6 +114,7 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Inventory ─────────────────────────────────────────────────────────
         - id: inventory-routes
           uri: http://inventory-service:8089
           predicates:
@@ -93,6 +123,7 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Promotion ─────────────────────────────────────────────────────────
         - id: promotion-routes
           uri: http://promotion-service:8091
           predicates:
@@ -101,6 +132,7 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Returns ───────────────────────────────────────────────────────────
         - id: returns-routes
           uri: http://returns-service:8092
           predicates:
@@ -108,11 +140,37 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Reports ───────────────────────────────────────────────────────────
+        - id: reports-routes
+          uri: http://reports-service:8100
+          predicates:
+            - Path=/api/v1/reports/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Payment OAuth (callback público, MP no manda JWT) ─────────────────
+        - id: payment-oauth-public-routes
+          uri: http://payment-service:8098
+          predicates:
+            - Path=/api/v1/oauth/callback,
+              /api/v1/payments/webhook
+
+        # ── Payment (protegido) ───────────────────────────────────────────────
+        - id: payment-routes
+          uri: http://payment-service:8098
+          predicates:
+            - Path=/api/v1/payments/**,
+              /api/v1/oauth/**
+          filters:
+            - JwtValidationFilter
+
+        # ── LoyalCustomer (internas entre microservicios, sin JWT) ────────────
         - id: loyalty-internal-routes
           uri: http://loyal-customer-service:8093
           predicates:
             - Path=/api/v1/loyalty/internal/**
 
+        # ── LoyalCustomer (protegidas) ────────────────────────────────────────
         - id: loyalty-routes
           uri: http://loyal-customer-service:8093
           predicates:
@@ -120,9 +178,34 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Reviews ───────────────────────────────────────────────────────────
         - id: reviews-routes
           uri: http://reviews-service:8095
           predicates:
             - Path=/api/v1/reviews/**
+          filters:
+            - JwtValidationFilter
+
+        # ── CMS ───────────────────────────────────────────────────────────────
+        - id: cms-routes
+          uri: http://cms-service:8101
+          predicates:
+            - Path=/api/v1/cms/**
+          filters:
+            - JwtValidationFilter
+
+        # ── IA User ───────────────────────────────────────────────────────────
+        - id: ia-user-routes
+          uri: http://ia-user-service:8099
+          predicates:
+            - Path=/api/v1/ia/user/**
+          filters:
+            - JwtValidationFilter
+
+        # ── IA Admin ──────────────────────────────────────────────────────────
+        - id: ia-admin-routes
+          uri: http://payment-service:8098
+          predicates:
+            - Path=/api/v1/ia/admin/**
           filters:
             - JwtValidationFilter
