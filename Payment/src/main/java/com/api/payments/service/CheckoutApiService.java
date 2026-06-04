@@ -75,7 +75,7 @@ public class CheckoutApiService {
                     .paymentMethodId(request.getPaymentMethodId())
                     .payer(payer)
                     .externalReference(request.getExternalReference())
-                    .notificationUrl(mpConfig.getNotificationUrl())
+                    .notificationUrl(mpConfig.getNotificationUrl() != null && !mpConfig.getNotificationUrl().contains("localhost") ? mpConfig.getNotificationUrl() : null)
                     // El marketplace_fee se descuenta automáticamente hacia tu cuenta
                     .applicationFee(platformFee)
                     .build();

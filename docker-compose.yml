@@ -96,6 +96,7 @@ services:
       NAME_CLOUD: ${NAME_CLOUD}
       KEY_CLOUD: ${KEY_CLOUD}
       SECRET_CLOUD: ${SECRET_CLOUD}
+      MEDIA_SERVICE_URL: http://media-service:8096
       SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
       SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
     depends_on:
@@ -126,6 +127,7 @@ services:
       NAME_CLOUD: ${NAME_CLOUD}
       KEY_CLOUD: ${KEY_CLOUD}
       SECRET_CLOUD: ${SECRET_CLOUD}
+      MEDIA_SERVICE_URL: http://media-service:8096
       SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
       SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
     depends_on:
@@ -152,10 +154,10 @@ services:
       DB_PASSWORD: root
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       STORE_SERVICE_URL: http://store-service:8081/api/v1
-      # Credenciales de Cloudinary: define estas en el .env de esta carpeta
       NAME_CLOUD: ${NAME_CLOUD}
       KEY_CLOUD: ${KEY_CLOUD}
       SECRET_CLOUD: ${SECRET_CLOUD}
+      MEDIA_SERVICE_URL: http://media-service:8096
     depends_on:
       postgres:
         condition: service_healthy
@@ -435,6 +437,32 @@ services:
         condition: service_started
       cms-service:
         condition: service_started
+    networks:
+      - vexio-net
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: ./Payment
+      dockerfile: ../Dockerfile
+    container_name: payment-service
+    ports:
+      - "8098:8098"
+    environment:
+      SERVER_PORT: 8098
+      DB_URL: jdbc:postgresql://postgres:5432/payments
+      DB_USER: postgres
+      DB_PASSWORD: root
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
+      MP_CLIENT_ID: ${MP_CLIENT_ID}
+      MP_CLIENT_SECRET: ${MP_CLIENT_SECRET}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
+      MP_FEE_RATIO: ${MP_FEE_RATIO:0.01}
+      APP_BASE_URL: ${APP_BASE_URL:http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - vexio-net
     restart: unless-stopped

@@ -64,13 +64,17 @@ public class SubscriptionService {
                 .pending(mpConfig.getFrontendUrl() + "/dashboard/subscription/pending")
                 .build();
 
+            String notifUrl = mpConfig.getNotificationUrl();
+            String frontendUrl = mpConfig.getFrontendUrl();
+            boolean isPublicEnv = frontendUrl != null && !frontendUrl.contains("localhost") && !frontendUrl.contains("127.0.0.1");
+
             PreferenceRequest preferenceReq = PreferenceRequest.builder()
                 .items(List.of(item))
                 .payer(payer)
                 .backUrls(backUrls)
-                .autoReturn("approved")
+                .autoReturn(isPublicEnv ? "approved" : null)
                 .externalReference("SUB-" + request.getTenantId() + "-" + request.getPlan().name())
-                .notificationUrl(mpConfig.getNotificationUrl())
+                .notificationUrl(isPublicEnv ? notifUrl : null)
                 .build();
 
             PreferenceClient client = new PreferenceClient();

@@ -16,7 +16,7 @@ import com.api.payments.service.MarketplaceService;
 import com.api.payments.service.SubscriptionService;
 
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/payments")
 @RequiredArgsConstructor
 @Slf4j
 public class PaymentController {
