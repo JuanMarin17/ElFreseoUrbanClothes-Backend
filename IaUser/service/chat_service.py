@@ -8,7 +8,15 @@ from service.client import (
 )
 from schemas.chat_schemas import ChatRequest, ChatResponse
 import uuid
+import re
 from uuid import UUID
+
+_UUID_RE = re.compile(r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}')
+
+
+def _sanitize_uuid(value: str) -> str:
+    match = _UUID_RE.search(value)
+    return match.group(0) if match else value
 
 
 def _build_product_context(products: list) -> str:
@@ -17,17 +25,21 @@ def _build_product_context(products: list) -> str:
     lines = []
     for p in products[:40]:
         variants = p.get("variants", [])
+        # Precio desde la primera variante (el producto no tiene precio propio)
+        first_price = next((v.get("price") for v in variants if v.get("price") is not None), None)
+        price_label = f"${first_price}" if first_price is not None else "sin precio"
+
         stock_info = []
         for v in variants:
             qty   = v.get("stock", 0)
             color = v.get("color", "")
             size  = v.get("size", "")
-            label = f"{color}/{size}" if color or size else v.get("variantId", "")
+            label = f"{color}/{size}".strip("/") if (color or size) else "única"
             stock_info.append(
-                f"{label}: {'disponible' if qty > 0 else 'sin stock'} (id:{v.get('variantId','')})"
+                f"{label}: {'disponible' if qty > 0 else 'sin stock'} (variantId:{v.get('variantId','')})"
             )
         lines.append(
-            f"- {p.get('name','')} | Precio: {p.get('price','')} | Variantes: {', '.join(stock_info)}"
+            f"- {p.get('name','')} | productId:{p.get('productId','')} | Precio: {price_label} | Variantes: {', '.join(stock_info)}"
         )
     return "\n".join(lines)
 
@@ -125,17 +137,20 @@ async def process_action(
 
     if "ACTION:ADD_TO_CART" in ai_response:
         data = extract_action_data(ai_response)
+        product_id = _sanitize_uuid(data.get("productId", ""))
+        print(f"[process_action] ADD_TO_CART | productId={product_id} | storeId={store_id} | userId={user_id}")
         response.action = "ADD_TO_CART"
         response.action_data = data
         try:
-            await cart_client.add_to_cart(user_id, store_id, data.get("variantId", ""), 1)
+            await cart_client.add_to_cart(user_id, store_id, product_id, 1)
             response.message = clean_response(ai_response) or "¡Perfecto! Agregué el producto a tu carrito."
-        except:
-            response.message = "Quise agregar el producto pero hubo un error. ¿Puedes intentarlo manualmente?"
+        except Exception as e:
+            print(f"[process_action] ADD_TO_CART falló: {e}")
+            response.message = f"No pude agregar el producto al carrito. Error: {e}"
 
     elif "ACTION:STOCK_NOTIFY" in ai_response:
         data = extract_action_data(ai_response)
-        variant_id = data.get("variantId", "")
+        variant_id = _sanitize_uuid(data.get("variantId", ""))
         response.action = "STOCK_NOTIFY"
         response.action_data = data
         try:
@@ -232,7 +247,9 @@ def extract_action_data(response: str) -> dict:
     data = {}
     try:
         action_part = response[response.index("ACTION:"):]
-        parts = action_part.split("|")
+        # Solo la primera línea — evita que texto de respuesta posterior contamine los valores
+        action_line = action_part.split("\n")[0].strip()
+        parts = action_line.split("|")
         for part in parts:
             if ":" in part and not part.startswith("ACTION"):
                 k, v = part.split(":", 1)

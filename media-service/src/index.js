@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const sharp = require('sharp');
 const { v2: cloudinary } = require('cloudinary');
 require('dotenv').config();
 
@@ -25,10 +26,17 @@ const upload = multer({
   },
 });
 
+const compressToWebP = (buffer, mimetype) => {
+  const isAnimated = mimetype === 'image/gif';
+  return sharp(buffer, { animated: isAnimated })
+    .webp({ quality: 82, effort: 4 })
+    .toBuffer();
+};
+
 const uploadToCloudinary = (buffer, folder) =>
   new Promise((resolve, reject) => {
     cloudinary.uploader
-      .upload_stream({ folder, resource_type: 'image' }, (error, result) => {
+      .upload_stream({ folder, resource_type: 'image', format: 'webp' }, (error, result) => {
         if (error) reject(error);
         else resolve(result);
       })
@@ -43,11 +51,12 @@ const handleUpload = async (req, res) => {
   const folder = req.query.folder || 'general';
 
   try {
-    const result = await uploadToCloudinary(req.file.buffer, folder);
+    const webpBuffer = await compressToWebP(req.file.buffer, req.file.mimetype);
+    const result = await uploadToCloudinary(webpBuffer, folder);
     res.json({ url: result.secure_url });
   } catch (error) {
-    console.error('Error al subir a Cloudinary:', error.message);
-    res.status(500).json({ error: 'Error al subir imagen: ' + error.message });
+    console.error('Error al procesar/subir imagen:', error.message);
+    res.status(500).json({ error: 'Error al procesar imagen: ' + error.message });
   }
 };
 // POST /api/v1/upload?folder=general

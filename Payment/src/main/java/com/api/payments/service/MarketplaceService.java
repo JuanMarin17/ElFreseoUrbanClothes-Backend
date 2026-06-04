@@ -82,12 +82,16 @@ public class MarketplaceService {
                 .pending(mpConfig.getFrontendUrl() + "/store/checkout/pending")
                 .build();
 
+            String notifUrl = mpConfig.getNotificationUrl();
+            String frontendUrl = mpConfig.getFrontendUrl();
+            boolean isPublicEnv = frontendUrl != null && !frontendUrl.contains("localhost") && !frontendUrl.contains("127.0.0.1");
+
             PreferenceRequest preferenceReq = PreferenceRequest.builder()
                 .items(items)
                 .backUrls(backUrls)
-                .autoReturn("approved")
+                .autoReturn(isPublicEnv ? "approved" : null)
                 .externalReference(request.getExternalReference())
-                .notificationUrl(mpConfig.getNotificationUrl())
+                .notificationUrl(isPublicEnv ? notifUrl : null)
                 // marketplace_fee: lo que tú cobras (en centavos o en la moneda configurada)
                 .marketplaceFee(platformFee)
                 .build();

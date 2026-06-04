@@ -26,7 +26,7 @@ import java.util.Map;
  *   - x-request-id
  */
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/payments")
 @RequiredArgsConstructor
 @Slf4j
 public class WebhookController {

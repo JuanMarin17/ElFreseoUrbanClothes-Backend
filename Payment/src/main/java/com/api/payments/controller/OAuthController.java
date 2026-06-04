@@ -11,7 +11,7 @@ import com.api.payments.dto.response.OAuthResponse;
 import com.api.payments.service.OAuthService;
 
 @RestController
-@RequestMapping("/api/oauth")
+@RequestMapping("/oauth")
 @RequiredArgsConstructor
 @Slf4j
 public class OAuthController {
