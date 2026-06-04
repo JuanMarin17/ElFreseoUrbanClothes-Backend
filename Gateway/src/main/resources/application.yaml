@@ -205,11 +205,27 @@ spring:
 
         # ── IA Admin ─────────────────────────────────────────────────────────
         - id: ia-admin-routes
-          uri: http://localhost:8101
+          uri: http://localhost:8102
           predicates:
             - Path=/api/v1/ia/admin/**
           filters:
             - JwtValidationFilter
+        # ── Transaction / Billing (público para ver planes) ───────────────────
+        - id: transaction-plans-public
+          uri: http://localhost:8103
+          predicates:
+            - Path=/api/v1/transactions/plans,
+              /api/v1/transactions/plans/**,
+              /api/v1/transactions/limits/**,
+              /api/v1/transactions/webhook
+        # ── Transaction / Billing (protegido) ────────────────────────────────
+        - id: transaction-routes
+          uri: http://localhost:8103
+          predicates:
+            - Path=/api/v1/transactions/**
+          filters:
+            - JwtValidationFilter
+
 
 server:
   port: ${SERVER_PORT:8080}
