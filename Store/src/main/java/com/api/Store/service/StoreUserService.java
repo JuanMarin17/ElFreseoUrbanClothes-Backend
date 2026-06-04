@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -32,14 +33,28 @@ public class StoreUserService {
     @Transactional
     public StoreUserResponseDTO addUserToStore(StoreUserRequestDTO dto) {
 
-        UUID userId = headerUtil.getUserIdFromHeader().orElseThrow(() -> new RuntimeException("Usuario no autenticado"));
-        dto.setUserId(userId);
+        UUID userId;
 
-        if(!userClient.existUser(userId)){
+        if (dto.getUserId() == null) {
+            userId = headerUtil.getUserIdFromHeader()
+                    .orElseThrow(() -> new RuntimeException("Usuario no autenticado"));
+            dto.setUserId(userId);
+        }
+
+        userId = dto.getUserId();
+
+        if (!userClient.existUser(userId)) {
             throw new RuntimeException("Usuario no encontrado");
         }
 
-        UUID storeId = headerUtil.getStoreIdFromHeader().orElseThrow(()-> new RuntimeException("El id de la tienda es obligatorio"));
+        UUID storeId;
+
+        if (dto.getStoreId() == null) {
+            storeId = headerUtil.getStoreIdFromHeader()
+                    .orElseThrow(() -> new RuntimeException("El id de la tienda es obligatorio"));
+        }
+
+        storeId = dto.getStoreId();
 
         dto.setStoreId(storeId);
 
@@ -86,6 +101,22 @@ public class StoreUserService {
     // ── 4. Validar acceso de un usuario a una tienda ─────────────────────────
     public boolean validateAccess(UUID userId, UUID storeId) {
         return storeUserRepository.existsByIdUserIdAndIdStoreId(userId, storeId);
+    }
+
+    public StoreRole getUserRole(UUID userId, UUID storeId) {
+        Optional<StoreUser> optionalUser = storeUserRepository.findByIdUserIdAndIdStoreId(userId, storeId);
+
+        if (optionalUser.isEmpty()) {
+            StoreUserRequestDTO dto = new StoreUserRequestDTO();
+            dto.setUserId(userId);
+            dto.setStoreId(storeId);
+            dto.setRole(StoreRole.CUSTOMER);
+            addUserToStore(dto);
+
+            return StoreRole.CUSTOMER;
+        }
+
+        return optionalUser.get().getRole();
     }
 
     // ── Mapper ───────────────────────────────────────────────────────────────

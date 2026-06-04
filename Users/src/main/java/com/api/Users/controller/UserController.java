@@ -38,7 +38,9 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> myProfile() {
+        Long start = System.currentTimeMillis();
         UserResponseDTO response = userService.myProfile();
+        System.out.println("Users:" + (System.currentTimeMillis() - start) + "ms");
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
