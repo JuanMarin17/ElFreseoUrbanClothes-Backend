@@ -2,7 +2,8 @@
 
     import com.api.Store.dto.StoreUserRequestDTO;
     import com.api.Store.dto.StoreUserResponseDTO;
-    import com.api.Store.service.StoreUserService;
+import com.api.Store.enums.StoreRole;
+import com.api.Store.service.StoreUserService;
     import jakarta.validation.Valid;
     import lombok.RequiredArgsConstructor;
     import org.springframework.http.HttpStatus;
@@ -55,5 +56,12 @@
 
             boolean hasAccess = storeUserService.validateAccess(userId, storeId);
             return ResponseEntity.ok(Map.of("hasAccess", hasAccess));
+        }
+
+        @GetMapping("{storeId}/isOwner/{userId}")
+        public ResponseEntity<StoreRole> isOwner(@PathVariable UUID storeId, @PathVariable UUID userId){
+            StoreRole role = storeUserService.getUserRole(userId, storeId);
+            System.out.println(role);
+            return ResponseEntity.status(HttpStatus.OK).body(role);
         }
     }

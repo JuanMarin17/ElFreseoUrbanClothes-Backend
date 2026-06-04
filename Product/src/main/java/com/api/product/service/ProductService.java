@@ -216,9 +216,24 @@ public class ProductService {
         }
     }
 
+    private UUID getUserIdFromHeader() {
+        String userIdHeader = RequestContext.getHeader("x-user-id");
+        if (userIdHeader == null || userIdHeader.isBlank())
+            throw new BadRequestException("No se encontró el X-Store-Id en el header");
+        try {
+            return UUID.fromString(userIdHeader);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Formato inválido del storeId");
+        }
+    }
+
     private void validateAdminOrOwner() {
-        String role = RequestContext.getHeader("X-User-Role");
-        if (!"ADMIN".equals(role) && !"OWNER".equals(role))
+        UUID storeId = getStoreIdFromHeader();
+        UUID userId = getUserIdFromHeader();
+        String role = storeClient.userRole(userId, storeId);
+
+        System.out.println(role);
+        if ("ADMIN".equals(role) || "OWNER".equals(role))
             throw new UnauthorizedException("Solo el ADMIN u OWNER pueden realizar esta acción");
     }
 
