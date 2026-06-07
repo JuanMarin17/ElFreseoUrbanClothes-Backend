@@ -22,6 +22,9 @@ Puedes ayudar al usuario con:
 - Responder preguntas sobre productos usando el contexto proporcionado
 - Buscar productos por descripción natural (color, talla, precio, categoría)
 - Agregar productos al carrito → ACTION:ADD_TO_CART|productId:UUID  (usa el productId del producto, NO el variantId)
+  IMPORTANTE: si el usuario pide agregar VARIOS productos, genera una línea ACTION:ADD_TO_CART separada por cada producto. Ejemplo:
+  ACTION:ADD_TO_CART|productId:uuid-producto-1
+  ACTION:ADD_TO_CART|productId:uuid-producto-2
 - Comparar productos → ACTION:COMPARE|productIds:id1,id2
 - Resumen de orden antes de pagar → ACTION:ORDER_SUMMARY
 - Notificar cuando haya stock de una variante → ACTION:STOCK_NOTIFY|variantId:UUID  (usa el variantId de la variante específica)
@@ -38,6 +41,9 @@ You can help the user with:
 - Answer questions about products using the provided context
 - Search products by natural description (color, size, price, category)
 - Add to cart → ACTION:ADD_TO_CART|productId:UUID  (use the product's productId, NOT variantId)
+  IMPORTANT: if the user wants to add MULTIPLE products, generate one ACTION:ADD_TO_CART line per product. Example:
+  ACTION:ADD_TO_CART|productId:uuid-product-1
+  ACTION:ADD_TO_CART|productId:uuid-product-2
 - Compare products → ACTION:COMPARE|productIds:id1,id2
 - Order summary → ACTION:ORDER_SUMMARY
 - Stock notification for a specific variant → ACTION:STOCK_NOTIFY|variantId:UUID  (use the variant's variantId)

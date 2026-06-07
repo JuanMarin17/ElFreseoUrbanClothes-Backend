@@ -136,17 +136,29 @@ async def process_action(
     response = ChatResponse(session_id=session_id, message=ai_response)
 
     if "ACTION:ADD_TO_CART" in ai_response:
-        data = extract_action_data(ai_response)
-        product_id = _sanitize_uuid(data.get("productId", ""))
-        print(f"[process_action] ADD_TO_CART | productId={product_id} | storeId={store_id} | userId={user_id}")
+        # Extraer TODAS las líneas ACTION:ADD_TO_CART (puede haber varias cuando el usuario pide múltiples productos)
+        cart_lines = re.findall(r'ACTION:ADD_TO_CART[^\n]*', ai_response)
         response.action = "ADD_TO_CART"
-        response.action_data = data
-        try:
-            await cart_client.add_to_cart(user_id, store_id, product_id, 1)
-            response.message = clean_response(ai_response) or "¡Perfecto! Agregué el producto a tu carrito."
-        except Exception as e:
-            print(f"[process_action] ADD_TO_CART falló: {e}")
-            response.message = f"No pude agregar el producto al carrito. Error: {e}"
+        added, failed = [], []
+        for line in cart_lines:
+            data = extract_action_data(line)
+            product_id = _sanitize_uuid(data.get("productId", ""))
+            if not product_id:
+                continue
+            print(f"[process_action] ADD_TO_CART | productId={product_id} | storeId={store_id} | userId={user_id}")
+            try:
+                await cart_client.add_to_cart(user_id, store_id, product_id, 1)
+                added.append(product_id)
+            except Exception as e:
+                print(f"[process_action] ADD_TO_CART falló productId={product_id}: {e}")
+                failed.append(product_id)
+        response.action_data = {"added": added, "failed": failed}
+        if added and not failed:
+            response.message = clean_response(ai_response) or f"¡Perfecto! Agregué {len(added)} producto(s) a tu carrito."
+        elif added and failed:
+            response.message = clean_response(ai_response) or f"Agregué {len(added)} producto(s), pero {len(failed)} no pudo(n) agregarse."
+        else:
+            response.message = "No pude agregar los productos al carrito. Intenta de nuevo."
 
     elif "ACTION:STOCK_NOTIFY" in ai_response:
         data = extract_action_data(ai_response)

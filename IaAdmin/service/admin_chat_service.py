@@ -8,11 +8,11 @@ from service.ai_service import generate_admin_response, analyze_product_image, b
 from service.image_processor import enhance_image
 from service.client import (
     reports_client, inventory_client, support_client,
-    store_client, product_client, promotions_client
+    store_client, product_client, promotions_client, loyalty_client
 )
 from schemas.admin_schemas import AdminChatRequest, AdminChatResponse
 
-CONTEXT_WINDOW = 20  # últimos N mensajes enviados al modelo
+CONTEXT_WINDOW = 20
 
 
 def _extract_action_data(response: str) -> dict:
@@ -65,7 +65,7 @@ async def process_admin_chat(
         db.commit()
         db.refresh(session)
 
-    # Guardar mensaje
+    # Guardar mensaje del usuario
     db.add(AdminChatMessage(
         session_id=session.session_id, role="user", content=dto.message
     ))
@@ -77,7 +77,7 @@ async def process_admin_chat(
     ).order_by(AdminChatMessage.created_at.asc()).all()
     history = [{"role": m.role, "content": m.content} for m in messages[-CONTEXT_WINDOW:]]
 
-    # Contexto de la tienda (en paralelo)
+    # Contexto de la tienda
     store_info = await store_client.get_store_info(store_id)
     products   = await product_client.get_active_products(store_id, jwt_token)
     dashboard  = await reports_client.get_dashboard(store_id, jwt_token)
@@ -101,7 +101,7 @@ async def process_admin_chat(
 
     return await _process_admin_action(
         session.session_id, ai_response, dto,
-        store_id, jwt_token
+        admin_id, store_id, jwt_token
     )
 
 
@@ -109,100 +109,144 @@ async def _process_admin_action(
     session_id: UUID,
     ai_response: str,
     dto: AdminChatRequest,
+    admin_id: str,
     store_id: str,
     jwt_token: str
 ) -> AdminChatResponse:
 
     response = AdminChatResponse(session_id=session_id, message=ai_response)
 
-    # ── Reportes ──────────────────────────────────────────────────────────────
-    if "ACTION:REPORT_DASHBOARD" in ai_response:
-        data = await reports_client.get_dashboard(store_id, jwt_token)
-        response.action = "REPORT_DASHBOARD"
-        response.action_data = data
-        response.message = _clean_response(ai_response) or "Aquí tienes el resumen del dashboard de tu tienda."
+    # ── Reportes (ACTION:REPORT|type:sales/dashboard/stock/orders) ────────────
+    if "ACTION:REPORT" in ai_response:
+        raw  = _extract_action_data(ai_response)
+        rtype = str(raw.get("type", "dashboard")).lower()
+        days  = int(raw.get("days", 30))
 
-    elif "ACTION:REPORT_SALES" in ai_response:
-        raw = _extract_action_data(ai_response)
-        days = int(raw.get("days", 30))
-        data = await reports_client.get_sales(store_id, jwt_token, days)
-        response.action = "REPORT_SALES"
-        response.action_data = data
-        response.message = _clean_response(ai_response) or f"Reporte de ventas de los últimos {days} días."
+        if rtype == "sales":
+            data = await reports_client.get_sales(store_id, jwt_token, days)
+            response.action = "REPORT_SALES"
+            response.action_data = data
+            response.message = _clean_response(ai_response) or f"Reporte de ventas de los últimos {days} días."
 
-    elif "ACTION:REPORT_STOCK" in ai_response:
-        data = await reports_client.get_stock_report(store_id, jwt_token)
-        response.action = "REPORT_STOCK"
-        response.action_data = data
-        response.message = _clean_response(ai_response) or "Aquí tienes el reporte de stock de tu tienda."
+        elif rtype == "stock":
+            data = await reports_client.get_stock_report(store_id, jwt_token)
+            response.action = "REPORT_STOCK"
+            response.action_data = data
+            response.message = _clean_response(ai_response) or "Aquí tienes el reporte de stock de tu tienda."
 
-    elif "ACTION:REPORT_ORDERS" in ai_response:
-        raw = _extract_action_data(ai_response)
-        days = int(raw.get("days", 30))
-        data = await reports_client.get_orders_report(store_id, jwt_token, days)
-        response.action = "REPORT_ORDERS"
-        response.action_data = data
-        response.message = _clean_response(ai_response) or f"Reporte de órdenes de los últimos {days} días."
+        elif rtype == "orders":
+            data = await reports_client.get_orders_report(store_id, jwt_token, days)
+            response.action = "REPORT_ORDERS"
+            response.action_data = data
+            response.message = _clean_response(ai_response) or f"Reporte de órdenes de los últimos {days} días."
 
-    # ── Inventario ────────────────────────────────────────────────────────────
+        else:  # dashboard (por defecto)
+            data = await reports_client.get_dashboard(store_id, jwt_token)
+            response.action = "REPORT_DASHBOARD"
+            response.action_data = data
+            response.message = _clean_response(ai_response) or "Aquí tienes el resumen del dashboard de tu tienda."
+
+    # ── Sugerencias de tienda (ACTION:STORE_SUGGESTION|type:colors/typography/layout/branding) ──
+    elif "ACTION:STORE_SUGGESTION" in ai_response:
+        raw   = _extract_action_data(ai_response)
+        stype = str(raw.get("type", "colors")).lower()
+        response.action = f"STORE_SUGGESTION_{stype.upper()}"
+        response.action_data = raw
+        response.message = _clean_response(ai_response)
+
+    # ── Sugerencia de precio (ACTION:PRICE_SUGGESTION) ────────────────────────
+    elif "ACTION:PRICE_SUGGESTION" in ai_response:
+        data = _extract_action_data(ai_response)
+        response.action = "PRICE_SUGGESTION"
+        response.action_data = data
+        response.message = _clean_response(ai_response)
+
+    # ── Inventario (ACTION:INVENTORY_ALERT) ───────────────────────────────────
     elif "ACTION:INVENTORY_ALERT" in ai_response:
         balance = await inventory_client.get_balance(store_id, jwt_token)
-        low     = [b for b in balance if b.get("quantity", 0) <= 5]
+        low     = [b for b in balance if 0 < b.get("quantity", 0) <= 5]
         out     = [b for b in balance if b.get("quantity", 0) == 0]
         response.action = "INVENTORY_ALERT"
-        response.action_data = {"lowStock": low, "outOfStock": out, "total": len(balance)}
+        response.action_data = {
+            "lowStock": low,
+            "outOfStock": out,
+            "totalVariants": len(balance),
+            "criticalCount": len(low),
+            "outOfStockCount": len(out),
+        }
         response.message = _clean_response(ai_response) or (
-            f"⚠️ Tienes {len(out)} variantes sin stock y {len(low)} con stock crítico (≤5 unidades)."
+            f"Tienes {len(out)} variantes sin stock y {len(low)} con stock crítico (1-5 unidades)."
         )
 
-    # ── Soporte ───────────────────────────────────────────────────────────────
+    # ── Lealtad (ACTION:LOYALTY_SUMMARY) ─────────────────────────────────────
+    elif "ACTION:LOYALTY_SUMMARY" in ai_response:
+        ledger = await loyalty_client.get_ledger(store_id, admin_id, jwt_token)
+
+        total_earned   = sum(e.get("points", 0) for e in ledger if e.get("type") == "EARN")
+        total_redeemed = abs(sum(e.get("points", 0) for e in ledger if e.get("type") == "REDEEM"))
+        total_expired  = abs(sum(e.get("points", 0) for e in ledger if e.get("type") == "EXPIRE"))
+
+        response.action = "LOYALTY_SUMMARY"
+        response.action_data = {
+            "totalEarned": total_earned,
+            "totalRedeemed": total_redeemed,
+            "totalExpired": total_expired,
+            "transactions": ledger,
+            "note": (
+                "Los datos corresponden a la cuenta del administrador. "
+                "Para estadísticas globales de todos los usuarios se requiere un endpoint de administración adicional."
+            ),
+        }
+        response.message = _clean_response(ai_response) or (
+            f"Resumen de lealtad: {total_earned} puntos ganados, "
+            f"{total_redeemed} canjeados, {total_expired} vencidos."
+        )
+
+    # ── Soporte (ACTION:SUPPORT_SUMMARY) ──────────────────────────────────────
     elif "ACTION:SUPPORT_SUMMARY" in ai_response:
         tickets = await support_client.get_all_tickets(store_id, jwt_token)
         open_t  = [t for t in tickets if t.get("status") not in ("CLOSED",)]
         response.action = "SUPPORT_SUMMARY"
-        response.action_data = {"tickets": open_t, "total": len(tickets), "open": len(open_t)}
+        response.action_data = {
+            "tickets": open_t,
+            "total": len(tickets),
+            "open": len(open_t),
+        }
         response.message = _clean_response(ai_response) or (
             f"Tienes {len(open_t)} tickets abiertos de {len(tickets)} en total."
         )
 
     elif "ACTION:REPLY_TICKET" in ai_response:
-        data = _extract_action_data(ai_response)
+        data      = _extract_action_data(ai_response)
         ticket_id = data.get("ticketId", "")
         message   = data.get("message", "")
-        result = await support_client.reply_ticket(ticket_id, message, jwt_token)
+        result    = await support_client.reply_ticket(ticket_id, message, jwt_token)
         response.action = "REPLY_TICKET"
         response.action_data = result
         response.message = "Respuesta enviada al ticket correctamente."
 
     elif "ACTION:CLOSE_TICKET" in ai_response:
-        data = _extract_action_data(ai_response)
+        data   = _extract_action_data(ai_response)
         result = await support_client.close_ticket(data.get("ticketId", ""), jwt_token)
         response.action = "CLOSE_TICKET"
         response.action_data = result
         response.message = "Ticket cerrado correctamente."
 
-    # ── Precios ───────────────────────────────────────────────────────────────
-    elif "ACTION:SUGGEST_PRICE" in ai_response:
+    # ── Promociones (ACTION:SUGGEST_PROMOTION) ────────────────────────────────
+    elif "ACTION:SUGGEST_PROMOTION" in ai_response:
         data = _extract_action_data(ai_response)
-        response.action = "SUGGEST_PRICE"
+        response.action = "SUGGEST_PROMOTION"
         response.action_data = data
         response.message = _clean_response(ai_response)
 
-    # ── Estilo de tienda ──────────────────────────────────────────────────────
-    elif "ACTION:SUGGEST_STORE_STYLE" in ai_response:
-        data = _extract_action_data(ai_response)
-        response.action = "SUGGEST_STORE_STYLE"
-        response.action_data = data
-        response.message = _clean_response(ai_response)
-
-    # ── Productos ─────────────────────────────────────────────────────────────
+    # ── Sugerencia de producto (ACTION:SUGGEST_PRODUCT) ───────────────────────
     elif "ACTION:SUGGEST_PRODUCT" in ai_response:
         data = _extract_action_data(ai_response)
         response.action = "SUGGEST_PRODUCT"
         response.action_data = data
         response.message = _clean_response(ai_response)
 
-    # ── Análisis de imagen ────────────────────────────────────────────────────
+    # ── Análisis de imagen (ACTION:ANALYZE_IMAGE) ─────────────────────────────
     elif "ACTION:ANALYZE_IMAGE" in ai_response:
         data = _extract_action_data(ai_response)
         response.action = "ANALYZE_IMAGE"
@@ -223,17 +267,10 @@ async def _process_admin_action(
                     contrast=contrast,
                     sharpness=sharpness,
                 )
-                response.enhanced_image_base64     = enhanced_b64
-                response.enhanced_image_mime_type  = enhanced_mime
+                response.enhanced_image_base64    = enhanced_b64
+                response.enhanced_image_mime_type = enhanced_mime
             except Exception as e:
-                response.message += f"\n\n No se pudo procesar la imagen: {e}"
-
-    # ── Promociones ───────────────────────────────────────────────────────────
-    elif "ACTION:SUGGEST_PROMOTION" in ai_response:
-        data = _extract_action_data(ai_response)
-        response.action = "SUGGEST_PROMOTION"
-        response.action_data = data
-        response.message = _clean_response(ai_response)
+                response.message += f"\n\nNo se pudo procesar la imagen: {e}"
 
     else:
         response.message = ai_response.strip()

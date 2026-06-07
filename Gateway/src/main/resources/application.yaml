@@ -2,6 +2,9 @@ spring:
   application:
     name: api-gateway
 
+  codec:
+    max-in-memory-size: 10MB
+
   cloud:
     gateway:
       routes:
@@ -44,15 +47,13 @@ spring:
             - Path=/api/v1/stores,
               /api/v1/stores/**
 
-        # ── Media service (centraliza todas las subidas de imágenes) ─────────
+        # ── Media service (público — Cloudinary controla el abuso) ──────────
         - id: media-routes
           uri: http://localhost:8096
           predicates:
             - Path=/api/v1/upload,
               /api/v1/upload/**,
               /api/v1/cloudinary/**
-          filters:
-            - JwtValidationFilter
 
         # ── Product ───────────────────────────────────────────────────────────────
         - id: product-routes
@@ -79,14 +80,22 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Usuarios público (sin JWT) ───────────────────────────────────────
+        - id: users-public-routes
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/users/createUser,
+              /api/v1/users/existUser/**,
+              /api/v1/users/myUserName/**,
+              /api/v1/users/getUserById/**
+
         # ── Usuarios (requiere JWT) ───────────────────────────────────────────
         - id: users-routes
           uri: http://localhost:8083
           predicates:
             - Path=/api/v1/users/me,
-              /api/v1/users/createUser,
               /api/v1/users/update,
-              /api/v1/users/{id}
+              /api/v1/users/profile-image
           filters:
             - JwtValidationFilter
 

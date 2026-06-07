@@ -16,5 +16,5 @@ public class StoreUserRequestDTO {
     private UUID storeId;
 
     @NotNull(message = "El rol no puede estar vacío")
-    private StoreRole role; // OWNER, ADMIN, CUSTOMER
+    private StoreRole role;
 }

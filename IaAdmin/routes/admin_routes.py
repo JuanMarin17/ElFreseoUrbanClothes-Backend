@@ -124,5 +124,5 @@ async def analyze_image(
         image_mime_type=dto.mime_type
     )
     return await _process_admin_action(
-        session.session_id, ai_response, dummy_dto, store_id, ""
+        session.session_id, ai_response, dummy_dto, admin_id, store_id, ""
     )
