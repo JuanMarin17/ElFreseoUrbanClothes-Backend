@@ -59,6 +59,8 @@ const handleUpload = async (req, res) => {
     res.status(500).json({ error: 'Error al procesar imagen: ' + error.message });
   }
 };
+app.get('/health', (_req, res) => res.json({ status: 'UP' }));
+
 // POST /api/v1/upload?folder=general
 app.post('/api/v1/upload', upload.single('image'), handleUpload);
 

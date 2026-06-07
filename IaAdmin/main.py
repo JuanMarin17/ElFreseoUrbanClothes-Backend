@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from models.database import create_tables
 from routes.admin_routes import router
 from exceptions.handlers import general_exception_handler, value_error_handler
+from service.ai_service import groq_client
 
 app = FastAPI(title="IA Admin Agent", version="1.0.0")
 
@@ -16,6 +17,15 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     create_tables()
+    # Establece la conexión TCP/TLS con Groq para que el primer request real no lo pague
+    try:
+        groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": "hi"}],
+            max_tokens=1
+        )
+    except Exception:
+        pass
 
 app.include_router(router)
 app.add_exception_handler(Exception, general_exception_handler)

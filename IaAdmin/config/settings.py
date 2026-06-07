@@ -12,3 +12,4 @@ REPORTS_SERVICE_URL    = os.getenv("REPORTS_SERVICE_URL",    "http://localhost:8
 INVENTORY_SERVICE_URL  = os.getenv("INVENTORY_SERVICE_URL",  "http://localhost:8089")
 SUPPORT_SERVICE_URL    = os.getenv("SUPPORT_SERVICE_URL",    "http://localhost:8088")
 PROMOTIONS_SERVICE_URL = os.getenv("PROMOTIONS_SERVICE_URL", "http://localhost:8091")
+LOYALTY_SERVICE_URL    = os.getenv("LOYALTY_SERVICE_URL",    "http://localhost:8093")

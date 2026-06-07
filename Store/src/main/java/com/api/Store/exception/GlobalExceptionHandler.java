@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@RestControllerAdvice
+@RestControllerAdvice(basePackages = "com.api.Store.controller")
 public class GlobalExceptionHandler {
 
     // ── Validaciones Jakarta (@NotBlank, @Size, @Valid, etc.) ─────────────────

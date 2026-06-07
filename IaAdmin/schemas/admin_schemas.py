@@ -15,18 +15,43 @@ class AdminChatResponse(BaseModel):
     session_id: UUID
     message: str
     action: Optional[str] = None
-    # Acciones posibles:
-    #   REPORT_DASHBOARD     → action_data: {dashboard data interpretado}
-    #   REPORT_SALES         → action_data: {sales data interpretado}
-    #   REPORT_STOCK         → action_data: {stock data interpretado}
-    #   REPORT_ORDERS        → action_data: {orders data interpretado}
-    #   SUGGEST_PRICE        → action_data: {productId, suggestedPrice, reason}
-    #   SUGGEST_STORE_STYLE  → action_data: {colors, fonts, borderRadius}
+    # Acciones posibles (action + action_data):
+    #
+    # REPORTES
+    #   REPORT_DASHBOARD     → action_data: datos del dashboard general
+    #   REPORT_SALES         → action_data: ventas por período, ingresos COP, top productos
+    #   REPORT_STOCK         → action_data: estado del inventario y alertas de stock
+    #   REPORT_ORDERS        → action_data: órdenes por estado, comparativa de período
+    #
+    # PRECIOS
+    #   PRICE_SUGGESTION     → action_data: {productId, suggestedPrice, reason}
+    #
+    # ESTILO DE TIENDA (generado por IA, solo sugerencias)
+    #   STORE_SUGGESTION_COLORS      → action_data: {primaryColor, secondaryColor, accentColor, ...}
+    #   STORE_SUGGESTION_TYPOGRAPHY  → action_data: {headingFont, bodyFont, ...} (Google Fonts)
+    #   STORE_SUGGESTION_LAYOUT      → action_data: descripción del layout sugerido
+    #   STORE_SUGGESTION_BRANDING    → action_data: {slogan, shortDescription, longDescription}
+    #
+    # PRODUCTOS
     #   SUGGEST_PRODUCT      → action_data: {name, description, price}
-    #   ANALYZE_IMAGE        → action_data: {removeBackground, brightness, contrast, suggestions}
-    #   INVENTORY_ALERT      → action_data: {lowStock: [], outOfStock: []}
-    #   SUPPORT_SUMMARY      → action_data: {tickets: [], priority: []}
-    #   SUGGEST_PROMOTION    → action_data: {type, discount, reason}
+    #
+    # IMAGEN DE PRODUCTO
+    #   ANALYZE_IMAGE        → action_data: {removeBackground, brightness, contrast, sharpness}
+    #                          + enhanced_image_base64 si se procesó
+    #
+    # INVENTARIO
+    #   INVENTORY_ALERT      → action_data: {lowStock: [], outOfStock: [], totalVariants, criticalCount}
+    #
+    # LEALTAD
+    #   LOYALTY_SUMMARY      → action_data: {totalEarned, totalRedeemed, totalExpired, transactions, note}
+    #
+    # SOPORTE
+    #   SUPPORT_SUMMARY      → action_data: {tickets: [], total, open}
+    #   REPLY_TICKET         → action_data: resultado de la respuesta enviada
+    #   CLOSE_TICKET         → action_data: resultado del cierre
+    #
+    # PROMOCIONES
+    #   SUGGEST_PROMOTION    → action_data: {type, discount, duration, target, reason}
     action_data: Optional[Dict[str, Any]] = None
     enhanced_image_base64: Optional[str] = None
     enhanced_image_mime_type: Optional[str] = None

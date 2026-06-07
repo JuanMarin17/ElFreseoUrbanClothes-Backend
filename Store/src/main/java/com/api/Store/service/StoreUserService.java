@@ -104,19 +104,9 @@ public class StoreUserService {
     }
 
     public StoreRole getUserRole(UUID userId, UUID storeId) {
-        Optional<StoreUser> optionalUser = storeUserRepository.findByIdUserIdAndIdStoreId(userId, storeId);
-
-        if (optionalUser.isEmpty()) {
-            StoreUserRequestDTO dto = new StoreUserRequestDTO();
-            dto.setUserId(userId);
-            dto.setStoreId(storeId);
-            dto.setRole(StoreRole.CUSTOMER);
-            addUserToStore(dto);
-
-            return StoreRole.CUSTOMER;
-        }
-
-        return optionalUser.get().getRole();
+        return storeUserRepository.findByIdUserIdAndIdStoreId(userId, storeId)
+                .map(StoreUser::getRole)
+                .orElseThrow(() -> new RuntimeException("El usuario no pertenece a esta tienda"));
     }
 
     // ── Mapper ───────────────────────────────────────────────────────────────
