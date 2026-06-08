@@ -1,7 +1,9 @@
 package com.api.OrderPayment.service;
 
 import com.api.OrderPayment.client.CartClient;
+import com.api.OrderPayment.client.PromotionClient;
 import com.api.OrderPayment.client.dto.CartResponseDTO;
+import com.api.OrderPayment.client.dto.CouponValidationDTO;
 import com.api.OrderPayment.dto.order.CreateOrderRequestDTO;
 import com.api.OrderPayment.dto.order.OrderResponseDTO;
 import com.api.OrderPayment.dto.order.UpdateOrderStatusRequestDTO;
@@ -18,10 +20,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -32,6 +36,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final CartClient cartClient;
+    private final PromotionClient promotionClient;
     private final OrderMapper orderMapper;
 
     private final AtomicLong orderCounter = new AtomicLong(1);
@@ -53,15 +58,51 @@ public class OrderService {
             throw new IllegalStateException("El carrito está vacío. Agrega productos antes de crear una orden.");
         }
 
+        // Base: usa el total con descuentos de producto si está disponible
+        BigDecimal baseTotal = cart.getTotalWithDiscount() != null
+                ? cart.getTotalWithDiscount()
+                : cart.getSubtotal();
+        BigDecimal subtotal = cart.getSubtotal() != null ? cart.getSubtotal() : baseTotal;
+
+        // Aplica cupón de descuento si se envió uno
+        BigDecimal couponDiscount = BigDecimal.ZERO;
+        String appliedCoupon = null;
+
+        if (dto.getCouponCode() != null && !dto.getCouponCode().isBlank()) {
+            Optional<CouponValidationDTO> couponOpt = promotionClient.validateCoupon(
+                    dto.getCouponCode(), storeId, userId);
+
+            if (couponOpt.isPresent()) {
+                CouponValidationDTO coupon = couponOpt.get();
+                if ("PERCENTAGE".equals(coupon.getDiscountType())) {
+                    couponDiscount = baseTotal.multiply(
+                            coupon.getDiscount().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))
+                            .setScale(2, RoundingMode.HALF_UP);
+                } else {
+                    couponDiscount = coupon.getDiscount().min(baseTotal);
+                }
+                appliedCoupon = dto.getCouponCode().toUpperCase();
+                log.info("Cupón '{}' aplicado: descuento={}", appliedCoupon, couponDiscount);
+            } else {
+                throw new IllegalArgumentException(
+                        "Cupón inválido, inactivo o ya utilizado: " + dto.getCouponCode());
+            }
+        }
+
+        // Descuento total = descuentos de producto (ya en totalWithDiscount) + cupón
+        BigDecimal productDiscount = subtotal.subtract(baseTotal);
+        BigDecimal totalDiscount = productDiscount.add(couponDiscount);
+        BigDecimal finalTotal = subtotal.subtract(totalDiscount).max(BigDecimal.ZERO);
+
         Order order = Order.builder()
                 .userId(userId)
                 .storeId(storeId)
                 .orderNumber(generateOrderNumber())
                 .status(OrderStatus.PENDING)
-                .subtotal(cart.getTotal())
+                .subtotal(subtotal)
                 .tax(BigDecimal.ZERO)
-                .discount(BigDecimal.ZERO)
-                .total(cart.getTotal())
+                .discount(totalDiscount)
+                .total(finalTotal)
                 .shippingAddress(dto.getShippingAddress())
                 .notes(dto.getNotes())
                 .build();
@@ -81,6 +122,11 @@ public class OrderService {
 
         Order saved = orderRepository.save(order);
         log.info("Orden creada exitosamente: orderNumber={}", saved.getOrderNumber());
+
+        // Registra redención del cupón después de guardar la orden
+        if (appliedCoupon != null) {
+            promotionClient.redeemCoupon(appliedCoupon, storeId, userId);
+        }
 
         try {
             cartClient.clearCart(storeId, userId);
