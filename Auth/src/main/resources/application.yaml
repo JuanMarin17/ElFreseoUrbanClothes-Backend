@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: api
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/auth}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            required: true
+            enable: true
+
+users:
+  service:
+    url: ${USERS_SERVICE_URL:http://localhost:8083/api/v1}
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET:Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=}
+    token-expiration: ${JWT_EXPIRATION:3600000}
+
+server:
+  port: ${SERVER_PORT:8082}
+  servlet:
+    context-path: /api/v1
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"
+  endpoint:
+    health:
+      show-details: always

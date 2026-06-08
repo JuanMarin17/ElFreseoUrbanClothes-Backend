@@ -1,0 +1,44 @@
+# Compiled output
+target/
+*.class
+
+# Maven wrapper
+.mvn/wrapper/maven-wrapper.jar
+
+# Environment variables (NEVER commit these)
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+.springBeans
+.sts4-cache
+.factorypath
+.apt_generated
+
+# Build artifacts
+HELP.md
+*.log
+*.jar
+*.war
+*.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/

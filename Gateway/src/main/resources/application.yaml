@@ -1,0 +1,253 @@
+spring:
+  application:
+    name: api-gateway
+
+  codec:
+    max-in-memory-size: 10MB
+
+  cloud:
+    gateway:
+      routes:
+        # ── Auth (público) ────────────────────────────────────────────────────
+        - id: auth-routes
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/auth/register,
+              /api/v1/auth/registerSecondStep,
+              /api/v1/auth/resendVerificationCode,
+              /api/v1/auth/login,
+              /api/v1/auth/loginSecondStep,
+              /api/v1/auth/forgotPassword,
+              /api/v1/auth/forgotPasswordSecondStep,
+              /api/v1/auth/deactivateAccount,
+              /api/v1/auth/refresh-token
+
+        # ── Cart (antes de store-routes para mayor especificidad) ───────────────
+        - id: cart-routes
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/v1/stores/*/cart,
+              /api/v1/stores/*/cart/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Orders y Payments (antes de store-routes para mayor especificidad) ──
+        - id: order-routes
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/v1/stores/*/orders,
+              /api/v1/stores/*/orders/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Tiendas ───────────────────────────────────────────────────────────
+        - id: store-routes
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/stores,
+              /api/v1/stores/**
+
+        # ── Media service (público — Cloudinary controla el abuso) ──────────
+        - id: media-routes
+          uri: http://localhost:8096
+          predicates:
+            - Path=/api/v1/upload,
+              /api/v1/upload/**,
+              /api/v1/cloudinary/**
+
+        # ── Product ───────────────────────────────────────────────────────────────
+        - id: product-routes
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/products/**,
+              /api/v1/categories/**,
+              /api/v1/brands/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Alertas de stock SSE (sin JWT para que el frontend pueda conectarse) ──
+        - id: stock-alert-routes
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/alerts/stock/stream
+
+        # ── Variantes ─────────────────────────────────────────────────────────
+        - id: variant-routes
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/variants,
+              /api/v1/variants/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Usuarios público (sin JWT) ───────────────────────────────────────
+        - id: users-public-routes
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/users/createUser,
+              /api/v1/users/existUser/**,
+              /api/v1/users/myUserName/**,
+              /api/v1/users/getUserById/**
+
+        # ── Usuarios (requiere JWT) ───────────────────────────────────────────
+        - id: users-routes
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/users/me,
+              /api/v1/users/update,
+              /api/v1/users/profile-image
+          filters:
+            - JwtValidationFilter
+
+        # ── Supplier ─────────────────────────────────────────────────────────
+        - id: supplier-routes
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/v1/suppliers/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Support ─────────────────────────────────────────────────────────
+        - id: support-routes
+          uri: http://localhost:8088
+          predicates:
+            - Path=/api/v1/support/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Preferences ─────────────────────────────────────────────────────────
+        - id: preferences-routes
+          uri: http://localhost:8094
+          predicates:
+            - Path=/api/v1/wishlist/**,
+              /api/v1/preferences/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Inventory ─────────────────────────────────────────────────────────
+        - id: inventory-routes
+          uri: http://localhost:8089
+          predicates:
+            - Path=/api/v1/inventory/**,
+              /api/v1/locations/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Promotion ─────────────────────────────────────────────────────────
+        - id: promotion-routes
+          uri: http://localhost:8091
+          predicates:
+            - Path=/api/v1/promotions/**,
+              /api/v1/coupons/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Returns ─────────────────────────────────────────────────────────
+        - id: returns-routes
+          uri: http://localhost:8092
+          predicates:
+            - Path=/api/v1/returns/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Reports (requiere JWT + X-Store-Id) ──────────────────────────────
+        - id: reports-routes
+          uri: http://localhost:8100
+          predicates:
+            - Path=/api/v1/reports/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Payment OAuth (callback público, MP no manda JWT) ────────────────
+        - id: payment-oauth-public-routes
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api/v1/oauth/callback,
+              /api/v1/payments/webhook
+
+        # ── Payment (protegido) ───────────────────────────────────────────────
+        - id: payment-routes
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api/v1/payments/**,
+              /api/v1/oauth/**
+          filters:
+            - JwtValidationFilter
+
+        # ── LoyalCustomer (internas entre microservicios) ─────────────────────
+        - id: loyalty-internal-routes
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/v1/loyalty/internal/**
+
+        # ── LoyalCustomer (protegidas) ────────────────────────────────────────
+        - id: loyalty-routes
+          uri: http://localhost:8093
+          predicates:
+            - Path=/api/v1/loyalty/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Reviews ─────────────────────────────────────────────────────────
+        - id: reviews-routes
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/reviews/**
+          filters:
+            - JwtValidationFilter
+
+        # ── CMS ─────────────────────────────────────────────────────────────
+        - id: cms-routes
+          uri: http://localhost:8101
+          predicates:
+            - Path=/api/v1/cms/**
+          filters:
+            - JwtValidationFilter
+
+        # ── IA User ─────────────────────────────────────────────────────────
+        - id: ia-user-routes
+          uri: http://localhost:8099
+          predicates:
+            - Path=/api/v1/ia/user/**
+          filters:
+            - JwtValidationFilter
+
+        # ── IA Admin ─────────────────────────────────────────────────────────
+        - id: ia-admin-routes
+          uri: http://localhost:8102
+          predicates:
+            - Path=/api/v1/ia/admin/**
+          filters:
+            - JwtValidationFilter
+        # ── Transaction / Billing (público para ver planes) ───────────────────
+        - id: transaction-plans-public
+          uri: http://localhost:8103
+          predicates:
+            - Path=/api/v1/transactions/plans,
+              /api/v1/transactions/plans/**,
+              /api/v1/transactions/limits/**,
+              /api/v1/transactions/webhook
+        # ── Transaction / Billing (protegido) ────────────────────────────────
+        - id: transaction-routes
+          uri: http://localhost:8103
+          predicates:
+            - Path=/api/v1/transactions/**
+          filters:
+            - JwtValidationFilter
+
+
+server:
+  port: ${SERVER_PORT:8080}
+
+security:
+  jwt:
+    secret-key: ${JWT_SECRET:Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+  endpoint:
+    health:
+      show-details: always

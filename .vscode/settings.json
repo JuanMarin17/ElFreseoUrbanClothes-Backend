@@ -1,0 +1,5 @@
+{
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "java.project.sourcePaths": ["Transaction"],
+  "python-envs.defaultEnvManager": "ms-python.python:system"
+}
