@@ -1,0 +1,822 @@
+================================================================================
+  RETROALIMENTACIÓN GENERAL DEL PROYECTO — ElFreseo / Vexio Backend
+  Fecha de revisión: 2026-06-02
+  Revisado por: Claude Code (Anthropic)
+================================================================================
+
+ÍNDICE
+------
+  1. Resumen ejecutivo
+  2. Mapa de puertos y bases de datos
+  3. Retroalimentación por módulo
+  4. Estado de las conexiones entre módulos
+  5. Errores críticos encontrados (resumen consolidado)
+  6. Recomendaciones generales
+
+
+================================================================================
+  1. RESUMEN EJECUTIVO
+================================================================================
+
+El proyecto es una arquitectura de microservicios con 19 módulos (14 Spring Boot
+Java, 1 Node.js, 1 Python FastAPI, 1 módulo de pagos, 1 de reportes y 1 CMS).
+La estructura general está bien pensada: separación de responsabilidades clara,
+gateway centralizado, base de datos independiente por servicio y autenticación
+con JWT + OTP.
+
+ESTADO GENERAL:
+  - Módulos funcionales y bien estructurados: 12/19
+  - Módulos con errores de conexión HTTP (URL mal construida): 2
+  - Errores críticos en el Gateway (perfil Docker): 1
+  - Conflicto de base de datos entre módulos: 1
+  - Módulos sin ruta en el Gateway Docker: 3
+  - Inconsistencias de versiones: 3 módulos
+
+Los problemas más graves están en el Gateway (perfil Docker incompleto) y en
+las URLs de los clientes HTTP de OrderPayment y Returns.
+
+
+================================================================================
+  2. MAPA DE PUERTOS Y BASES DE DATOS
+================================================================================
+
+MÓDULO               | PUERTO | BASE DE DATOS     | TECNOLOGÍA
+---------------------|--------|-------------------|---------------------------
+Gateway              | 8080   | N/A               | Spring Cloud Gateway
+Store                | 8081   | store             | Spring Boot 3.5.14 / Java 21
+Auth                 | 8082   | auth              | Spring Boot 3.2.5 / Java 21
+Users                | 8083   | users             | Spring Boot 3.5.4 / Java 21
+Product              | 8084   | product           | Spring Boot 3.3.5 / Java 21
+Supplier             | 8085   | supplier          | Spring Boot 4.0.6 / Java 21
+Cart                 | 8086   | cart              | Spring Boot 3.5.14 / Java 21
+OrderPayment         | 8087   | order_payment     | Spring Boot 3.2.5 / Java 17
+Support              | 8088   | support           | Spring Boot 3.5.4 / Java 21
+Inventory            | 8089   | inventory         | Spring Boot 3.5.4 / Java 21
+Promotion            | 8091   | promotion         | Spring Boot 3.5.4 / Java 21
+Returns              | 8092   | returns           | Spring Boot 3.5.4 / Java 21
+LoyalCustomer        | 8093   | loyalty           | Spring Boot 3.5.4 / Java 21
+Preferences          | 8094   | preferences       | Spring Boot 3.5.4 / Java 21
+Reviews              | 8095   | reviews           | Spring Boot 3.5.4 / Java 21
+media-service        | 8096   | N/A               | Node.js 20 / Express
+IaUser               | 8099   | ia_user           | Python 3.11 / FastAPI
+Cms                  | 8101   | promotion (*)     | Spring Boot 3.5.4 / Java 21
+Reports              | 8100   | N/A (consulta)    | Spring Boot 3.5.4 / Java 21
+Payment              | 8098   | (propio)          | Spring Boot 3.2.5 / Java 17
+
+(*) CONFLICTO: Cms comparte la base de datos "promotion" con el módulo Promotion.
+
+
+================================================================================
+  3. RETROALIMENTACIÓN POR MÓDULO
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+  3.1 AUTH (Puerto 8082)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Flujo de doble factor (OTP por email) correctamente implementado.
+  + JwtService con generación y validación completa de tokens.
+  + Separación clara entre registro (2 pasos) y login (2 pasos).
+  + Endpoints de recuperación de contraseña bien implementados.
+  + EmailService genera HTML responsivo con plantillas por tipo de correo.
+  + GlobalExceptionHandler cubre los casos principales.
+  + Renovación de token (refresh-token) implementada.
+
+LO QUE ESTÁ MAL:
+  - EmailService.java tiene un typo en el HTML del método buildVerificationHtml():
+    línea ~78 dice "bsckground-color:#111111" en lugar de "background-color".
+    No afecta el envío del correo, pero el estilo no aplica en ese elemento.
+
+  - application.yaml usa Spring Boot 3.2.5 y Java 21. Muchos otros módulos
+    ya están en 3.5.x. Considerar actualizar para recibir correcciones y mejoras.
+
+  - El secret JWT está hardcodeado en application.yaml:
+    JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+    Debería venir exclusivamente desde variable de entorno, sin valor por defecto.
+
+CONEXIONES QUE HACE:
+  → Users Service: POST /users/createUser (al registrar)
+  → Users Service: GET /users/myUserName/{id} (al hacer login)
+  Estado: OK — las rutas que consume existen en Users.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.2 USERS (Puerto 8083)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Gestión de perfil de usuario separada del módulo de autenticación.
+  + Soporte de imagen de perfil con Cloudinary.
+  + Endpoints de verificación de existencia (existUser) para uso interno.
+  + Sigue el mismo patrón de extracción de userId desde header JWT.
+
+LO QUE ESTÁ MAL:
+  - El endpoint PATCH /users/profile-image tiene doble lógica de subida:
+    llama a MediaServiceClient Y tiene CloudinaryService local. Si media-service
+    falla, no hay fallback claro. Debería centralizarse en uno solo.
+
+  - La versión de jjwt es 0.12.6 mientras que Auth usa la misma. Correcto.
+    Pero la URL de Auth Service en application.yaml tiene la forma
+    "http://localhost:8082/api/v1" y en Docker se sobreescribe correctamente.
+
+CONEXIONES QUE HACE:
+  → Auth Service: (validación de JWT, uso interno)
+  → Media Service: POST /api/v1/upload (subida de imágenes)
+  Estado: OK — las rutas existen.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.3 STORE (Puerto 8081)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Concepto de tienda (Store) bien modelado con slug único para URLs amigables.
+  + StoreSettings separado como entidad propia (OneToOne).
+  + Endpoint existStore para validaciones cruzadas desde otros módulos.
+  + Gestión de imágenes centralizada en media-service.
+
+LO QUE ESTÁ MAL:
+  - En application.yaml se usa jjwt 0.11.5 mientras otros módulos usan 0.12.6.
+    Esto puede causar incompatibilidades de serialización de tokens.
+
+  - El context-path no está explícitamente definido en application.yaml del
+    módulo Store (a diferencia de otros módulos que sí lo tienen). Si el
+    framework lo infiere correctamente no es problema, pero conviene ser explícito.
+
+CONEXIONES QUE HACE:
+  → Users Service: (verificar usuario dueño)
+  → Media Service: POST /api/v1/upload
+  Estado: OK.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.4 PRODUCT (Puerto 8084)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Modelo completo: Product, ProductVariant, ProductImage, Brand, Category.
+  + Configuración avanzada de Hikari pool (max 10 conexiones, keepalive).
+  + SSE (Server-Sent Events) para alertas de stock en tiempo real.
+  + La ruta SSE está correctamente definida sin JWT en el Gateway para que el
+    frontend pueda conectarse sin problemas de autenticación.
+  + Paginación en los endpoints de listado.
+
+LO QUE ESTÁ MAL:
+  - Spring Boot 3.3.5 (otros usan 3.5.x). Considerar actualizar.
+
+  - Los endpoints PATCH de stock (/variants/{variantId}/stock/increase y
+    /variants/{variantId}/stock/decrease) son llamados por Inventory, pero no
+    están protegidos con ningún mecanismo (no requieren JWT). Cualquiera que
+    conozca la URL interna podría modificar el stock directamente.
+
+CONEXIONES QUE HACE:
+  → Store Service: (verificar existencia de tienda)
+  → Media Service: POST /api/v1/upload
+  Estado: OK.
+
+CONEXIONES QUE RECIBE:
+  ← Inventory: PATCH /api/v1/variants/{id}/stock/increase|decrease
+  ← Inventory: GET /api/v1/variants/{id} (verificar existencia)
+  Estado: OK — los endpoints existen y las URLs que usa Inventory son correctas.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.5 CART (Puerto 8086)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Constraint única (storeId, userId) en la entidad Cart — evita carritos
+    duplicados para el mismo usuario en la misma tienda.
+  + Cascade y orphanRemoval en la relación Cart → CartItem.
+  + Si agrega un producto que ya existe, suma la cantidad (no duplica).
+  + userId viene del header X-User-Id inyectado por el Gateway.
+  + No depende de ningún otro microservicio (autocontenido).
+
+LO QUE ESTÁ MAL:
+  - CartItem guarda productVariantId pero no el nombre del producto. Si el
+    producto es eliminado, se pierde la referencia visual. Debería guardarse
+    un snapshot del nombre/precio como hace OrderItem.
+
+  - No hay validación de que el variantId exista en Product al agregar al
+    carrito. Un usuario podría agregar un ID inexistente.
+
+CONEXIONES QUE HACE: ninguna (autocontenido).
+CONEXIONES QUE RECIBE:
+  ← OrderPayment: GET /api/v1/stores/{storeId}/cart
+  ← OrderPayment: DELETE /api/v1/stores/{storeId}/cart
+  Estado: OK — los endpoints existen.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.6 SUPPLIER (Puerto 8085)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Concepto de desvinculación (unlink) separado de eliminación. Correcto.
+  + Soft delete implementado (desactivar en lugar de borrar).
+
+LO QUE ESTÁ MAL:
+  - Spring Boot 4.0.6 es una versión RC/alpha que NO es estable para producción.
+    Todos los demás módulos usan 3.x. Esto es un riesgo alto: la versión 4.x
+    tiene breaking changes. Debería bajarse a 3.5.x.
+
+  - No tiene base de datos para relacionar proveedores con productos. No hay
+    manera de saber qué proveedor suministra qué producto.
+
+  - No aparece en el docker-compose.yml original (sí en las depends_on del
+    Gateway, pero falta su propio servicio). REVISAR.
+
+CONEXIONES QUE HACE: ninguna.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.7 SUPPORT (Puerto 8088)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Sistema de tickets con estados (OPEN, IN_PROGRESS, RESOLVED, CLOSED).
+  + Mensajería dentro del ticket (SupportMessage).
+  + Notificaciones por correo al crear/responder tickets.
+  + Separación de endpoints por rol (usuario vs OWNER).
+
+LO QUE ESTÁ MAL:
+  - No hay validación de que el userId que crea el ticket exista en Users.
+  - No hay límite de mensajes por ticket, lo que puede generar tickets muy
+    grandes sin paginación.
+  - El módulo de Support no es consultado por IaUser correctamente. La URL
+    en settings.py de IaUser apunta a http://localhost:8088 sin /api/v1,
+    pero Support tiene context-path /api/v1. En Docker se corrige con la
+    variable de entorno, pero hay inconsistencia en los valores por defecto.
+
+CONEXIONES QUE HACE: solo envío de emails.
+CONEXIONES QUE RECIBE:
+  ← IaUser: consultas de tickets de soporte del usuario
+  Estado: OK — la URL en Docker es correcta.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.8 PROMOTION (Puerto 8091)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Tipos de descuento (PERCENTAGE y FIXED_AMOUNT) bien definidos.
+  + Sistema de cupones con historial de uso (CouponRedemption).
+  + Soft delete de promociones (isActive).
+
+LO QUE ESTÁ MAL:
+  - GRAVE: El módulo CMS (puerto 8101) usa la MISMA base de datos "promotion"
+    que este módulo. Si ambos tienen JPA con ddl-auto: update, Hibernate de
+    CMS podría interferir con las tablas de Promotion. Esto es un error de
+    diseño arquitectural. CMS debe tener su propia base de datos "cms".
+
+  - No hay validación para que el descuento de tipo PERCENTAGE no supere 100.
+  - Los cupones no tienen fecha de expiración implementada en las entidades
+    (aunque la lógica podría estar en el servicio).
+
+CONEXIONES QUE HACE: ninguna.
+CONEXIONES QUE RECIBE:
+  ← IaUser: consultas de promociones activas
+  Estado: OK.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.9 LOYAL CUSTOMER (Puerto 8093)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Configuración de reglas de negocio en application.yaml (points-per-amount,
+    expiry-days) — fácil de cambiar sin recompilar.
+  + Ledger (libro contable) para auditar todos los movimientos de puntos.
+  + Separación de endpoints internos (/loyalty/internal/**) sin JWT para
+    que otros servicios puedan acreditar puntos sin necesitar un token de usuario.
+
+LO QUE ESTÁ MAL:
+  - La acreditación de puntos no está conectada con OrderPayment. Cuando se
+    crea/confirma un pago, OrderPayment no llama a LoyalCustomer para acreditar
+    puntos. El flujo está roto: no hay integración automática.
+
+  - No hay endpoint en el Gateway (docker profile) para loyalty/internal en
+    el perfil Docker. Sí está en application.yaml pero no en
+    application-docker.yml. (Ver sección Gateway).
+
+CONEXIONES QUE HACE: ninguna directa.
+CONEXIONES QUE RECIBE: ninguna automática (el problema descrito arriba).
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.10 PREFERENCES (Puerto 8094)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Wishlist con timestamps de cuándo se agregó cada producto.
+  + UserBehavior para almacenar historial de comportamiento del usuario.
+  + Consultado por IaUser y CMS para personalización — buena integración IA.
+
+LO QUE ESTÁ MAL:
+  - WishlistItem guarda solo el productId. Si el producto se elimina o cambia
+    de nombre, la wishlist queda con datos inconsistentes. Debería guardarse
+    snapshot del nombre al momento de agregar.
+
+  - No hay validación de que el productId exista en Product al agregar
+    a la wishlist.
+
+CONEXIONES QUE HACE: ninguna.
+CONEXIONES QUE RECIBE:
+  ← IaUser: consultas de preferencias
+  ← CMS: consultas para generar contenido personalizado
+  Estado: OK.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.11 REVIEWS (Puerto 8095)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Rating con validación (1-5).
+  + Campo isVerified para marcar si el comprador realmente adquirió el producto.
+  + Respuestas a reseñas (ReviewReply) con estructura correcta.
+  + Reacciones a reseñas (ReviewReaction).
+
+LO QUE ESTÁ MAL:
+  - isVerified siempre se crea en false. No hay lógica que lo ponga en true
+    automáticamente consultando OrderPayment para verificar si el usuario
+    compró el producto. La verificación es manual o inexistente.
+
+  - No hay validación de que el productId exista al crear la reseña.
+  - Un usuario puede crear múltiples reseñas del mismo producto (no hay
+    unique constraint en productId + userId).
+
+CONEXIONES QUE HACE: ninguna.
+CONEXIONES QUE RECIBE:
+  ← IaUser: consultas de reseñas por producto
+  Estado: OK.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.12 INVENTORY (Puerto 8089)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + InventoryBalance con cantidad disponible vs reservada — correcto para
+    sistemas con reserva de stock.
+  + InventoryMovement con tipos (IN, OUT, ADJUSTMENT) y razones.
+  + Locations (ubicaciones/almacenes) para inventario multi-almacén.
+  + WebClient configurado correctamente con base URL sin /api/v1 en config.
+  + ProductClient usa rutas absolutas que incluyen /api/v1 explícitamente
+    → las URLs resultantes son correctas.
+
+LO QUE ESTÁ MAL:
+  - No hay sincronización automática cuando se crea una orden en OrderPayment.
+    OrderPayment no notifica a Inventory para reservar/decrementar stock.
+    El flujo Orden→Inventario está roto.
+
+  - ProductClient.variantExists() captura TODAS las excepciones y retorna false.
+    Si Product está caído, retornará false aunque la variante exista. Debería
+    distinguir entre "no existe (404)" y "servicio caído (5xx)".
+
+CONEXIONES QUE HACE:
+  → Product Service: PATCH /api/v1/variants/{id}/stock/increase
+  → Product Service: PATCH /api/v1/variants/{id}/stock/decrease
+  → Product Service: GET /api/v1/variants/{id} (verificar existencia)
+  Estado: OK — URLs correctamente construidas.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.13 ORDER PAYMENT (Puerto 8087)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Snapshot completo del carrito al crear la orden (OrderItem guarda nombre,
+    precio, cantidad al momento de la compra — correcto para historial).
+  + Generación de número de orden legible (ORD-YYYYMMDD-000001).
+  + @PostConstruct para inicializar el contador desde la BD al arrancar.
+  + Vaciado automático del carrito tras crear la orden (con manejo de error
+    no bloqueante si falla el vaciado).
+  + Flujo de pago con estados PENDING → CONFIRMED bien implementado.
+
+LO QUE ESTÁ MAL:
+  - BUG CORREGIDO en esta sesión: CartClient tenía la URL duplicada
+    ("/api/v1" + "/api/stores/..."). Ya fue arreglado a "/stores/...".
+
+  - AppConfig.java crea el WebClient bean con cartBaseUrl como base URL, pero
+    CartClient ignora esa base URL y construye URLs absolutas manualmente.
+    El bean de WebClient es redundante en su configuración de base URL. Debería
+    usarse el patrón de Returns/Inventory (WebClient con base URL fija y
+    rutas relativas en el cliente).
+
+  - Java 17 mientras todos los demás módulos usan Java 21. Riesgo de
+    incompatibilidades a futuro.
+
+  - Spring Boot 3.2.5 (más antiguo que los demás en 3.5.x). Actualizar.
+
+  - No notifica a Inventory al confirmar una orden (stock no se descuenta).
+  - No acredita puntos de lealtad al confirmar un pago.
+  - No verifica stock disponible antes de crear la orden.
+
+CONEXIONES QUE HACE:
+  → Cart Service: GET /api/v1/stores/{storeId}/cart   ← URL AHORA CORRECTA
+  → Cart Service: DELETE /api/v1/stores/{storeId}/cart ← URL AHORA CORRECTA
+  Estado: CORREGIDO en esta sesión.
+
+CONEXIONES QUE RECIBE:
+  ← Returns: GET /stores/{storeId}/orders/{orderId}
+  Estado: ver módulo Returns (URL con bug).
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.14 RETURNS (Puerto 8092)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + WebClientConfig bien implementado: crea el bean con base URL desde
+    application.yaml y usa nombres descriptivos (orderWebClient).
+  + Estados claros (PENDING, APPROVED, REJECTED, REFUNDED).
+  + ReturnItem guarda referencia al orderItemId para saber exactamente qué
+    producto se quiere devolver.
+
+LO QUE ESTÁ MAL:
+  - BUG EN OrderClient.java: La base URL ya contiene "/api/v1"
+    (order.service.url = http://localhost:8087/api/v1) pero la URI en
+    existsOrder() usa "/api/stores/{storeId}/orders/{orderId}".
+    URL resultante: http://localhost:8087/api/v1/api/stores/.../orders/...
+    URL correcta:   http://localhost:8087/api/v1/stores/.../orders/...
+    DEBE CAMBIARSE A: .uri("/stores/{storeId}/orders/{orderId}", storeId, orderId)
+
+  - No hay integración con Inventory al aprobar una devolución (el stock
+    no se repone automáticamente).
+  - No hay integración con Payment al aprobar un reembolso (el reembolso
+    en OrderPayment es manual).
+
+CONEXIONES QUE HACE:
+  → Order Payment: GET /api/v1/stores/{storeId}/orders/{orderId}
+  Estado: ERROR — la URL tiene "/api/v1/api/stores/..." duplicado. Ver arriba.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.15 GATEWAY (Puerto 8080)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Filtro JwtValidationFilter que valida el token y propaga X-User-Id, X-Store-Id.
+  + Rutas públicas correctamente identificadas (auth, SSE, loyalty/internal,
+    payment webhook/callback).
+  + Orden correcto de rutas: las más específicas (cart, orders) se definen
+    antes que las generales (stores) para evitar conflictos de matching.
+  + Perfil Docker separado en application-docker.yml para reemplazar
+    "localhost" por nombres de servicio Docker.
+
+LO QUE ESTÁ MAL:
+
+  [CRÍTICO] application-docker.yml está INCOMPLETO. Cuando Docker Compose
+  activa el perfil "docker", Spring Boot REEMPLAZA la lista completa de rutas
+  del application.yaml con la del perfil docker. Las siguientes rutas del
+  application.yaml NO están en application-docker.yml y por lo tanto NO
+  funcionarán en producción Docker:
+
+    - cart-routes          → cart-service:8086       (FALTA COMPLETAMENTE)
+    - media-routes         → media-service:8096       (FALTA COMPLETAMENTE)
+    - reports-routes       → reports:8100             (FALTA COMPLETAMENTE)
+    - payment-routes       → payment:8098             (FALTA COMPLETAMENTE)
+    - payment-oauth-public-routes                     (FALTA COMPLETAMENTE)
+    - ia-user-routes       → ia-user-service:8099     (FALTA COMPLETAMENTE)
+    - ia-admin-routes                                 (FALTA COMPLETAMENTE)
+
+  [CRÍTICO] En application-docker.yml, product-routes incluye
+  "/api/v1/cloudinary/**" — esto es INCORRECTO. En el perfil de desarrollo
+  (application.yaml), cloudinary/** va a media-service, no a product-service.
+  En Docker, las peticiones de Cloudinary irían al módulo equivocado.
+
+  [GRAVE] ia-user-routes en application.yaml apunta a http://localhost:8097
+  pero IaUser corre en el puerto 8099. Esta ruta nunca ha funcionado en
+  desarrollo local.
+
+  [GRAVE] En application-docker.yml, la ruta auth-routes no incluye el
+  endpoint /api/v1/auth/refresh-token que sí está en application.yaml.
+  En Docker, la renovación de token no será accesible.
+
+  [MENOR] No hay rate limiting ni circuit breaker configurado en el Gateway.
+
+CONEXIONES QUE HACE (estado Docker):
+  ✓ auth-routes          → auth-service:8082        (parcial: falta refresh-token)
+  ✓ order-routes         → order-payment-service:8087
+  ✓ store-routes         → store-service:8081
+  ✗ product-routes       → tiene cloudinary redirigido WRONG a product-service
+  ✓ stock-alert-routes   → product-service:8084
+  ✓ variant-routes       → product-service:8084
+  ✓ users-routes         → users-service:8083
+  ✓ supplier-routes      → supplier-service:8085
+  ✓ support-routes       → support-service:8088
+  ✓ preferences-routes   → preferences-service:8094
+  ✓ inventory-routes     → inventory-service:8089
+  ✓ promotion-routes     → promotion-service:8091
+  ✓ returns-routes       → returns-service:8092
+  ✓ loyalty-internal-routes → loyal-customer-service:8093
+  ✓ loyalty-routes       → loyal-customer-service:8093
+  ✓ reviews-routes       → reviews-service:8095
+  ✗ cart-routes          → FALTA en docker profile
+  ✗ media-routes         → FALTA en docker profile
+  ✗ ia-user-routes       → FALTA en docker profile (y puerto incorrecto en dev)
+  ✗ reports-routes       → FALTA en docker profile
+  ✗ payment-routes       → FALTA en docker profile
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.16 MEDIA SERVICE — Node.js (Puerto 8096)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Servicio ligero y bien enfocado: solo maneja uploads a Cloudinary.
+  + Memoria (multer.memoryStorage) en lugar de guardar en disco — correcto
+    para contenedores sin estado.
+  + Endpoint de firma para uploads directos desde el frontend (signature).
+  + Aliases de rutas para compatibilidad (/cloudinary/upload y /upload).
+  + Dockerfile propio y correcto para Node.js.
+
+LO QUE ESTÁ MAL:
+  - No hay autenticación interna. Cualquier petición que llegue al puerto
+    8096 directamente puede subir imágenes sin restricción. Debería validar
+    que la petición viene del Gateway (por ejemplo, un header secreto interno).
+
+  - No hay límite de tamaño de archivo en multer. Un archivo de 1GB podría
+    colapsar el servicio. Agregar limits: { fileSize: 10 * 1024 * 1024 }.
+
+  - No hay validación del tipo MIME. Debería rechazar archivos que no sean
+    imágenes (image/jpeg, image/png, image/webp).
+
+  - El package.json no tiene el campo "main" ni "scripts.start" explícito
+    (el Dockerfile usa node src/index.js directamente — funciona, pero
+    es menos mantenible).
+
+CONEXIONES QUE RECIBE:
+  ← Users, Store, Product: POST /api/v1/upload
+  Estado: OK.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.17 IAUSER — Python FastAPI (Puerto 8099)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + FastAPI es una excelente elección para el servicio de IA (asincrónico,
+    alto rendimiento, tipado con Pydantic).
+  + Historial de chat persistido en base de datos (ChatSession + ChatMessage).
+  + Session cleaner automático en background para limpiar sesiones viejas.
+  + StockNotification implementado para alertar cuando un producto tiene stock.
+  + CORS configurado correctamente para acceso desde el frontend.
+  + Dockerfile bien estructurado (Python slim, sin copiar venv).
+
+LO QUE ESTÁ MAL:
+  - settings.py tiene CART_SERVICE_URL con valor por defecto
+    "http://localhost:8083" que es el puerto de USERS, no de Cart (8086).
+    En Docker se sobreescribe con la variable correcta, pero en desarrollo
+    local el agente de IA no podría acceder al carrito.
+
+  - La ruta en el Gateway (application.yaml) apunta a
+    http://localhost:8097 pero el servicio corre en 8099. La IA nunca
+    ha sido accesible desde el Gateway en desarrollo local.
+
+  - La ruta ia-user-routes NO existe en application-docker.yml, así que
+    tampoco funciona en producción Docker.
+
+  - El módulo no tiene autenticación propia: confía en que el Gateway inyecta
+    X-User-Id. Si alguien llama directamente al puerto 8099, cualquier
+    X-User-Id es válido.
+
+  - CMS_SERVICE_URL apunta a http://cms-service:8101 pero CMS no está en
+    docker-compose.yml (recién falta agregar). En el meantime, si IaUser
+    intenta consultar CMS, el servicio falla.
+
+CONEXIONES QUE HACE (en Docker):
+  → Product Service: http://product-service:8084     ✓
+  → Cart Service:    http://cart-service:8086         ✓
+  → Support Service: http://support-service:8088     ✓
+  → Store Service:   http://store-service:8081       ✓
+  → Promotion:       http://promotion-service:8091   ✓
+  → Reviews:         http://reviews-service:8095     ✓
+  → CMS:             http://cms-service:8101         ✗ (CMS no está en docker-compose)
+  → Preferences:     http://preferences-service:8094 ✓
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.18 CMS (Puerto 8101)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Generación de contenido con Gemini IA bien integrada.
+  + Separación de responsabilidades: CmsService para CRUD, GeminiService para IA.
+  + Páginas CMS por tienda con slug para URLs amigables.
+
+LO QUE ESTÁ MAL:
+  - CRÍTICO: application.yaml del CMS configura la base de datos como
+    "promotion" (misma que el módulo Promotion). Dos servicios distintos
+    con JPA y ddl-auto: update apuntando a la misma DB puede corromper
+    el esquema de ambos. CMS necesita su propia base de datos "cms".
+
+  - CMS no está en docker-compose.yml. Si otros módulos (IaUser) intentan
+    consultar cms-service:8101, la petición fallará.
+
+  - No hay ruta en el Gateway para /api/v1/cms/**. El módulo no es accesible
+    desde fuera a través del Gateway.
+
+CONEXIONES QUE HACE:
+  → Preferences Service: (consultas de preferencias)
+  → Product Service: (consultas de productos)
+  Estado: OK si las variables de entorno se configuran correctamente.
+
+
+────────────────────────────────────────────────────────────────────────────────
+  3.19 REPORTS (Puerto 8100)
+────────────────────────────────────────────────────────────────────────────────
+
+LO QUE ESTÁ BIEN:
+  + Enfoque correcto: servicio de solo lectura que agrega datos de otros.
+  + No tiene base de datos propia (correcto para un servicio de reportes).
+
+LO QUE ESTÁ MAL:
+  - No está en docker-compose.yml. El Gateway tiene la ruta configurada
+    (reports-routes → 8100) pero el servicio no se levanta en Docker.
+
+  - La ruta reports-routes en application-docker.yml tampoco existe
+    (ver sección Gateway).
+
+  - No está documentado qué endpoints expone exactamente.
+
+CONEXIONES QUE HACE:
+  → Product Service: consultas de productos
+  → Order Payment: consultas de órdenes
+  Estado: depende de que los otros servicios estén levantados.
+
+
+================================================================================
+  4. ESTADO DE LAS CONEXIONES ENTRE MÓDULOS
+================================================================================
+
+LEYENDA: ✓ = OK  ✗ = ERROR  ⚠ = ADVERTENCIA  ? = SIN VERIFICAR
+
+EMISOR           | DESTINO          | RUTA LLAMADA                          | ESTADO
+-----------------|------------------|---------------------------------------|-------
+Auth             | Users            | POST /users/createUser                | ✓
+Auth             | Users            | GET /users/myUserName/{id}            | ✓
+Auth             | Email (SMTP)     | (envío directo)                       | ✓
+Users            | Media Service    | POST /api/v1/upload                   | ✓
+Store            | Users            | (verificar dueño)                     | ✓
+Store            | Media Service    | POST /api/v1/upload                   | ✓
+Product          | Store            | (verificar tienda)                    | ✓
+Product          | Media Service    | POST /api/v1/upload                   | ✓
+Inventory        | Product          | PATCH /api/v1/variants/{id}/stock/+   | ✓
+Inventory        | Product          | PATCH /api/v1/variants/{id}/stock/-   | ✓
+Inventory        | Product          | GET /api/v1/variants/{id}             | ✓
+OrderPayment     | Cart             | GET /api/v1/stores/{id}/cart          | ✓ (corregido)
+OrderPayment     | Cart             | DELETE /api/v1/stores/{id}/cart       | ✓ (corregido)
+Returns          | OrderPayment     | GET /stores/{id}/orders/{id}          | ✗ URL DUPLICA /api/v1
+IaUser           | Product          | (consultas de catálogo)               | ✓
+IaUser           | Cart             | (consulta de carrito)                 | ✓
+IaUser           | Support          | (consulta de tickets)                 | ✓
+IaUser           | Store            | (información de tienda)               | ✓
+IaUser           | Promotion        | (consulta de promociones)             | ✓
+IaUser           | Reviews          | (consulta de reseñas)                 | ✓
+IaUser           | Preferences      | (consulta de preferencias)            | ✓
+IaUser           | CMS              | (consulta de contenido)               | ✗ CMS no en docker-compose
+CMS              | Preferences      | (personalización)                     | ✓
+CMS              | Product          | (datos de productos)                  | ✓
+Reports          | Product          | (reportes de productos)               | ✓
+Reports          | OrderPayment     | (reportes de ventas)                  | ✓
+
+INTEGRACIONES AUTOMÁTICAS ROTAS (flujos de negocio incompletos):
+  ✗ OrderPayment → Inventory: al confirmar una orden, el stock NO se descuenta
+  ✗ OrderPayment → LoyalCustomer: al pagar, NO se acreditan puntos de lealtad
+  ✗ Returns → Inventory: al aprobar devolución, el stock NO se repone
+  ✗ Returns → OrderPayment: el reembolso del pago NO se dispara automáticamente
+  ✗ Reviews → OrderPayment: no verifica si el usuario compró el producto
+
+
+================================================================================
+  5. ERRORES CRÍTICOS ENCONTRADOS (RESUMEN)
+================================================================================
+
+PRIORIDAD ALTA — Bugs que causan fallo funcional directo:
+─────────────────────────────────────────────────────────
+
+[BUG-1] CORREGIDO EN ESTA SESIÓN
+  Archivo: OrderPayment/.../client/CartClient.java (líneas 40 y 62)
+  Problema: URL duplicaba /api/v1: ".../api/v1/api/stores/{id}/cart"
+  Corrección: Cambiado a "/stores/{storeId}/cart"
+
+[BUG-2] POR CORREGIR
+  Archivo: Returns/.../client/OrderClient.java (línea 17)
+  Problema: Igual que BUG-1. base URL ya tiene /api/v1 pero la URI agrega
+            "/api/stores/{storeId}/orders/{orderId}".
+  URL actual: http://host:8087/api/v1/api/stores/.../orders/...
+  URL correcta: http://host:8087/api/v1/stores/.../orders/...
+  Corrección: Cambiar a ".uri("/stores/{storeId}/orders/{orderId}", ...)"
+
+[BUG-3] POR CORREGIR
+  Archivo: Gateway/src/main/resources/application-docker.yml
+  Problema: El perfil Docker del Gateway está incompleto. En Docker, no
+            funcionan: carrito, media, reportes, pagos, IA usuario.
+  Corrección: Agregar las rutas faltantes al perfil docker (ver sección 3.15).
+
+[BUG-4] POR CORREGIR
+  Archivo: Gateway/src/main/resources/application-docker.yml (product-routes)
+  Problema: product-routes incluye /api/v1/cloudinary/** que debe ir a
+            media-service, no a product-service.
+  Corrección: Mover /api/v1/cloudinary/** a media-routes en el perfil docker.
+
+[BUG-5] POR CORREGIR
+  Archivo: Gateway/src/main/resources/application.yaml (ia-user-routes)
+  Problema: ia-user-routes apunta a http://localhost:8097 pero IaUser
+            corre en el puerto 8099.
+  Corrección: Cambiar 8097 → 8099.
+
+PRIORIDAD MEDIA — Errores de diseño que afectan integridad de datos:
+─────────────────────────────────────────────────────────────────────
+
+[DISEÑO-1]
+  Módulos: Cms, Promotion
+  Problema: CMS usa la misma base de datos "promotion" que el módulo Promotion.
+  Corrección: Crear base de datos "cms" en init.sql y actualizar application.yaml
+              de CMS.
+
+[DISEÑO-2]
+  Módulo: LoyalCustomer
+  Problema: Al confirmar un pago en OrderPayment, no se acreditan puntos.
+            La integración entre ambos módulos está pendiente.
+
+[DISEÑO-3]
+  Módulo: Inventory
+  Problema: Al crear una orden, Inventory no descuenta el stock.
+            El stock solo cambia cuando Inventory registra un movimiento
+            manualmente, no de forma automática al vender.
+
+PRIORIDAD BAJA — Advertencias y mejoras:
+──────────────────────────────────────────
+
+[ADVERTENCIA-1]
+  Módulo: Supplier
+  Problema: Usa Spring Boot 4.0.6 (no estable / alpha). Riesgo en producción.
+  Corrección: Bajar a Spring Boot 3.5.x.
+
+[ADVERTENCIA-2]
+  Módulos: Auth, OrderPayment, Gateway
+  Problema: Spring Boot 3.2.5 mientras los demás usan 3.5.x.
+  Corrección: Actualizar a 3.5.x para homogeneizar.
+
+[ADVERTENCIA-3]
+  Módulo: OrderPayment
+  Problema: Java 17 mientras los demás usan Java 21.
+  Corrección: Actualizar pom.xml: <java.version>21</java.version>
+
+[ADVERTENCIA-4]
+  Módulos: CMS, Reports
+  Problema: No están en docker-compose.yml ni tienen rutas en el Gateway
+            Docker. Son módulos "fantasma" desde la perspectiva de Docker.
+
+[ADVERTENCIA-5]
+  Módulo: media-service (Node.js)
+  Problema: Sin límite de tamaño de archivo, sin validación de tipo MIME.
+
+
+================================================================================
+  6. RECOMENDACIONES GENERALES
+================================================================================
+
+1. PRIORIDAD INMEDIATA: Corregir BUG-2 (Returns/OrderClient.java), BUG-3 y
+   BUG-4 (Gateway docker profile) y BUG-5 (puerto de IaUser en Gateway).
+
+2. SEPARAR LA BASE DE DATOS DE CMS: Crear "cms" en docker/init.sql y
+   actualizar la configuración del módulo CMS.
+
+3. AGREGAR CMS AL DOCKER-COMPOSE: El módulo CMS no está en el compose actual.
+   IaUser lo referencia y fallará si no está disponible.
+
+4. COMPLETAR EL GATEWAY DOCKER PROFILE: Agregar las rutas de cart, media,
+   ia-user, reports y payment al application-docker.yml.
+
+5. HOMOGENEIZAR VERSIONES: Unificar Spring Boot a 3.5.x y Java 21 en todos
+   los módulos. Bajar Supplier de 4.0.6 a 3.5.x.
+
+6. IMPLEMENTAR EL FLUJO ORDEN → INVENTARIO → LEALTAD: Cuando una orden se
+   confirma/paga en OrderPayment, debería:
+     a) Llamar a Inventory para decrementar stock de cada variante.
+     b) Llamar a LoyalCustomer para acreditar puntos al usuario.
+
+7. IMPLEMENTAR EL FLUJO DEVOLUCIÓN → INVENTARIO: Cuando Returns aprueba una
+   devolución, debería llamar a Inventory para reponer el stock.
+
+8. PROTEGER ENDPOINTS INTERNOS DE PRODUCT: Los endpoints de stock increase/
+   decrease deberían requerir un header secreto interno para que solo
+   Inventory pueda llamarlos, no cualquier cliente externo.
+
+9. CORREGIR VALOR POR DEFECTO DE CART_SERVICE_URL EN IAUSER:
+   settings.py tiene como default "http://localhost:8083" (Users) en lugar
+   de "http://localhost:8086" (Cart). Corregir aunque solo afecte al
+   desarrollo local fuera de Docker.
+
+10. AÑADIR VALIDACIONES CRUZADAS DE EXISTENCIA: Cart debería validar que
+    el variantId existe en Product. Reviews debería validar que productId
+    existe. Wishlist ídem.
+
+================================================================================
+  FIN DEL REPORTE
+================================================================================

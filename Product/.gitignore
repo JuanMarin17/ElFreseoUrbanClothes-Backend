@@ -5,6 +5,7 @@ target/
 !**/src/test/**/target/
 
 ### STS ###
+.env.example
 .apt_generated
 .classpath
 .factorypath
@@ -33,3 +34,4 @@ build/
 
 ### VS Code ###
 .vscode/
+*/target/

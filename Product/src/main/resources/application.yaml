@@ -3,15 +3,18 @@ spring:
     name: product
 
   datasource:
-    url: ${DB_URL}
-    username: ${USER_NAME}
-    password: ${PASSWORD}
     driver-class-name: org.postgresql.Driver
-
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/product}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:root}
     hikari:
-      data-source-properties:
-        ssl: true
-        sslmode: require
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 600000        # cierra conexiones inactivas después de 10 min
+      max-lifetime: 1800000       # recicla conexiones cada 30 min (antes de que Postgres las cierre)
+      keepalive-time: 60000       # ping cada 1 min para mantener la conexión viva
+      connection-timeout: 30000
+      validation-timeout: 5000
 
   jpa:
     hibernate:
@@ -23,9 +26,23 @@ spring:
         format_sql: true
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8084}
+  servlet:
+    context-path: /api/v1
 
-# Configuración JWT (para validar tokens)
-jwt:
-  secret: mi_secreto_super_seguro_123456
-  expiration: 3600000
+store:
+  service:
+    url: ${STORE_SERVICE_URL:http://localhost:8081/api/v1}
+
+media:
+  service:
+    url: ${MEDIA_SERVICE_URL:http://localhost:8096}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"
+  endpoint:
+    health:
+      show-details: always
