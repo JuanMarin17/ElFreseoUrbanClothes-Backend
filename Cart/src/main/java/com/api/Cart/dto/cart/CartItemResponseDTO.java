@@ -28,5 +28,14 @@ public class CartItemResponseDTO {
     /** Precio actual del producto en catálogo */
     private BigDecimal currentPrice;
 
+    /** ID de la promoción activa aplicada a este producto (null si no hay) */
+    private UUID promotionId;
+    /** Nombre de la promoción activa */
+    private String promotionName;
+    /** Precio unitario con descuento (null si no hay promoción) */
+    private BigDecimal discountedPrice;
+    /** Descuento total aplicado al ítem = (unitPrice - discountedPrice) × quantity */
+    private BigDecimal promotionDiscount;
+
     private OffsetDateTime addedAt;
 }
