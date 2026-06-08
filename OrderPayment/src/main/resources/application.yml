@@ -26,6 +26,10 @@ cart:
   service:
     base-url: ${CART_SERVICE_URL:http://localhost:8086/api/v1}
 
+promotion:
+  service:
+    url: ${PROMOTION_SERVICE_URL:http://localhost:8091/api/v1}
+
 management:
   endpoints:
     web:

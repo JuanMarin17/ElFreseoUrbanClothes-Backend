@@ -17,8 +17,10 @@ public class CartResponseDTO {
     private UUID userId;
     private UUID storeId;
     private List<CartItemDTO> items;
-    private BigDecimal total;
-    private int itemCount;
+    private BigDecimal subtotal;
+    private BigDecimal totalDiscount;
+    private BigDecimal totalWithDiscount;
+    private int totalItems;
 
     @Data
     public static class CartItemDTO {

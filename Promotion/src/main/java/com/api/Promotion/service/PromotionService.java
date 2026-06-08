@@ -5,7 +5,10 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.api.Promotion.client.ProductClient;
+import com.api.Promotion.client.StoreClient;
 import com.api.Promotion.dto.ApiResponseDTO;
+import com.api.Promotion.dto.ProductPromotionDTO;
 import com.api.Promotion.dto.PromotionRequestDTO;
 import com.api.Promotion.dto.PromotionResponseDTO;
 import com.api.Promotion.entity.Promotion;
@@ -22,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 public class PromotionService {
 
     private final PromotionRepository promotionRepository;
+    private final StoreClient storeClient;
+    private final ProductClient productClient;
 
     // ── Crear promoción ───────────────────────────────────────────────────────
     public PromotionResponseDTO createPromotion(PromotionRequestDTO dto) {
@@ -37,11 +42,18 @@ public class PromotionService {
         if (dto.getDiscountType() == null)
             throw new BadRequestException("El tipo de descuento es obligatorio");
 
+        if (!storeClient.existsStore(storeId))
+            throw new BadRequestException("La tienda no existe: " + storeId);
+
+        if (dto.getProductId() != null && !productClient.existsProduct(dto.getProductId(), storeId))
+            throw new BadRequestException("El producto no existe: " + dto.getProductId());
+
         Promotion promotion = new Promotion();
         promotion.setName(dto.getName());
         promotion.setDiscount(dto.getDiscount());
         promotion.setDiscountType(dto.getDiscountType());
         promotion.setStoreId(storeId);
+        promotion.setProductId(dto.getProductId());
 
         return toPromotionResponse(promotionRepository.save(promotion));
     }
@@ -78,6 +90,11 @@ public class PromotionService {
             promotion.setDiscount(dto.getDiscount());
         if (dto.getDiscountType() != null)
             promotion.setDiscountType(dto.getDiscountType());
+        if (dto.getProductId() != null) {
+            if (!productClient.existsProduct(dto.getProductId(), storeId))
+                throw new BadRequestException("El producto no existe: " + dto.getProductId());
+            promotion.setProductId(dto.getProductId());
+        }
 
         return toPromotionResponse(promotionRepository.save(promotion));
     }
@@ -102,6 +119,13 @@ public class PromotionService {
         return response;
     }
 
+    // ── Interno: promociones activas para una lista de productos (llamado por Cart) ──
+    public List<ProductPromotionDTO> getPromotionsForProducts(UUID storeId, List<UUID> productIds) {
+        if (productIds == null || productIds.isEmpty()) return List.of();
+        return promotionRepository.findByStoreIdAndProductIdInAndIsActiveTrue(storeId, productIds)
+                .stream().map(this::toProductPromotionDTO).toList();
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
     private UUID getStoreIdFromHeader() {
         String storeIdHeader = RequestContext.getHeader("X-Store-Id");
@@ -120,7 +144,7 @@ public class PromotionService {
             throw new UnauthorizedException("Solo el ADMIN u OWNER pueden realizar esta acción");
     }
 
-    // ── Mapper ────────────────────────────────────────────────────────────────
+    // ── Mappers ────────────────────────────────────────────────────────────────
     private PromotionResponseDTO toPromotionResponse(Promotion p) {
         PromotionResponseDTO dto = new PromotionResponseDTO();
         dto.setPromotionId(p.getPromotionId());
@@ -128,8 +152,19 @@ public class PromotionService {
         dto.setDiscount(p.getDiscount());
         dto.setDiscountType(p.getDiscountType());
         dto.setStoreId(p.getStoreId());
+        dto.setProductId(p.getProductId());
         dto.setIsActive(p.getIsActive());
         dto.setCreatedAt(p.getCreatedAt());
+        return dto;
+    }
+
+    private ProductPromotionDTO toProductPromotionDTO(Promotion p) {
+        ProductPromotionDTO dto = new ProductPromotionDTO();
+        dto.setPromotionId(p.getPromotionId());
+        dto.setProductId(p.getProductId());
+        dto.setName(p.getName());
+        dto.setDiscount(p.getDiscount());
+        dto.setDiscountType(p.getDiscountType().name());
         return dto;
     }
 }
