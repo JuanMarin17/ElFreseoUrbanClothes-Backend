@@ -36,6 +36,10 @@ public class Promotion {
     @Column(name = "store_id")
     private UUID storeId;
 
+    // null = aplica a toda la orden; not-null = solo a este producto
+    @Column(name = "product_id")
+    private UUID productId;
+
     @Column(name = "is_active")
     private Boolean isActive = true;
 

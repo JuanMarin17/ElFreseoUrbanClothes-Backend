@@ -3,14 +3,13 @@ package com.api.Promotion.dto;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-import com.api.Promotion.enums.DiscountType;
-
 import lombok.Data;
 
 @Data
-public class PromotionRequestDTO {
+public class ProductPromotionDTO {
+    private UUID promotionId;
+    private UUID productId;
     private String name;
     private BigDecimal discount;
-    private DiscountType discountType;
-    private UUID productId;
+    private String discountType;
 }

@@ -15,6 +15,7 @@ public class PromotionResponseDTO {
     private BigDecimal discount;
     private DiscountType discountType;
     private UUID storeId;
+    private UUID productId;
     private Boolean isActive;
     private OffsetDateTime createdAt;
 }

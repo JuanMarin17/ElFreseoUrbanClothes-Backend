@@ -11,4 +11,6 @@ public interface PromotionRepository extends JpaRepository<Promotion, UUID> {
     List<Promotion> findByStoreIdAndIsActiveTrue(UUID storeId);
 
     List<Promotion> findByStoreId(UUID storeId);
+
+    List<Promotion> findByStoreIdAndProductIdInAndIsActiveTrue(UUID storeId, List<UUID> productIds);
 }
