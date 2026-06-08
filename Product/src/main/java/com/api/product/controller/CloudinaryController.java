@@ -3,12 +3,12 @@ package com.api.product.controller;
 import java.util.Map;
 import java.util.Set;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.api.product.client.MediaServiceClient;
 import com.api.product.dto.CloudinarySignatureResponse;
-import com.api.product.service.CloudinarySignatureService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -17,36 +17,29 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CloudinaryController {
 
-    private final CloudinarySignatureService signatureService;
-
-    @Value("${cloudinary.cloud_name}")
-    private String cloudName;
-
-    @Value("${cloudinary.api_key}")
-    private String apiKey;
-
-    // carpetas permitidas (seguridad)
+    private final MediaServiceClient mediaServiceClient;
     private final Set<String> allowedFolders = Set.of("productos");
 
     @GetMapping("/signature")
     public ResponseEntity<CloudinarySignatureResponse> getSignature(
-            @RequestParam(defaultValue = "productos") String folder
-    ) {
+            @RequestParam(defaultValue = "productos") String folder) {
 
         if (!allowedFolders.contains(folder)) {
             throw new RuntimeException("Carpeta no permitida");
         }
 
-        Map<String, Object> signatureData = signatureService.generateSignature(folder);
+        return ResponseEntity.ok(mediaServiceClient.getSignature(folder));
+    }
 
-        CloudinarySignatureResponse response = new CloudinarySignatureResponse(
-                signatureData.get("signature").toString(),
-                Long.parseLong(signatureData.get("timestamp").toString()),
-                apiKey,
-                cloudName,
-                folder
-        );
+    @PostMapping("/upload")
+    public ResponseEntity<Map<String, String>> uploadImage(
+            @RequestParam("image") MultipartFile image) {
 
-        return ResponseEntity.ok(response);
+        if (image.isEmpty()) {
+            throw new RuntimeException("El archivo de imagen está vacío");
+        }
+
+        String url = mediaServiceClient.upload(image, "productos");
+        return ResponseEntity.ok(Map.of("url", url));
     }
 }

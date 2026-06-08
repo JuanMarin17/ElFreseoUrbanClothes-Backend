@@ -7,6 +7,7 @@ import com.api.Store.entity.StoreSettings;
 import com.api.Store.exception.StoreNotFoundException;
 import com.api.Store.repository.StoreRepository;
 import com.api.Store.repository.StoreSettingsRepository;
+import com.api.Store.client.MediaServiceClient;
 import com.api.Store.util.HeaderUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class StoreSettingsService {
     private final StoreRepository storeRepository;
     private final ObjectMapper objectMapper;
     private final HeaderUtil headerUtil;
+    private final MediaServiceClient mediaServiceClient;
 
     // ── 1. Obtener settings de una tienda ────────────────────────────────────
     public StoreSettingsResponseDTO getSettings() {
@@ -118,6 +120,29 @@ public class StoreSettingsService {
                 .styles(s.getStyles())
                 .updatedAt(s.getUpdatedAt())
                 .build();
+    }
+
+    // ── 3. Subir logo a Cloudinary y guardar URL ─────────────────────────────
+    @Transactional
+    public StoreSettingsResponseDTO uploadLogo(org.springframework.web.multipart.MultipartFile file) {
+        UUID storeId = headerUtil.getStoreIdFromHeader()
+                .orElseThrow(() -> new RuntimeException("No se envió el id de la tienda"));
+
+        verifyStoreExists(storeId);
+
+        String logoUrl = mediaServiceClient.upload(file, "stores/logos");
+
+        StoreSettings settings = storeSettingsRepository.findById(storeId)
+                .orElseGet(() -> {
+                    Store store = storeRepository.findById(storeId)
+                            .orElseThrow(() -> new StoreNotFoundException("Tienda no encontrada: " + storeId));
+                    return StoreSettings.builder().store(store).build();
+                });
+
+        settings.setLogoUrl(logoUrl);
+        settings.setUpdatedAt(java.time.OffsetDateTime.now());
+
+        return toResponse(storeSettingsRepository.save(settings));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

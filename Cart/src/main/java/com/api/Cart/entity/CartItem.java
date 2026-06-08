@@ -7,10 +7,6 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Ítem dentro del carrito de compras.
- * Guarda el precio al momento de agregar para detectar cambios.
- */
 @Entity
 @Data
 @Builder
@@ -34,9 +30,21 @@ public class CartItem {
     @JoinColumn(name = "cart_id", nullable = false)
     private Cart cart;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
+    /** ID del producto en el módulo Product */
+    @Column(name = "product_id", nullable = false)
+    private UUID productId;
+
+    /** Snapshot del nombre al momento de agregar */
+    @Column(name = "product_name", nullable = false)
+    private String productName;
+
+    /** Snapshot del SKU de la primera variante al momento de agregar */
+    @Column(name = "product_sku")
+    private String productSku;
+
+    /** Snapshot de la imagen al momento de agregar */
+    @Column(name = "product_image_url")
+    private String productImageUrl;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;

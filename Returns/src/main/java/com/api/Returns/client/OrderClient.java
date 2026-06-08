@@ -15,7 +15,7 @@ public class OrderClient {
     public boolean existsOrder(UUID storeId, UUID orderId) {
         try {
             orderWebClient.get()
-                    .uri("/api/stores/{storeId}/orders/{orderId}", storeId, orderId)
+                    .uri("/stores/{storeId}/orders/{orderId}", storeId, orderId)
                     .retrieve()
                     .toBodilessEntity()
                     .block();

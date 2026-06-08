@@ -43,7 +43,7 @@ public class StoreController {
     }
 
 
-    @GetMapping("/existStore/{id}")
+    @GetMapping("/existStore/{storeId}")
     public ResponseEntity<Boolean> existStore(@PathVariable UUID storeId) {
         return ResponseEntity.status(HttpStatus.OK).body(storeService.existStore(storeId));
     }

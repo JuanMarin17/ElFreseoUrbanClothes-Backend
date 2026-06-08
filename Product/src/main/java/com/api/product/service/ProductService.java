@@ -216,9 +216,24 @@ public class ProductService {
         }
     }
 
+    private UUID getUserIdFromHeader() {
+        String userIdHeader = RequestContext.getHeader("x-user-id");
+        if (userIdHeader == null || userIdHeader.isBlank())
+            throw new BadRequestException("No se encontró el X-Store-Id en el header");
+        try {
+            return UUID.fromString(userIdHeader);
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Formato inválido del storeId");
+        }
+    }
+
     private void validateAdminOrOwner() {
-        String role = RequestContext.getHeader("X-User-Role");
-        if (!"ADMIN".equals(role) && !"OWNER".equals(role))
+        UUID storeId = getStoreIdFromHeader();
+        UUID userId = getUserIdFromHeader();
+        String role = storeClient.userRole(userId, storeId);
+
+        System.out.println(role);
+        if ("ADMIN".equals(role) || "OWNER".equals(role))
             throw new UnauthorizedException("Solo el ADMIN u OWNER pueden realizar esta acción");
     }
 
@@ -260,6 +275,8 @@ public class ProductService {
                         .price(v.getPrice())
                         .stock(v.getStock())
                         .minStock(v.getMinStock())
+                        .size(v.getSize())
+                        .color(v.getColor())
                         .product(product)
                         .build())
                 .collect(Collectors.toList());
@@ -289,6 +306,16 @@ public class ProductService {
         return categories;
     }
 
+    private String buildVariantLabel(ProductVariant variant) {
+        StringBuilder sb = new StringBuilder(" (SKU: ").append(variant.getSku());
+        if (variant.getSize() != null && !variant.getSize().isBlank())
+            sb.append(" | Talla: ").append(variant.getSize());
+        if (variant.getColor() != null && !variant.getColor().isBlank())
+            sb.append(" | Color: ").append(variant.getColor());
+        sb.append(")");
+        return sb.toString();
+    }
+
     private void sendStockAlertsIfNeeded(Product product) {
         if (product.getVariants() == null || product.getVariants().isEmpty())
             return;
@@ -296,15 +323,17 @@ public class ProductService {
         product.getVariants().forEach(variant -> {
             if (variant.getStock() <= variant.getMinStock()) {
                 try {
+                    String label = buildVariantLabel(variant);
                     stockAlertService.sendAlert(StockAlertDTO.builder()
                             .productId(product.getProductId())
                             .productName(product.getName())
                             .variantId(variant.getVariantId())
                             .sku(variant.getSku())
+                            .size(variant.getSize())
+                            .color(variant.getColor())
                             .stock(variant.getStock())
                             .minStock(variant.getMinStock())
-                            .message("⚠️ Stock bajo: " + product.getName() +
-                                    " (SKU: " + variant.getSku() + ")")
+                            .message("⚠️ Stock bajo: " + product.getName() + label)
                             .timestamp(OffsetDateTime.now())
                             .build());
                 } catch (Exception e) {
@@ -322,8 +351,14 @@ public class ProductService {
 
         List<ProductResponseDTO.VariantDTO> variants = variantList.stream()
                 .map(v -> ProductResponseDTO.VariantDTO.builder()
-                        .sku(v.getSku()).price(v.getPrice())
-                        .stock(v.getStock()).minStock(v.getMinStock()).build())
+                        .variantId(v.getVariantId())
+                        .sku(v.getSku())
+                        .price(v.getPrice())
+                        .stock(v.getStock())
+                        .minStock(v.getMinStock())
+                        .size(v.getSize())
+                        .color(v.getColor())
+                        .build())
                 .collect(Collectors.toList());
 
         List<ProductResponseDTO.ImageDTO> images = product.getImages() != null

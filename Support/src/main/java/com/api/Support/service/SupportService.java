@@ -58,7 +58,7 @@ public class SupportService {
 
     // ── Obtener todos los tickets (solo OWNER) ────────────────────────────────
     public List<TicketResponseDTO> getAllTickets() {
-        validateOwner();
+        validateSuperAdmin();
 
         return ticketRepository.findAll()
                 .stream()
@@ -84,7 +84,7 @@ public class SupportService {
     // ── Responder ticket (solo OWNER) ─────────────────────────────────────────
     @Transactional
     public MessageResponseDTO replyTicket(UUID ticketId, MessageRequestDTO dto) {
-        validateOwner();
+        validateSuperAdmin();
 
         SupportTicket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket no encontrado con id: " + ticketId));
@@ -130,7 +130,7 @@ public class SupportService {
     // ── Cerrar ticket (solo OWNER) ────────────────────────────────────────────
     @Transactional
     public ApiResponseDTO closeTicket(UUID ticketId) {
-        validateOwner();
+        validateSuperAdmin();
 
         SupportTicket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket no encontrado con id: " + ticketId));
@@ -153,7 +153,7 @@ public class SupportService {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     private UUID getUserIdFromHeader() {
-        String userIdHeader = RequestContext.getHeader("X-User-Id");
+        String userIdHeader = RequestContext.getHeader("x-user-id");
         if (userIdHeader == null || userIdHeader.isBlank())
             throw new UnauthorizedException("Usuario no autenticado");
         try {
@@ -164,16 +164,16 @@ public class SupportService {
     }
 
     private String getUserEmailFromHeader() {
-        String email = RequestContext.getHeader("X-User-Email");
+        String email = RequestContext.getHeader("x-user-email");
         if (email == null || email.isBlank())
             throw new UnauthorizedException("No se pudo obtener el email del usuario autenticado");
         return email;
     }
 
-    private void validateOwner() {
-        String role = RequestContext.getHeader("X-User-Role");
-        if (!"OWNER".equals(role))
-            throw new UnauthorizedException("Solo el OWNER puede realizar esta acción");
+    private void validateSuperAdmin() {
+        String role = RequestContext.getHeader("x-user-role");
+        if (!"SUPERADMIN".equals(role))
+            throw new UnauthorizedException("Solo el SUPERADMIN puede realizar esta acción");
     }
 
     // ── Mappers ───────────────────────────────────────────────────────────────
