@@ -16,4 +16,7 @@ public class CreateOrderRequestDTO {
     /** Notas adicionales del cliente */
     @Size(max = 500, message = "Las notas no pueden superar 500 caracteres")
     private String notes;
+
+    /** Código de cupón de descuento (opcional) */
+    private String couponCode;
 }

@@ -20,8 +20,12 @@ public class CartResponseDTO {
 
     /** Suma de todas las quantities */
     private Integer totalItems;
-    /** Suma de todos los subtotales */
+    /** Suma de todos los subtotales (precio original) */
     private BigDecimal subtotal;
+    /** Suma de todos los descuentos por promociones de producto */
+    private BigDecimal totalDiscount;
+    /** subtotal - totalDiscount */
+    private BigDecimal totalWithDiscount;
 
     /** true si algún ítem tiene priceChanged = true */
     private Boolean hasPriceChanges;

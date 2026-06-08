@@ -1,7 +1,9 @@
 package com.api.Cart.service;
 
 import com.api.Cart.client.ProductClient;
+import com.api.Cart.client.PromotionClient;
 import com.api.Cart.client.StoreClient;
+import com.api.Cart.client.dto.ProductPromotionDTO;
 import com.api.Cart.client.dto.ProductResponse;
 import com.api.Cart.dto.cart.AddToCartRequestDTO;
 import com.api.Cart.dto.cart.CartItemResponseDTO;
@@ -20,9 +22,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +37,7 @@ public class CartService {
         private final CartItemRepository cartItemRepository;
         private final StoreClient storeClient;
         private final ProductClient productClient;
+        private final PromotionClient promotionClient;
 
         // ── 1. Ver carrito ────────────────────────────────────────────────────────
         public CartResponseDTO getCart(UUID storeId, UUID userId) {
@@ -63,8 +69,7 @@ public class CartService {
                                                         if (product.getTotalStock() < newQty)
                                                                 throw new InsufficientStockException(
                                                                                 "Stock insuficiente. Disponible: %d, en carrito: %d"
-                                                                                                .formatted(product
-                                                                                                                .getTotalStock(),
+                                                                                                .formatted(product.getTotalStock(),
                                                                                                                 existing.getQuantity()));
                                                         existing.setQuantity(newQty);
                                                         cartItemRepository.save(existing);
@@ -162,12 +167,33 @@ public class CartService {
         // ── Mapper ────────────────────────────────────────────────────────────────
 
         private CartResponseDTO toResponse(Cart cart, UUID storeId) {
+                // Obtiene todas las promociones de producto en un solo request (batch)
+                List<UUID> productIds = cart.getItems().stream()
+                                .map(CartItem::getProductId)
+                                .distinct()
+                                .toList();
+
+                Map<UUID, ProductPromotionDTO> promotionByProduct = promotionClient
+                                .getPromotionsForProducts(productIds, storeId)
+                                .stream()
+                                .collect(Collectors.toMap(
+                                                ProductPromotionDTO::getProductId,
+                                                p -> p,
+                                                (a, b) -> a)); // si hay varias, se queda la primera
+
                 List<CartItemResponseDTO> itemDTOs = cart.getItems().stream()
-                                .map(item -> toItemResponse(item, storeId))
+                                .map(item -> toItemResponse(item, storeId,
+                                                promotionByProduct.get(item.getProductId())))
                                 .toList();
 
                 BigDecimal subtotal = itemDTOs.stream()
                                 .map(CartItemResponseDTO::getSubtotal)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                BigDecimal totalDiscount = itemDTOs.stream()
+                                .map(i -> i.getPromotionDiscount() != null
+                                                ? i.getPromotionDiscount()
+                                                : BigDecimal.ZERO)
                                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                 int totalItems = itemDTOs.stream()
@@ -184,12 +210,15 @@ public class CartService {
                                 .items(itemDTOs)
                                 .totalItems(totalItems)
                                 .subtotal(subtotal)
+                                .totalDiscount(totalDiscount)
+                                .totalWithDiscount(subtotal.subtract(totalDiscount))
                                 .hasPriceChanges(hasPriceChanges)
                                 .updatedAt(cart.getUpdatedAt())
                                 .build();
         }
 
-        private CartItemResponseDTO toItemResponse(CartItem item, UUID storeId) {
+        private CartItemResponseDTO toItemResponse(CartItem item, UUID storeId,
+                        ProductPromotionDTO promotion) {
                 BigDecimal subtotal = item.getUnitPrice()
                                 .multiply(BigDecimal.valueOf(item.getQuantity()));
 
@@ -208,6 +237,30 @@ public class CartService {
                         }
                 }
 
+                // Calcula descuento por promoción de producto
+                UUID promotionId = null;
+                String promotionName = null;
+                BigDecimal discountedPrice = null;
+                BigDecimal promotionDiscount = BigDecimal.ZERO;
+
+                if (promotion != null) {
+                        promotionId = promotion.getPromotionId();
+                        promotionName = promotion.getName();
+                        if ("PERCENTAGE".equals(promotion.getDiscountType())) {
+                                BigDecimal factor = BigDecimal.ONE.subtract(
+                                                promotion.getDiscount().divide(BigDecimal.valueOf(100), 4,
+                                                                RoundingMode.HALF_UP));
+                                discountedPrice = item.getUnitPrice().multiply(factor)
+                                                .setScale(2, RoundingMode.HALF_UP);
+                        } else {
+                                discountedPrice = item.getUnitPrice().subtract(promotion.getDiscount())
+                                                .max(BigDecimal.ZERO);
+                        }
+                        promotionDiscount = item.getUnitPrice().subtract(discountedPrice)
+                                        .multiply(BigDecimal.valueOf(item.getQuantity()))
+                                        .setScale(2, RoundingMode.HALF_UP);
+                }
+
                 return CartItemResponseDTO.builder()
                                 .cartItemId(item.getCartItemId())
                                 .productId(item.getProductId())
@@ -219,6 +272,10 @@ public class CartService {
                                 .subtotal(subtotal)
                                 .priceChanged(priceChanged)
                                 .currentPrice(currentPrice)
+                                .promotionId(promotionId)
+                                .promotionName(promotionName)
+                                .discountedPrice(discountedPrice)
+                                .promotionDiscount(promotionDiscount)
                                 .addedAt(item.getAddedAt())
                                 .build();
         }
