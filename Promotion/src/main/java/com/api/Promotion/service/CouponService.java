@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.api.Promotion.dto.ApiResponseDTO;
 import com.api.Promotion.dto.CouponRequestDTO;
 import com.api.Promotion.dto.CouponResponseDTO;
+import com.api.Promotion.dto.CouponValidationDTO;
 import com.api.Promotion.dto.RedemptionResponseDTO;
 import com.api.Promotion.entity.Coupon;
 import com.api.Promotion.entity.CouponRedemption;
@@ -134,6 +135,25 @@ public class CouponService {
         redemption.setUserId(userId);
 
         return toRedemptionResponse(redemptionRepository.save(redemption));
+    }
+
+    // ── Interno: validar cupón sin redimir (llamado por OrderPayment) ─────────
+    public CouponValidationDTO validateCoupon(String code, UUID storeId, UUID userId) {
+        Coupon coupon = couponRepository.findByCodeAndStoreId(code.toUpperCase(), storeId)
+                .orElseThrow(() -> new PromotionNotFoundException("Cupón no encontrado: " + code));
+
+        if (!coupon.getIsActive())
+            throw new BadRequestException("El cupón no está activo");
+
+        if (redemptionRepository.existsByCouponIdAndUserId(coupon.getCouponId(), userId))
+            throw new BadRequestException("Ya usaste este cupón anteriormente");
+
+        CouponValidationDTO dto = new CouponValidationDTO();
+        dto.setCouponId(coupon.getCouponId());
+        dto.setCode(coupon.getCode());
+        dto.setDiscount(coupon.getDiscount());
+        dto.setDiscountType(coupon.getDiscountType().name());
+        return dto;
     }
 
     // ── Ver redenciones de un cupón ───────────────────────────────────────────

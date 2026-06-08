@@ -38,6 +38,10 @@ product:
   service:
     url: ${PRODUCT_SERVICE_URL:http://localhost:8084/api/v1}
 
+promotion:
+  service:
+    url: ${PROMOTION_SERVICE_URL:http://localhost:8091/api/v1}
+
 logging:
   level:
     org.hibernate.SQL: DEBUG
