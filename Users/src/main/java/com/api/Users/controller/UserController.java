@@ -4,16 +4,12 @@ import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import java.util.Map;
 
 import com.api.Users.dto.MessageResponseDTO;
 import com.api.Users.dto.UserDTO;
@@ -42,7 +38,9 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserResponseDTO> myProfile() {
+        Long start = System.currentTimeMillis();
         UserResponseDTO response = userService.myProfile();
+        System.out.println("Users:" + (System.currentTimeMillis() - start) + "ms");
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
@@ -65,5 +63,25 @@ public class UserController {
     @GetMapping("/existUser/{id}")
     public ResponseEntity<Boolean> existUser(@PathVariable UUID id){
         return ResponseEntity.status(HttpStatus.OK).body(userService.existUser(id));
+    }
+
+    /**
+     * Sube la foto de perfil del usuario autenticado a Cloudinary.
+     * El backend hace todo: recibe el archivo, lo sube y guarda la URL.
+     *
+     * PATCH /api/v1/users/profile-image
+     * Content-Type: multipart/form-data
+     * Body: image (file)
+     */
+    @PatchMapping("/profile-image")
+    public ResponseEntity<Map<String, String>> uploadProfileImage(
+            @RequestParam("image") MultipartFile image) {
+
+        if (image.isEmpty()) {
+            throw new RuntimeException("El archivo de imagen está vacío");
+        }
+
+        String imageUrl = userService.uploadProfileImage(image);
+        return ResponseEntity.ok(Map.of("imageProfile", imageUrl));
     }
 }

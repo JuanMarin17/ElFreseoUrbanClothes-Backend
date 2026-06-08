@@ -1,0 +1,30 @@
+server:
+  port: ${SERVER_PORT:8100}
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: reports
+
+  jackson:
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: false
+    deserialization:
+      FAIL_ON_UNKNOWN_PROPERTIES: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+  endpoint:
+    health:
+      show-details: always
+
+# URLs de los servicios internos (sin pasar por Gateway)
+services:
+  product:
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8084/api/v1}
+  order:
+    url: ${ORDER_SERVICE_URL:http://localhost:8087/api/v1}

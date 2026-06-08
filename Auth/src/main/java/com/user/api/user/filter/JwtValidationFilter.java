@@ -44,7 +44,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
         return path.contains("/register") ||
                 path.contains("/login") ||
                 path.contains("/verificationCode") ||
-                path.contains("/refreshToken") ||
+                path.contains("/refresh-token") ||
                 path.contains("/resendVerificationCode") || 
                 path.contains("/forgotPassword") ||
                 path.contains("/forgotPasswordSecondStep") ||

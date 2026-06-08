@@ -1,5 +1,6 @@
 package com.api.Store.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -23,4 +24,7 @@ public class StoreCreateRequestDTO {
 
     @Size(max = 200, message = "La descripción no puede superar los 200 caracteres")
     private String description;
+
+    @Valid
+    private StoreCmsDTO cms;
 }

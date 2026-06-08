@@ -18,27 +18,33 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
-public class JwtValidationFilter extends AbstractGatewayFilterFactory<Object>{
+public class JwtValidationFilter extends AbstractGatewayFilterFactory<Object> {
 
     @Value("${security.jwt.secret-key}")
     private String secretKey;
 
     @Override
-    public GatewayFilter apply(Object config){
+    public GatewayFilter apply(Object config) {
         return (exchange, chain) -> {
+
+            long startTime = System.currentTimeMillis(); // ⏱️ inicio
+
             ServerHttpRequest request = exchange.getRequest();
             String authHeader = request.getHeaders().getFirst("Authorization");
             String storeId = request.getHeaders().getFirst("X-Store-Id");
 
-            if(authHeader == null || !authHeader.startsWith("Bearer ")){
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                log.warn("JWT Filter took {} ms (UNAUTHORIZED - no token)",
+                        System.currentTimeMillis() - startTime);
                 return exchange.getResponse().setComplete();
             }
 
             String token = authHeader.replace("Bearer ", "");
 
-            try{
-                SecretKey key = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secretKey));
+            try {
+                SecretKey key = Keys.hmacShaKeyFor(
+                        Base64.getDecoder().decode(secretKey));
 
                 Claims claims = Jwts.parser()
                         .verifyWith(key)
@@ -46,19 +52,31 @@ public class JwtValidationFilter extends AbstractGatewayFilterFactory<Object>{
                         .parseSignedClaims(token)
                         .getPayload();
 
-                ServerHttpRequest enrichedRequest = request.mutate()
-                                            .header("X-User-Id", claims.get("user_id", String.class))
-                                            .header("X-User-Name", claims.getSubject())
-                                            .header("X-User-Role", claims.get("role", String.class))
-                                            .header("X-User-Email", claims.get("email", String.class))
-                                            .header("X-Store-Id", storeId)
-                                            .build();
+                ServerHttpRequest.Builder builder = request.mutate()
+                        .header("X-User-Id", claims.get("user_id", String.class))
+                        .header("X-User-Name", claims.getSubject())
+                        .header("X-User-Role", claims.get("role", String.class))
+                        .header("X-User-Email", claims.get("email", String.class));
 
-                return chain.filter(exchange.mutate().request(enrichedRequest).build());
-            } catch (Exception e){
-                log.error("Jwt validation failed: {}", e.getMessage());
+                if (storeId != null)
+                    builder.header("X-Store-Id", storeId);
+
+                ServerHttpRequest enrichedRequest = builder.build();
+
+                return chain.filter(exchange.mutate().request(enrichedRequest).build())
+                        .doFinally(signalType -> {
+                            long duration = System.currentTimeMillis() - startTime;
+                            log.info("JWT Filter completed in {} ms | Path: {}",
+                                    duration,
+                                    request.getURI().getPath());
+                        });
+
+            } catch (Exception e) {
+                long duration = System.currentTimeMillis() - startTime;
+                log.error("Jwt validation failed in {} ms: {}", duration, e.getMessage());
+
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete(); 
+                return exchange.getResponse().setComplete();
             }
         };
     }

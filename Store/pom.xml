@@ -107,10 +107,47 @@
 			<version>2.5.0</version>
 		</dependency>
 
+		<!-- 🔧 Dotenv (carga .env en local) -->
+		<dependency>
+			<groupId>me.paulschwarz</groupId>
+			<artifactId>spring-dotenv</artifactId>
+			<version>4.0.0</version>
+		</dependency>
+
+		<!-- ☁️ Cloudinary -->
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-http44</artifactId>
+			<version>1.38.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.cloudinary</groupId>
+			<artifactId>cloudinary-core</artifactId>
+			<version>1.38.0</version>
+		</dependency>
+
+		<!-- 🛫 Flyway (migraciones SQL) -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+
 		<!-- 🧪 Testing -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- REST Assured -->
+		<dependency>
+			<groupId>io.rest-assured</groupId>
+			<artifactId>rest-assured</artifactId>
+			<version>5.4.0</version>
 			<scope>test</scope>
 		</dependency>
 

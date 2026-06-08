@@ -19,7 +19,7 @@ public class Role {
     @GeneratedValue
     private UUID roleID;
 
-    @Column(name = "name")
+    @Column(name = "name", unique = true, nullable = false)
     private String name;
 
     @ManyToMany(mappedBy = "roles")

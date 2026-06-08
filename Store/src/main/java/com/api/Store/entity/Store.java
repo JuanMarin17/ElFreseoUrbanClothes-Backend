@@ -30,9 +30,11 @@ public class Store {
     @Column(name = "description")
     private String description;
 
+    @Builder.Default
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Builder.Default
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 

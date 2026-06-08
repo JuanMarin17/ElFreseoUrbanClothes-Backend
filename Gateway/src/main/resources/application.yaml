@@ -2,6 +2,9 @@ spring:
   application:
     name: api-gateway
 
+  codec:
+    max-in-memory-size: 10MB
+
   cloud:
     gateway:
       routes:
@@ -16,7 +19,17 @@ spring:
               /api/v1/auth/loginSecondStep,
               /api/v1/auth/forgotPassword,
               /api/v1/auth/forgotPasswordSecondStep,
-              /api/v1/auth/deactivateAccount
+              /api/v1/auth/deactivateAccount,
+              /api/v1/auth/refresh-token
+
+        # ── Cart (antes de store-routes para mayor especificidad) ───────────────
+        - id: cart-routes
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/v1/stores/*/cart,
+              /api/v1/stores/*/cart/**
+          filters:
+            - JwtValidationFilter
 
         # ── Orders y Payments (antes de store-routes para mayor especificidad) ──
         - id: order-routes
@@ -34,14 +47,21 @@ spring:
             - Path=/api/v1/stores,
               /api/v1/stores/**
 
+        # ── Media service (público — Cloudinary controla el abuso) ──────────
+        - id: media-routes
+          uri: http://localhost:8096
+          predicates:
+            - Path=/api/v1/upload,
+              /api/v1/upload/**,
+              /api/v1/cloudinary/**
+
         # ── Product ───────────────────────────────────────────────────────────────
         - id: product-routes
           uri: http://localhost:8084
           predicates:
             - Path=/api/v1/products/**,
               /api/v1/categories/**,
-              /api/v1/brands/**,
-              /api/v1/cloudinary/**
+              /api/v1/brands/**
           filters:
             - JwtValidationFilter
 
@@ -60,14 +80,22 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Usuarios público (sin JWT) ───────────────────────────────────────
+        - id: users-public-routes
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/users/createUser,
+              /api/v1/users/existUser/**,
+              /api/v1/users/myUserName/**,
+              /api/v1/users/getUserById/**
+
         # ── Usuarios (requiere JWT) ───────────────────────────────────────────
         - id: users-routes
           uri: http://localhost:8083
           predicates:
             - Path=/api/v1/users/me,
-              /api/v1/users/createUser,
               /api/v1/users/update,
-              /api/v1/users/{id}
+              /api/v1/users/profile-image
           filters:
             - JwtValidationFilter
 
@@ -122,6 +150,30 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Reports (requiere JWT + X-Store-Id) ──────────────────────────────
+        - id: reports-routes
+          uri: http://localhost:8100
+          predicates:
+            - Path=/api/v1/reports/**
+          filters:
+            - JwtValidationFilter
+
+        # ── Payment OAuth (callback público, MP no manda JWT) ────────────────
+        - id: payment-oauth-public-routes
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api/v1/oauth/callback,
+              /api/v1/payments/webhook
+
+        # ── Payment (protegido) ───────────────────────────────────────────────
+        - id: payment-routes
+          uri: http://localhost:8098
+          predicates:
+            - Path=/api/v1/payments/**,
+              /api/v1/oauth/**
+          filters:
+            - JwtValidationFilter
+
         # ── LoyalCustomer (internas entre microservicios) ─────────────────────
         - id: loyalty-internal-routes
           uri: http://localhost:8093
@@ -143,6 +195,46 @@ spring:
             - Path=/api/v1/reviews/**
           filters:
             - JwtValidationFilter
+
+        # ── CMS ─────────────────────────────────────────────────────────────
+        - id: cms-routes
+          uri: http://localhost:8101
+          predicates:
+            - Path=/api/v1/cms/**
+          filters:
+            - JwtValidationFilter
+
+        # ── IA User ─────────────────────────────────────────────────────────
+        - id: ia-user-routes
+          uri: http://localhost:8099
+          predicates:
+            - Path=/api/v1/ia/user/**
+          filters:
+            - JwtValidationFilter
+
+        # ── IA Admin ─────────────────────────────────────────────────────────
+        - id: ia-admin-routes
+          uri: http://localhost:8102
+          predicates:
+            - Path=/api/v1/ia/admin/**
+          filters:
+            - JwtValidationFilter
+        # ── Transaction / Billing (público para ver planes) ───────────────────
+        - id: transaction-plans-public
+          uri: http://localhost:8103
+          predicates:
+            - Path=/api/v1/transactions/plans,
+              /api/v1/transactions/plans/**,
+              /api/v1/transactions/limits/**,
+              /api/v1/transactions/webhook
+        # ── Transaction / Billing (protegido) ────────────────────────────────
+        - id: transaction-routes
+          uri: http://localhost:8103
+          predicates:
+            - Path=/api/v1/transactions/**
+          filters:
+            - JwtValidationFilter
+
 
 server:
   port: ${SERVER_PORT:8080}

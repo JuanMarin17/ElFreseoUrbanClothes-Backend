@@ -66,17 +66,29 @@ public class VariantInventoryService {
         return saved;
     }
 
+    private String buildVariantLabel(ProductVariant variant) {
+        StringBuilder sb = new StringBuilder(" (SKU: ").append(variant.getSku());
+        if (variant.getSize() != null && !variant.getSize().isBlank())
+            sb.append(" | Talla: ").append(variant.getSize());
+        if (variant.getColor() != null && !variant.getColor().isBlank())
+            sb.append(" | Color: ").append(variant.getColor());
+        sb.append(")");
+        return sb.toString();
+    }
+
     private void checkAndSendAlert(ProductVariant variant) {
         if (variant.getStock() <= variant.getMinStock()) {
+            String variantLabel = buildVariantLabel(variant);
             stockAlertService.sendAlert(StockAlertDTO.builder()
                     .productId(variant.getProduct().getProductId())
                     .productName(variant.getProduct().getName())
                     .variantId(variant.getVariantId())
                     .sku(variant.getSku())
+                    .size(variant.getSize())
+                    .color(variant.getColor())
                     .stock(variant.getStock())
                     .minStock(variant.getMinStock())
-                    .message("⚠️ Stock bajo: " + variant.getProduct().getName() +
-                            " (SKU: " + variant.getSku() + ")")
+                    .message("⚠️ Stock bajo: " + variant.getProduct().getName() + variantLabel)
                     .timestamp(OffsetDateTime.now())
                     .build());
         }
