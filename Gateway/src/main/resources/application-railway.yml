@@ -235,3 +235,19 @@ spring:
             - Path=/api/v1/transactions/**
           filters:
             - JwtValidationFilter
+
+        # ── Customer (gestión de clientes por tienda) ─────────────────────────
+        - id: customer-routes
+          uri: http://customer-service.railway.internal:8104
+          predicates:
+            - Path=/api/v1/stores/*/customers/**
+          filters:
+            - JwtValidationFilter
+
+        # ── POS Sale (ventas en punto de venta) ───────────────────────────────
+        - id: pos-sale-routes
+          uri: http://pos-sale-service.railway.internal:8105
+          predicates:
+            - Path=/api/v1/stores/*/pos/**
+          filters:
+            - JwtValidationFilter
