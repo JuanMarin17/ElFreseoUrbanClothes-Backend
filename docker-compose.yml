@@ -708,6 +708,99 @@ services:
       retries: 12
       start_period: 90s
 
+  customer-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.customer
+    container_name: customer-service
+    ports:
+      - "8104:8104"
+    environment:
+      SERVER_PORT: 8104
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/customer
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/customer
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8104/api/v1/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+
+  pos-sale-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.pos-sale
+    container_name: pos-sale-service
+    ports:
+      - "8105:8105"
+    environment:
+      SERVER_PORT: 8105
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pos_sale
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/pos_sale
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      INVENTORY_SERVICE_URL: http://inventory-service:8089/api/v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8105/api/v1/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+
+  transaction-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.transaction
+    container_name: transaction-service
+    ports:
+      - "8103:8103"
+    environment:
+      SERVER_PORT: 8103
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transaction
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+      DB_URL: jdbc:postgresql://postgres:5432/transaction
+      DB_USER: postgres
+      DB_PASSWORD: root
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
+      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
+      MP_NOTIFICATION_URL: ${MP_NOTIFICATION_URL:-http://localhost:8103/api/v1/transactions/webhook}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8103/api/v1/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+
   # ── GATEWAY (último en levantar) ─────────────────────────────────────────────
   # El Gateway enruta todas las peticiones externas a los microservicios.
   # SPRING_PROFILES_ACTIVE=docker activa application-docker.yml, que reemplaza
@@ -761,6 +854,12 @@ services:
       cms-service:
         condition: service_healthy
       reports-service:
+        condition: service_healthy
+      customer-service:
+        condition: service_healthy
+      pos-sale-service:
+        condition: service_healthy
+      transaction-service:
         condition: service_healthy
     networks:
       - vexio-net
