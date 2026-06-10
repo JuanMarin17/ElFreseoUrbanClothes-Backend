@@ -61,7 +61,7 @@ public class PromotionService {
     // ── Obtener promociones activas de la tienda ──────────────────────────────
     public List<PromotionResponseDTO> getActivePromotions() {
         UUID storeId = getStoreIdFromHeader();
-        return promotionRepository.findByStoreIdAndIsActiveTrue(storeId)
+        return promotionRepository.findByStoreIdAndActiveTrue(storeId)
                 .stream().map(this::toPromotionResponse).toList();
     }
 
@@ -110,7 +110,7 @@ public class PromotionService {
         if (!promotion.getStoreId().equals(storeId))
             throw new UnauthorizedException("Esta promoción no pertenece a tu tienda");
 
-        promotion.setIsActive(false);
+        promotion.setActive(false);
         promotionRepository.save(promotion);
 
         ApiResponseDTO response = new ApiResponseDTO();
@@ -122,7 +122,7 @@ public class PromotionService {
     // ── Interno: promociones activas para una lista de productos (llamado por Cart) ──
     public List<ProductPromotionDTO> getPromotionsForProducts(UUID storeId, List<UUID> productIds) {
         if (productIds == null || productIds.isEmpty()) return List.of();
-        return promotionRepository.findByStoreIdAndProductIdInAndIsActiveTrue(storeId, productIds)
+        return promotionRepository.findByStoreIdAndProductIdInAndActiveTrue(storeId, productIds)
                 .stream().map(this::toProductPromotionDTO).toList();
     }
 
@@ -153,7 +153,7 @@ public class PromotionService {
         dto.setDiscountType(p.getDiscountType());
         dto.setStoreId(p.getStoreId());
         dto.setProductId(p.getProductId());
-        dto.setIsActive(p.getIsActive());
+        dto.setIsActive(p.isActive());
         dto.setCreatedAt(p.getCreatedAt());
         return dto;
     }
