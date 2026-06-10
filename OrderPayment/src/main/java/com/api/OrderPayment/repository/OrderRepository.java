@@ -2,6 +2,8 @@ package com.api.OrderPayment.repository;
 
 import com.api.OrderPayment.entity.Order;
 import com.api.OrderPayment.enums.OrderStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -15,6 +17,10 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     List<Order> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
     List<Order> findByStoreIdOrderByCreatedAtDesc(UUID storeId);
+
+    Page<Order> findByStoreIdOrderByCreatedAtDesc(UUID storeId, Pageable pageable);
+
+    Page<Order> findByStoreIdAndStatusOrderByCreatedAtDesc(UUID storeId, OrderStatus status, Pageable pageable);
 
     List<Order> findByUserIdAndStoreIdOrderByCreatedAtDesc(UUID userId, UUID storeId);
 

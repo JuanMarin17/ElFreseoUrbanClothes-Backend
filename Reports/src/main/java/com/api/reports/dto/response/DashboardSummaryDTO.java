@@ -37,4 +37,14 @@ public class DashboardSummaryDTO {
 
     // ── Top productos ─────────────────────────────────────────────────────────
     private List<TopProductDTO> topProducts;
+
+    // ── Ingresos por día (últimos 30 días) ────────────────────────────────────
+    private List<DailyRevenueDTO> revenueByDay;
+
+    @Data
+    @Builder
+    public static class DailyRevenueDTO {
+        private String date;
+        private BigDecimal amount;
+    }
 }

@@ -3,10 +3,12 @@ package com.api.OrderPayment.controller;
 import com.api.OrderPayment.dto.order.CreateOrderRequestDTO;
 import com.api.OrderPayment.dto.order.OrderResponseDTO;
 import com.api.OrderPayment.dto.order.UpdateOrderStatusRequestDTO;
+import com.api.OrderPayment.enums.OrderStatus;
 import com.api.OrderPayment.service.OrderService;
 import com.api.OrderPayment.util.HeaderUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -78,10 +80,20 @@ public class OrderController {
 
     // ─── Endpoints de administración ───────────────────────────────────────────
 
-    /** [Admin] Listar todas las órdenes de la tienda */
+    /** [Interno] Endpoint para microservicios (Reports). Devuelve lista completa sin paginación. */
+    @GetMapping("/admin/internal")
+    public ResponseEntity<List<OrderResponseDTO>> getAllOrdersByStoreInternal(@PathVariable UUID storeId) {
+        return ResponseEntity.ok(orderService.getOrdersByStoreInternal(storeId));
+    }
+
+    /** [Admin] Listar todas las órdenes de la tienda con paginación y filtro opcional por status */
     @GetMapping("/admin/all")
-    public ResponseEntity<List<OrderResponseDTO>> getAllOrdersByStore(@PathVariable UUID storeId) {
-        return ResponseEntity.ok(orderService.getOrdersByStore(storeId));
+    public ResponseEntity<Page<OrderResponseDTO>> getAllOrdersByStore(
+            @PathVariable UUID storeId,
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(orderService.getOrdersByStore(storeId, status, page, size));
     }
 
     /** [Admin] Actualizar el estado de una orden */
