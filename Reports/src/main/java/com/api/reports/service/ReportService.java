@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.TreeMap;
 
 @Service
 @RequiredArgsConstructor
@@ -133,6 +134,24 @@ public class ReportService {
         BigDecimal weekRevenue = sumRevenue(filterByPeriod(orders, now.minusDays(7)));
         BigDecimal monthRevenue = sumRevenue(filterByPeriod(orders, now.minusDays(30)));
 
+        // Ingresos por día (últimos 30 días)
+        LocalDateTime thirtyDaysAgo = now.minusDays(30);
+        Map<String, BigDecimal> dailyRevMap = new TreeMap<>();
+        for (ExternalOrderDTO o : orders) {
+            if (o.getCreatedAt() == null || !o.getCreatedAt().isAfter(thirtyDaysAgo)) continue;
+            if (!isRevenueCounted(o) || o.getPayment() == null) continue;
+            BigDecimal amt = o.getPayment().getAmount() != null ? o.getPayment().getAmount() : o.getTotal();
+            if (amt == null) continue;
+            String day = o.getCreatedAt().format(DATE_FORMATTER);
+            dailyRevMap.merge(day, amt, BigDecimal::add);
+        }
+        List<DashboardSummaryDTO.DailyRevenueDTO> revenueByDay = dailyRevMap.entrySet().stream()
+                .map(e -> DashboardSummaryDTO.DailyRevenueDTO.builder()
+                        .date(e.getKey())
+                        .amount(e.getValue().setScale(2, RoundingMode.HALF_UP))
+                        .build())
+                .collect(Collectors.toList());
+
         return DashboardSummaryDTO.builder()
                 .totalProducts(totalProducts)
                 .activeProducts(activeProducts)
@@ -154,6 +173,7 @@ public class ReportService {
                 .weekRevenue(weekRevenue.setScale(2, RoundingMode.HALF_UP))
                 .monthRevenue(monthRevenue.setScale(2, RoundingMode.HALF_UP))
                 .topProducts(buildTopProducts(orders, 5))
+                .revenueByDay(revenueByDay)
                 .build();
     }
 
