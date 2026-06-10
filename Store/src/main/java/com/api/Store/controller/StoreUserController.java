@@ -64,4 +64,12 @@ import com.api.Store.service.StoreUserService;
             System.out.println(role);
             return ResponseEntity.status(HttpStatus.OK).body(role);
         }
+
+        /** [Admin] Activar o desactivar un miembro de la tienda */
+        @PatchMapping("/{storeId}/members/{userId}/toggle-status")
+        public ResponseEntity<StoreUserResponseDTO> toggleMemberStatus(
+                @PathVariable UUID storeId,
+                @PathVariable UUID userId) {
+            return ResponseEntity.ok(storeUserService.toggleUserStatus(storeId, userId));
+        }
     }

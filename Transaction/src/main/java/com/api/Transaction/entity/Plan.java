@@ -5,6 +5,9 @@ import java.util.UUID;
 
 import com.api.Transaction.enums.PlanName;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -40,7 +43,7 @@ public class Plan {
     @Column(name = "max_ai_calls")
     private Integer maxAiCalls;
 
-    // Otras limitaciones en formato JSON flexible
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String features;
 }

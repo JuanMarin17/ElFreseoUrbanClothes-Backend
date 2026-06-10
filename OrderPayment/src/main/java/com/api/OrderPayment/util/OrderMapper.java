@@ -1,5 +1,6 @@
 package com.api.OrderPayment.util;
 
+import com.api.OrderPayment.client.dto.UserInfoDTO;
 import com.api.OrderPayment.dto.order.OrderItemResponseDTO;
 import com.api.OrderPayment.dto.order.OrderResponseDTO;
 import com.api.OrderPayment.dto.payment.PaymentResponseDTO;
@@ -14,9 +15,15 @@ import java.util.List;
 public class OrderMapper {
 
     public OrderResponseDTO toDTO(Order order) {
+        return toDTO(order, null);
+    }
+
+    public OrderResponseDTO toDTO(Order order, UserInfoDTO userInfo) {
         return OrderResponseDTO.builder()
                 .id(order.getId())
                 .userId(order.getUserId())
+                .customerName(userInfo != null ? userInfo.getUserName() : null)
+                .customerEmail(userInfo != null ? userInfo.getUserEmail() : null)
                 .storeId(order.getStoreId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
@@ -42,6 +49,7 @@ public class OrderMapper {
                 .id(item.getId())
                 .productId(item.getProductId())
                 .productName(item.getProductName())
+                .variantName(item.getVariantName())
                 .quantity(item.getQuantity())
                 .unitPrice(item.getUnitPrice())
                 .subtotal(item.getSubtotal())
