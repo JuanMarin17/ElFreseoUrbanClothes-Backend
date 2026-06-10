@@ -21,7 +21,8 @@ public class OrderClient {
     public List<ExternalOrderDTO> getAllOrders(UUID storeId) {
         try {
             List<ExternalOrderDTO> orders = orderWebClient.get()
-                    .uri("/stores/{storeId}/orders/admin/all", storeId)
+                    .uri("/stores/{storeId}/orders/admin/internal", storeId)
+                    .header("X-Store-Id", storeId.toString())
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<List<ExternalOrderDTO>>() {})
                     .block();
@@ -29,7 +30,7 @@ public class OrderClient {
             return orders != null ? orders : Collections.emptyList();
 
         } catch (Exception e) {
-            log.warn("No se pudo obtener órdenes del OrderPayment service: {}", e.getMessage());
+            log.warn("No se pudo obtener órdenes del OrderPayment service para storeId={}: {}", storeId, e.getMessage());
             return Collections.emptyList();
         }
     }

@@ -12,6 +12,7 @@ public class OrderItemResponseDTO {
     private UUID id;
     private UUID productId;
     private String productName;
+    private String variantName;
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal subtotal;
