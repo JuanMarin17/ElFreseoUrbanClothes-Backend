@@ -58,7 +58,7 @@ public class CouponService {
     // ── Obtener cupones activos de la tienda ──────────────────────────────────
     public List<CouponResponseDTO> getActiveCoupons() {
         UUID storeId = getStoreIdFromHeader();
-        return couponRepository.findByStoreIdAndIsActiveTrue(storeId)
+        return couponRepository.findByStoreIdAndActiveTrue(storeId)
                 .stream().map(this::toCouponResponse).toList();
     }
 
@@ -106,7 +106,7 @@ public class CouponService {
         if (!coupon.getStoreId().equals(storeId))
             throw new UnauthorizedException("Este cupón no pertenece a tu tienda");
 
-        coupon.setIsActive(false);
+        coupon.setActive(false);
         couponRepository.save(coupon);
 
         ApiResponseDTO response = new ApiResponseDTO();
@@ -124,7 +124,7 @@ public class CouponService {
         Coupon coupon = couponRepository.findByCodeAndStoreId(code.toUpperCase(), storeId)
                 .orElseThrow(() -> new PromotionNotFoundException("Cupón no encontrado: " + code));
 
-        if (!coupon.getIsActive())
+        if (!coupon.isActive())
             throw new BadRequestException("El cupón no está activo");
 
         if (redemptionRepository.existsByCouponIdAndUserId(coupon.getCouponId(), userId))
@@ -142,7 +142,7 @@ public class CouponService {
         Coupon coupon = couponRepository.findByCodeAndStoreId(code.toUpperCase(), storeId)
                 .orElseThrow(() -> new PromotionNotFoundException("Cupón no encontrado: " + code));
 
-        if (!coupon.getIsActive())
+        if (!coupon.isActive())
             throw new BadRequestException("El cupón no está activo");
 
         if (redemptionRepository.existsByCouponIdAndUserId(coupon.getCouponId(), userId))
@@ -204,7 +204,7 @@ public class CouponService {
         dto.setDiscount(c.getDiscount());
         dto.setDiscountType(c.getDiscountType());
         dto.setStoreId(c.getStoreId());
-        dto.setIsActive(c.getIsActive());
+        dto.setIsActive(c.isActive());
         dto.setCreatedAt(c.getCreatedAt());
         return dto;
     }
