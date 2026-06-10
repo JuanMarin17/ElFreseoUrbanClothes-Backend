@@ -16,10 +16,20 @@ public class AppConfig implements WebMvcConfigurer {
     @Value("${cart.service.base-url}")
     private String cartBaseUrl;
 
+    @Value("${users.service.url}")
+    private String usersBaseUrl;
+
     @Bean
     public WebClient webClient() {
         return WebClient.builder()
                 .baseUrl(cartBaseUrl)
+                .build();
+    }
+
+    @Bean("usersWebClient")
+    public WebClient usersWebClient() {
+        return WebClient.builder()
+                .baseUrl(usersBaseUrl)
                 .build();
     }
 }
