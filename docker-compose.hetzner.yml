@@ -1,0 +1,90 @@
+services:
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.auth
+
+  users-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.users
+
+  store-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.store
+
+  product-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.product
+
+  cart-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.cart
+
+  supplier-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.supplier
+
+  support-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.support
+
+  promotion-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.promotion
+
+  loyal-customer-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.loyal-customer
+
+  preferences-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.preferences
+
+  reviews-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.reviews
+
+  cms-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.cms
+
+  reports-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.reports
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.inventory
+
+  order-payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.order-payment
+
+  returns-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.returns
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.payment
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway

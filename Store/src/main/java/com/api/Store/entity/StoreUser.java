@@ -21,6 +21,9 @@ public class StoreUser {
     @Column(nullable = false)
     private StoreRole role;
 
+    @Column(nullable = false)
+    private boolean isActive = true;
+
     @Embeddable
     @Data
     @NoArgsConstructor

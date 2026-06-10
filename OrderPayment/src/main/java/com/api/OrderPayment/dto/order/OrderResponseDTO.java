@@ -15,6 +15,8 @@ import java.util.UUID;
 public class OrderResponseDTO {
     private UUID id;
     private UUID userId;
+    private String customerName;
+    private String customerEmail;
     private UUID storeId;
     private String orderNumber;
     private OrderStatus status;

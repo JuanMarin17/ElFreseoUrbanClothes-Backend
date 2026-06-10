@@ -12,4 +12,7 @@ public class StoreUserResponseDTO {
     private UUID userId;
     private UUID storeId;
     private StoreRole role;
+    private boolean isActive;
+    private String userName;
+    private String userEmail;
 }

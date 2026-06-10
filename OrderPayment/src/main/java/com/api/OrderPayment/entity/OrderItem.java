@@ -35,6 +35,10 @@ public class OrderItem {
     @Column(nullable = false)
     private String productName;
 
+    /** Nombre de la variante seleccionada (snapshot) */
+    @Column(nullable = true)
+    private String variantName;
+
     /** Cantidad ordenada */
     @Column(nullable = false)
     private Integer quantity;
