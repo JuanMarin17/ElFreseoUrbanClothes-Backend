@@ -8,6 +8,7 @@ from schemas.admin_schemas import (
 from service.admin_chat_service import process_admin_chat
 from service.ai_service import analyze_product_image
 from service.image_processor import enhance_image
+from service.client import store_client
 from typing import List
 from uuid import UUID
 
@@ -32,10 +33,6 @@ def get_jwt(authorization: str = Header(None)) -> str:
     return authorization.replace("Bearer ", "").strip()
 
 
-def get_user_role(x_user_role: str = Header(None)) -> str:
-    return x_user_role or ""
-
-
 # ─── Chat ────────────────────────────────────────────────────────────────────
 
 @router.post("/chat", response_model=AdminChatResponse)
@@ -44,17 +41,21 @@ async def admin_chat(
     admin_id: str  = Depends(get_admin_id),
     store_id: str  = Depends(get_store_id),
     jwt_token: str = Depends(get_jwt),
-    role: str      = Depends(get_user_role),
     db: Session    = Depends(get_db)
 ):
     """
     Chat del agente admin/owner.
-    Requiere headers: X-User-Id, X-Store-Id, Authorization, X-User-Role (ADMIN u OWNER).
+    Requiere headers: X-User-Id, X-Store-Id, Authorization.
+    El rol se valida consultando el módulo Store — debe ser OWNER o ADMIN.
     Capacidades: reportes, precios, estilo de tienda, análisis de imágenes,
     sugerencias de productos, alertas de inventario, soporte, promociones.
     """
+    role = await store_client.get_user_store_role(store_id, admin_id)
     if role not in ("ADMIN", "OWNER"):
-        raise HTTPException(status_code=403, detail="Solo ADMIN y OWNER pueden usar este agente")
+        raise HTTPException(
+            status_code=403,
+            detail="Acceso denegado: el usuario no es ADMIN ni OWNER de esta tienda"
+        )
     return await process_admin_chat(dto, admin_id, store_id, jwt_token, db)
 
 
