@@ -1,5 +1,6 @@
 import uuid
 import json
+import asyncio
 from uuid import UUID
 from sqlalchemy.orm import Session
 
@@ -77,11 +78,23 @@ async def process_admin_chat(
     ).order_by(AdminChatMessage.created_at.asc()).all()
     history = [{"role": m.role, "content": m.content} for m in messages[-CONTEXT_WINDOW:]]
 
-    # Contexto de la tienda
-    store_info = await store_client.get_store_info(store_id)
-    products   = await product_client.get_active_products(store_id, jwt_token)
-    dashboard  = await reports_client.get_dashboard(store_id, jwt_token)
-    context    = build_context(store_info, dashboard, products)
+    # Contexto completo de la tienda (todo en paralelo)
+    results = await asyncio.gather(
+        store_client.get_store_info(store_id),
+        product_client.get_active_products(store_id, jwt_token),
+        reports_client.get_dashboard(store_id, jwt_token),
+        inventory_client.get_balance(store_id, jwt_token),
+        promotions_client.get_active_promotions(store_id, jwt_token),
+        support_client.get_all_tickets(store_id, jwt_token),
+        return_exceptions=True,
+    )
+    store_info  = results[0] if isinstance(results[0], dict)  else {}
+    products    = results[1] if isinstance(results[1], list)  else []
+    dashboard   = results[2] if isinstance(results[2], dict)  else {}
+    inventory   = results[3] if isinstance(results[3], list)  else []
+    promotions  = results[4] if isinstance(results[4], list)  else []
+    tickets     = results[5] if isinstance(results[5], list)  else []
+    context = build_context(store_info, dashboard, products, inventory, promotions, tickets)
 
     # Llamada a IA
     if dto.image_base64:
