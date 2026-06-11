@@ -1,6 +1,7 @@
 import uuid
 import json
 import asyncio
+import re
 from uuid import UUID
 from sqlalchemy.orm import Session
 
@@ -126,6 +127,9 @@ async def _process_admin_action(
     store_id: str,
     jwt_token: str
 ) -> AdminChatResponse:
+
+    # Normalizar espacios entre "ACTION:" y el nombre de la acción (ej: "ACTION: REPORT" → "ACTION:REPORT")
+    ai_response = re.sub(r'ACTION:\s+', 'ACTION:', ai_response)
 
     response = AdminChatResponse(session_id=session_id, message=ai_response)
 
