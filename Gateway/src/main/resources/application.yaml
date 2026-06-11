@@ -55,6 +55,13 @@ spring:
               /api/v1/upload/**,
               /api/v1/cloudinary/**
 
+        # ── Catálogo global (público — sin JWT) ──────────────────────────────────
+        - id: catalog-global-public
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/products/all/active
+            - Method=GET
+
         # ── Product ───────────────────────────────────────────────────────────────
         - id: product-routes
           uri: http://localhost:8084
