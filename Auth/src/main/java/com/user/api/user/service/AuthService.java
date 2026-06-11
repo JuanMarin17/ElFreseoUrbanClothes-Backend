@@ -51,7 +51,7 @@ public class AuthService {
     }
 
     public Boolean validateCode(ValidationCodeDTO validationCodeDTO) {
-        Optional<User> optionalUser = findByEmail(validationCodeDTO.getEmail());
+        Optional<User> optionalUser = findByEmail(validationCodeDTO.getEmail().toLowerCase());
 
         if (optionalUser.isEmpty()) {
             throw new UserNotFoundException("No se encontro un usuario con ese correo");
@@ -69,7 +69,7 @@ public class AuthService {
     }
 
     public MessageResponseDTO resendVerificationCode(EmailRequestDTO email) {
-        User user = userRepository.findByEmail(email.getEmail())
+        User user = userRepository.findByEmail(email.getEmail().toLowerCase())
                 .orElseThrow(() -> new UserAlreadyExistsException("Usuario con este correo inexistente"));
 
         SecretKey secretKey = secretKeyRepository.findByUser(user)
@@ -80,10 +80,10 @@ public class AuthService {
         secretKey.setExpiresAt(LocalDateTime.now().plusMinutes(5));
         secretKeyRepository.save(secretKey);
 
-        emailService.sendVerificationCode(email.getEmail(), newCode);
+        emailService.sendVerificationCode(email.getEmail().toLowerCase(), newCode);
 
         MessageResponseDTO response = new MessageResponseDTO();
-        response.setMessage("Se envió un nuevo código a: " + email.getEmail());
+        response.setMessage("Se envió un nuevo código a: " + email.getEmail().toLowerCase());
         return response;
     }
 
@@ -91,14 +91,14 @@ public class AuthService {
     public MessageResponseDTO register(UserRequestDTO userRequestDTO) {
         User user = new User();
 
-        if (findByEmail(userRequestDTO.getEmail()).isPresent()) {
+        if (findByEmail(userRequestDTO.getEmail().toLowerCase().toLowerCase()).isPresent()) {
             throw new UserAlreadyExistsException("Usuario con este correo ya existente");
         }
 
         Role role = roleRepository.findByName("USER")
                 .orElseThrow(() -> new RoleNotFoundException("Tipo de usuario inexistente"));
 
-        user.setEmail(userRequestDTO.getEmail());
+        user.setEmail(userRequestDTO.getEmail().toLowerCase().toLowerCase());
         user.setPassword(passwordEncoder.encode(userRequestDTO.getPassword()));
         user.setCreateAt(LocalDateTime.now());
         user.setRoles(Set.of(role));
@@ -120,10 +120,10 @@ public class AuthService {
         secretKeyRepository.save(secretKey);
 
         String code = otpService.generateOtp(userSecretKey);
-        emailService.sendVerificationCode(userRequestDTO.getEmail(), code);
+        emailService.sendVerificationCode(userRequestDTO.getEmail().toLowerCase(), code);
 
         MessageResponseDTO messageResponseDTO = new MessageResponseDTO();
-        messageResponseDTO.setMessage("Se envio un correo a " + userRequestDTO.getEmail() + " con el codigo de verificación");
+        messageResponseDTO.setMessage("Se envio un correo a " + userRequestDTO.getEmail().toLowerCase() + " con el codigo de verificación");
         return messageResponseDTO;
     }
 
@@ -131,7 +131,7 @@ public class AuthService {
     public JwtResponseDTO registerSecondStep(ValidationCodeDTO validationCodeDTO) {
         validateCode(validationCodeDTO);
 
-        User user = userRepository.findByEmail(validationCodeDTO.getEmail())
+        User user = userRepository.findByEmail(validationCodeDTO.getEmail().toLowerCase())
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         user.setIsActive(true);
@@ -140,9 +140,9 @@ public class AuthService {
 
         Role role = user.getRoles().iterator().next();
         String userName = usersClient.getUserName(user.getUser_id());
-        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail());
+        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase());
 
-        emailService.sendWelcome(validationCodeDTO.getEmail());
+        emailService.sendWelcome(validationCodeDTO.getEmail().toLowerCase());
 
         JwtResponseDTO responseDTO = new JwtResponseDTO();
         responseDTO.setMessage("El registro fue exitoso");
@@ -151,7 +151,7 @@ public class AuthService {
     }
 
     public MessageResponseDTO login(LoginRequestDTO loginRequestDTO) {
-        User user = userRepository.findByEmail(loginRequestDTO.getEmail())
+        User user = userRepository.findByEmail(loginRequestDTO.getEmail().toLowerCase())
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         if (!passwordEncoder.matches(loginRequestDTO.getPassword(), user.getPassword())) {
@@ -159,15 +159,15 @@ public class AuthService {
         }
 
         String code = otpService.generateOtp(user.getSecretKey().getSecretKey());
-        emailService.sendVerificationCode(loginRequestDTO.getEmail(), code);
+        emailService.sendVerificationCode(loginRequestDTO.getEmail().toLowerCase(), code);
 
         MessageResponseDTO response = new MessageResponseDTO();
-        response.setMessage("Se envio el codigo de verificación para el inicio de sesión al correo: " + loginRequestDTO.getEmail());
+        response.setMessage("Se envio el codigo de verificación para el inicio de sesión al correo: " + loginRequestDTO.getEmail().toLowerCase());
         return response;
     }
 
     public JwtResponseDTO loginSecondStep(ValidationCodeDTO validationCodeDTO) {
-        User user = userRepository.findByEmail(validationCodeDTO.getEmail())
+        User user = userRepository.findByEmail(validationCodeDTO.getEmail().toLowerCase())
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         Role role = user.getRoles().iterator().next();
@@ -177,7 +177,7 @@ public class AuthService {
         }
 
         String userName = usersClient.getUserName(user.getUser_id());
-        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail());
+        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase());
 
         JwtResponseDTO response = new JwtResponseDTO();
         response.setJwt(token);
@@ -199,7 +199,7 @@ public class AuthService {
 
     @Transactional
     public MessageResponseDTO forgotPasswordSecondStep(ForgotPasswordRequestDTO fPRequest) {
-        User user = userRepository.findByEmail(fPRequest.getEmail())
+        User user = userRepository.findByEmail(fPRequest.getEmail().toLowerCase())
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
         Boolean isValid = otpService.validateOtp(user.getSecretKey().getSecretKey(), fPRequest.getCode());
@@ -211,7 +211,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(fPRequest.getPassword()));
         userRepository.save(user);
 
-        emailService.sendPasswordChanged(fPRequest.getEmail());
+        emailService.sendPasswordChanged(fPRequest.getEmail().toLowerCase());
 
         MessageResponseDTO responseDTO = new MessageResponseDTO();
         responseDTO.setMessage("Se cambio la contraseña correctamente");
@@ -246,7 +246,7 @@ public class AuthService {
     public String getEmailByUserId(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuario con ese id no encontrado"))
-                .getEmail();
+                .getEmail().toLowerCase();
     }
 
     public JwtResponseDTO refreshToken(String token) {
