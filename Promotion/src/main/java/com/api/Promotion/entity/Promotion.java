@@ -11,7 +11,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.Data;
 
@@ -21,7 +23,7 @@ import lombok.Data;
 public class Promotion {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "promotion_id")
     private UUID promotionId;
 
@@ -41,8 +43,13 @@ public class Promotion {
     private UUID productId;
 
     @Column(name = "is_active")
-    private Boolean isActive = true;
+    private boolean active = true;
 
     @Column(name = "created_at")
-    private OffsetDateTime createdAt = OffsetDateTime.now();
+    private OffsetDateTime createdAt;
+
+    @PrePersist
+    void onCreate() {
+        this.createdAt = OffsetDateTime.now();
+    }
 }

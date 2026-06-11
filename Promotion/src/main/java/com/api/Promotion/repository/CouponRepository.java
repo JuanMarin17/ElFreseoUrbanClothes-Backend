@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.api.Promotion.entity.Coupon;
 
 public interface CouponRepository extends JpaRepository<Coupon, UUID> {
-    List<Coupon> findByStoreIdAndIsActiveTrue(UUID storeId);
+    List<Coupon> findByStoreIdAndActiveTrue(UUID storeId);
 
     List<Coupon> findByStoreId(UUID storeId);
 
