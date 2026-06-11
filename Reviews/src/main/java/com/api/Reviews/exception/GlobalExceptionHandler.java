@@ -1,11 +1,14 @@
 package com.api.Reviews.exception;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -25,6 +28,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException e) {
         return buildResponse(HttpStatus.FORBIDDEN, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(ConflictException e) {
+        return buildResponse(HttpStatus.CONFLICT, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException e) {
+        Map<String, List<String>> fieldErrors = new HashMap<>();
+        e.getBindingResult().getFieldErrors().forEach(fe ->
+                fieldErrors.computeIfAbsent(fe.getField(), k -> new ArrayList<>())
+                        .add(fe.getDefaultMessage()));
+        return buildResponse(HttpStatus.BAD_REQUEST, "Error de validación en los datos enviados", fieldErrors);
     }
 
     @ExceptionHandler(Exception.class)
