@@ -183,8 +183,7 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> listAllActiveProducts() {
-        UUID storeId = getStoreIdFromHeader();
-        return productRepository.findByStoreIdAndActiveTrue(storeId)
+        return productRepository.findByActiveTrue()
                 .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -373,6 +372,7 @@ public class ProductService {
 
         return ProductResponseDTO.builder()
                 .productId(product.getProductId())
+                .storeId(product.getStoreId())
                 .name(product.getName())
                 .description(product.getDescription())
                 .brandName(product.getBrand() != null ? product.getBrand().getName() : null)

@@ -17,6 +17,7 @@ import lombok.NoArgsConstructor;
 public class ProductResponseDTO {
 
     private UUID productId;
+    private UUID storeId;
     private String name;
     private String description;
     private String brandName;
