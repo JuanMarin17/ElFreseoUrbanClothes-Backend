@@ -42,12 +42,12 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.getReviewsByProduct(productId));
     }
 
-    @GetMapping("/me")
+    @GetMapping("/me/products")
     public ResponseEntity<List<ReviewResponseDTO>> getMyReviews() {
         return ResponseEntity.ok(reviewService.getMyReviews());
     }
 
-    @DeleteMapping("/{reviewId}")
+    @DeleteMapping("/product/{reviewId}")
     public ResponseEntity<ApiResponseDTO> deleteReview(@PathVariable UUID reviewId) {
         return ResponseEntity.ok(reviewService.deleteReview(reviewId));
     }
