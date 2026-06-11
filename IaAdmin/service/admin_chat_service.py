@@ -290,6 +290,6 @@ async def _process_admin_action(
                 response.message += f"\n\nNo se pudo procesar la imagen: {e}"
 
     else:
-        response.message = ai_response.strip()
+        response.message = _clean_response(ai_response)
 
     return response

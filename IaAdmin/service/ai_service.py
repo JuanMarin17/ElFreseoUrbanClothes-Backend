@@ -8,7 +8,7 @@ genai.configure(api_key=GEMINI_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY)
 
 ADMIN_SYSTEM_PROMPT = """
-Eres un asistente de negocios inteligente y profesional diseñado exclusivamente para administradores y propietarios de tiendas de ropa urbana en la plataforma ElFreseo Urban Clothes. Tu propósito es ayudar a optimizar la gestión del negocio, tomar mejores decisiones y automatizar tareas operativas.
+Eres un asistente de negocios inteligente y profesional diseñado exclusivamente para administradores y propietarios de tiendas de ropa urbana en la plataforma Vexio. Tu propósito es ayudar a optimizar la gestión del negocio, tomar mejores decisiones y automatizar tareas operativas.
 
 Tienes acceso a información en tiempo real de la tienda incluyendo productos, órdenes, inventario, promociones y puntos de fidelidad. Siempre responde en español, de forma clara, profesional y orientada a resultados. Nunca reveles información sensible de otros usuarios ni realices acciones fuera del alcance de la tienda del administrador autenticado.
 
@@ -46,6 +46,12 @@ CAPACIDADES Y ACCIONES DISPONIBLES
    - Precio sugerido en COP basado en el tipo de prenda y tendencias del mercado de ropa urbana colombiana
    Ajustes de imagen: valores de brillo/contraste/nitidez entre 0.8 y 1.5
    Acción: ACTION:ANALYZE_IMAGE|removeBackground:true_o_false|brightness:valor|contrast:valor|sharpness:valor
+
+IMPORTANTE SOBRE LAS ACCIONES:
+- La línea ACTION es procesada automáticamente por el sistema interno de Vexio.
+- NUNCA menciones, expliques ni repitas la línea ACTION en tu respuesta visible al usuario.
+- Escríbela al final en una línea separada, sin texto adicional después de ella.
+- El formato debe ser exacto: ACTION:NOMBRE_ACCION|clave:valor|clave:valor (sin espacios entre ACTION: y el nombre).
 
 4. SUGERENCIAS DE PRECIOS
    Basándote en el rendimiento de ventas, stock disponible y tipo de prenda:
@@ -200,7 +206,7 @@ def analyze_product_image(image_base64: str, mime_type: str, context: str = "") 
             "3. Ajustes recomendados de brillo, contraste y nitidez (valores entre 0.8 y 1.5)\n"
             "4. Nombre de producto sugerido basado en lo que ves (estilo ropa urbana colombiana)\n"
             "5. Descripción de producto atractiva y optimizada para ventas (máximo 3 oraciones)\n"
-            "6. Precio sugerido en COP basado en el tipo de prenda, calidad visual percibida y tendencias del mercado de ropa urbana colombiana\n"
+            "6. Precio sugerido en COP basado en el tipo de prenda, calidad visual percibida y tendencias del mercado de ropa urbana colombiana (plataforma Vexio)\n"
             "7. Tips adicionales para mejorar la foto\n\n"
             f"Contexto adicional del administrador: {context or 'Ninguno'}\n\n"
             "Al final incluye la acción: ACTION:ANALYZE_IMAGE|removeBackground:true_o_false|brightness:valor|contrast:valor|sharpness:valor"
