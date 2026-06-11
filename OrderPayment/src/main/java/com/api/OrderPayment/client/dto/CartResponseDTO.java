@@ -27,6 +27,7 @@ public class CartResponseDTO {
         private UUID cartItemId;
         private UUID productId;
         private String productName;
+        private String variantName;
         private int quantity;
         private BigDecimal unitPrice;
         private BigDecimal subtotal;

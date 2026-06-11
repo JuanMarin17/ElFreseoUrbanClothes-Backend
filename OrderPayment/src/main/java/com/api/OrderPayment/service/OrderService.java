@@ -2,8 +2,10 @@ package com.api.OrderPayment.service;
 
 import com.api.OrderPayment.client.CartClient;
 import com.api.OrderPayment.client.PromotionClient;
+import com.api.OrderPayment.client.UserClient;
 import com.api.OrderPayment.client.dto.CartResponseDTO;
 import com.api.OrderPayment.client.dto.CouponValidationDTO;
+import com.api.OrderPayment.client.dto.UserInfoDTO;
 import com.api.OrderPayment.dto.order.CreateOrderRequestDTO;
 import com.api.OrderPayment.dto.order.OrderResponseDTO;
 import com.api.OrderPayment.dto.order.UpdateOrderStatusRequestDTO;
@@ -16,6 +18,9 @@ import com.api.OrderPayment.util.OrderMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,10 +29,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +41,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CartClient cartClient;
     private final PromotionClient promotionClient;
+    private final UserClient userClient;
     private final OrderMapper orderMapper;
 
     private final AtomicLong orderCounter = new AtomicLong(1);
@@ -112,6 +117,7 @@ public class OrderService {
                         .order(order)
                         .productId(cartItem.getProductId())
                         .productName(cartItem.getProductName())
+                        .variantName(cartItem.getVariantName())
                         .quantity(cartItem.getQuantity())
                         .unitPrice(cartItem.getUnitPrice())
                         .subtotal(cartItem.getSubtotal())
@@ -152,12 +158,31 @@ public class OrderService {
                 .toList();
     }
 
+    /** Uso interno de otros microservicios (Reports). Sin paginación ni enriquecimiento. */
     @Transactional(readOnly = true)
-    public List<OrderResponseDTO> getOrdersByStore(UUID storeId) {
+    public List<OrderResponseDTO> getOrdersByStoreInternal(UUID storeId) {
         return orderRepository.findByStoreIdOrderByCreatedAtDesc(storeId)
                 .stream()
                 .map(orderMapper::toDTO)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderResponseDTO> getOrdersByStore(UUID storeId, OrderStatus status, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Order> ordersPage = (status != null)
+                ? orderRepository.findByStoreIdAndStatusOrderByCreatedAtDesc(storeId, status, pageable)
+                : orderRepository.findByStoreIdOrderByCreatedAtDesc(storeId, pageable);
+
+        // Enriquecer con datos de cliente (una llamada por usuario único)
+        Set<UUID> userIds = ordersPage.stream().map(Order::getUserId).collect(Collectors.toSet());
+        Map<UUID, UserInfoDTO> userCache = new HashMap<>();
+        for (UUID uid : userIds) {
+            userClient.getUserById(uid).ifPresent(info -> userCache.put(uid, info));
+        }
+
+        return ordersPage.map(order -> orderMapper.toDTO(order, userCache.get(order.getUserId())));
     }
 
     @Transactional

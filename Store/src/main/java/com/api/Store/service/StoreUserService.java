@@ -1,6 +1,7 @@
 package com.api.Store.service;
 
 import com.api.Store.client.UserClient;
+import com.api.Store.client.dto.UserInfoDTO;
 import com.api.Store.dto.StoreUserRequestDTO;
 import com.api.Store.dto.StoreUserResponseDTO;
 import com.api.Store.entity.StoreUser;
@@ -79,15 +80,32 @@ public class StoreUserService {
         return toResponse(storeUser);
     }
 
-    // ── 2. Usuarios de una tienda ────────────────────────────────────────────
+    // ── 2. Usuarios de una tienda (enriquecido con nombre y email) ──────────
     public List<StoreUserResponseDTO> getUsersByStore(UUID storeId) {
         if (!storeRepository.existsById(storeId))
             throw new StoreNotFoundException("Tienda no encontrada con id: " + storeId);
 
         return storeUserRepository.findByIdStoreId(storeId)
                 .stream()
-                .map(this::toResponse)
+                .map(su -> {
+                    var info = userClient.getUserById(su.getId().getUserId());
+                    return toResponse(su, info.orElse(null));
+                })
                 .toList();
+    }
+
+    // ── 5. Activar/desactivar usuario en tienda ──────────────────────────────
+    @Transactional
+    public StoreUserResponseDTO toggleUserStatus(UUID storeId, UUID userId) {
+        StoreUser storeUser = storeUserRepository
+                .findByIdUserIdAndIdStoreId(userId, storeId)
+                .orElseThrow(() -> new RuntimeException("El usuario no pertenece a esta tienda"));
+
+        storeUser.setActive(!storeUser.isActive());
+        storeUserRepository.save(storeUser);
+
+        var info = userClient.getUserById(userId);
+        return toResponse(storeUser, info.orElse(null));
     }
 
     // ── 3. Tiendas de un usuario ─────────────────────────────────────────────
@@ -111,10 +129,17 @@ public class StoreUserService {
 
     // ── Mapper ───────────────────────────────────────────────────────────────
     private StoreUserResponseDTO toResponse(StoreUser u) {
+        return toResponse(u, null);
+    }
+
+    private StoreUserResponseDTO toResponse(StoreUser u, UserInfoDTO info) {
         return StoreUserResponseDTO.builder()
                 .userId(u.getId().getUserId())
                 .storeId(u.getId().getStoreId())
                 .role(u.getRole())
+                .isActive(u.isActive())
+                .userName(info != null ? info.getUserName() : null)
+                .userEmail(info != null ? info.getUserEmail() : null)
                 .build();
     }
 }
