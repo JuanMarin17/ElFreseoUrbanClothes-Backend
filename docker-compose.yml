@@ -35,7 +35,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "5432:5432"   # Sigue accesible desde DBeaver en localhost:5432
+      - "127.0.0.1:5432:5432"   # Solo accesible desde localhost del VPS
     networks:
       - vexio-net
     healthcheck:
@@ -53,7 +53,7 @@ services:
       dockerfile: ../Dockerfile   # Dockerfile genérico en la raíz del proyecto
     container_name: auth-service
     ports:
-      - "8082:8082"
+      - "127.0.0.1:8082:8082"
     environment:
       SERVER_PORT: 8082
       # SPRING_DATASOURCE_URL sobreescribe spring.datasource.url del application.yaml
@@ -87,7 +87,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: users-service
     ports:
-      - "8083:8083"
+      - "127.0.0.1:8083:8083"
     environment:
       SERVER_PORT: 8083
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/users
@@ -124,7 +124,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: store-service
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     environment:
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/store
@@ -161,7 +161,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: product-service
     ports:
-      - "8084:8084"
+      - "127.0.0.1:8084:8084"
     environment:
       SERVER_PORT: 8084
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/product
@@ -195,7 +195,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: cart-service
     ports:
-      - "8086:8086"
+      - "127.0.0.1:8086:8086"
     environment:
       SERVER_PORT: 8086
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cart
@@ -231,7 +231,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: supplier-service
     ports:
-      - "8085:8085"
+      - "127.0.0.1:8085:8085"
     environment:
       SERVER_PORT: 8085
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/supplier
@@ -260,7 +260,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: support-service
     ports:
-      - "8088:8088"
+      - "127.0.0.1:8088:8088"
     environment:
       SERVER_PORT: 8088
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/support
@@ -291,7 +291,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: promotion-service
     ports:
-      - "8091:8091"
+      - "127.0.0.1:8091:8091"
     environment:
       SERVER_PORT: 8091
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/promotion
@@ -320,7 +320,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: loyal-customer-service
     ports:
-      - "8093:8093"
+      - "127.0.0.1:8093:8093"
     environment:
       SERVER_PORT: 8093
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/loyalty
@@ -349,7 +349,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: preferences-service
     ports:
-      - "8094:8094"
+      - "127.0.0.1:8094:8094"
     environment:
       SERVER_PORT: 8094
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/preferences
@@ -378,7 +378,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: reviews-service
     ports:
-      - "8095:8095"
+      - "127.0.0.1:8095:8095"
     environment:
       SERVER_PORT: 8095
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/reviews
@@ -407,7 +407,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: cms-service
     ports:
-      - "8101:8101"
+      - "127.0.0.1:8101:8101"
     environment:
       SERVER_PORT: 8101
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cms
@@ -443,7 +443,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: reports-service
     ports:
-      - "8100:8100"
+      - "127.0.0.1:8100:8100"
     environment:
       SERVER_PORT: 8100
       PRODUCT_SERVICE_URL: http://product-service:8084/api/v1
@@ -468,7 +468,7 @@ services:
       context: ./media-service
     container_name: media-service
     ports:
-      - "8096:8096"
+      - "127.0.0.1:8096:8096"
     environment:
       PORT: 8096
       NAME_CLOUD: ${NAME_CLOUD}
@@ -489,7 +489,7 @@ services:
       context: ./IaUser
     container_name: ia-user-service
     ports:
-      - "8099:8099"
+      - "127.0.0.1:8099:8099"
     environment:
       DATABASE_URL: postgresql://postgres:root@postgres:5432/ia_user
       GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -536,7 +536,7 @@ services:
       context: ./IaAdmin
     container_name: ia-admin-service
     ports:
-      - "8102:8102"
+      - "127.0.0.1:8102:8102"
     environment:
       DATABASE_URL: postgresql://postgres:root@postgres:5432/ia_admin
       GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -581,7 +581,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: payment-service
     ports:
-      - "8098:8098"
+      - "127.0.0.1:8098:8098"
     environment:
       SERVER_PORT: 8098
       DB_URL: jdbc:postgresql://postgres:5432/payments
@@ -618,7 +618,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: inventory-service
     ports:
-      - "8089:8089"
+      - "127.0.0.1:8089:8089"
     environment:
       SERVER_PORT: 8089
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory
@@ -650,7 +650,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: order-payment-service
     ports:
-      - "8087:8087"
+      - "127.0.0.1:8087:8087"
     environment:
       SERVER_PORT: 8087
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_payment
@@ -682,7 +682,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: returns-service
     ports:
-      - "8092:8092"
+      - "127.0.0.1:8092:8092"
     environment:
       SERVER_PORT: 8092
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/returns
@@ -714,7 +714,7 @@ services:
       dockerfile: Dockerfile.customer
     container_name: customer-service
     ports:
-      - "8104:8104"
+      - "127.0.0.1:8104:8104"
     environment:
       SERVER_PORT: 8104
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/customer
@@ -743,7 +743,7 @@ services:
       dockerfile: Dockerfile.pos-sale
     container_name: pos-sale-service
     ports:
-      - "8105:8105"
+      - "127.0.0.1:8105:8105"
     environment:
       SERVER_PORT: 8105
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pos_sale
@@ -775,7 +775,7 @@ services:
       dockerfile: Dockerfile.transaction
     container_name: transaction-service
     ports:
-      - "8103:8103"
+      - "127.0.0.1:8103:8103"
     environment:
       SERVER_PORT: 8103
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transaction
