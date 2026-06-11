@@ -188,7 +188,14 @@ spring:
           filters:
             - JwtValidationFilter
 
-        # ── Reviews ─────────────────────────────────────────────────────────
+        # ── Community Reviews públicos (GET /reviews — listado sin auth) ──────
+        - id: community-reviews-public
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/reviews
+            - Method=GET
+
+        # ── Reviews (protegidas con JWT) ─────────────────────────────────────
         - id: reviews-routes
           uri: http://localhost:8095
           predicates:
