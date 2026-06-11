@@ -101,16 +101,63 @@ REGLAS DE COMPORTAMIENTO
 """
 
 
-def build_context(store_info: dict, dashboard: dict = {}, products: list = []) -> str:
+def build_context(
+    store_info: dict,
+    dashboard: dict = {},
+    products: list = [],
+    inventory: list = [],
+    promotions: list = [],
+    tickets: list = [],
+) -> str:
     parts = []
+
     if store_info:
-        name = store_info.get("name", store_info.get("basic", {}).get("name", ""))
-        parts.append(f"Tienda: {name}")
+        parts.append(f"=== TIENDA ===\n{json.dumps(store_info, default=str)[:800]}")
+
     if dashboard:
-        parts.append(f"Dashboard: {json.dumps(dashboard, default=str)[:1000]}")
+        parts.append(f"=== DASHBOARD ===\n{json.dumps(dashboard, default=str)[:2000]}")
+
     if products:
-        parts.append(f"Productos activos: {len(products)}")
-    return "\n".join(parts)
+        summary = [
+            {
+                "id":       p.get("id") or p.get("productId"),
+                "name":     p.get("name") or p.get("productName"),
+                "price":    p.get("price") or p.get("basePrice"),
+                "category": p.get("category") or p.get("categoryName"),
+                "active":   p.get("active", True),
+            }
+            for p in products[:40]
+        ]
+        parts.append(
+            f"=== PRODUCTOS ACTIVOS ({len(products)} total) ===\n"
+            f"{json.dumps(summary, default=str)[:2500]}"
+        )
+
+    if inventory:
+        low_stock  = [b for b in inventory if 0 < b.get("quantity", 0) <= 5]
+        out_stock  = [b for b in inventory if b.get("quantity", 0) == 0]
+        parts.append(
+            f"=== INVENTARIO ===\n"
+            f"Total variantes: {len(inventory)}\n"
+            f"Sin stock ({len(out_stock)} variantes): {json.dumps(out_stock[:15], default=str)[:800]}\n"
+            f"Stock crítico 1-5 unid. ({len(low_stock)} variantes): {json.dumps(low_stock[:15], default=str)[:800]}"
+        )
+
+    if promotions:
+        parts.append(
+            f"=== PROMOCIONES ACTIVAS ({len(promotions)}) ===\n"
+            f"{json.dumps(promotions[:15], default=str)[:800]}"
+        )
+
+    if tickets:
+        open_tickets = [t for t in tickets if t.get("status") not in ("CLOSED",)]
+        parts.append(
+            f"=== SOPORTE ===\n"
+            f"Tickets abiertos: {len(open_tickets)} de {len(tickets)} total\n"
+            f"{json.dumps(open_tickets[:10], default=str)[:800]}"
+        )
+
+    return "\n\n".join(parts)
 
 
 def generate_admin_response(messages: list, context: str = "") -> str:
