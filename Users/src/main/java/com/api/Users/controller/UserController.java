@@ -9,11 +9,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 
+import java.util.List;
 import java.util.Map;
 
 import com.api.Users.dto.MessageResponseDTO;
 import com.api.Users.dto.UserDTO;
 import com.api.Users.dto.UserResponseDTO;
+import com.api.Users.dto.UserWithStoreDTO;
 import com.api.Users.service.UserService;
 
 import lombok.RequiredArgsConstructor;
@@ -73,6 +75,12 @@ public class UserController {
      * Content-Type: multipart/form-data
      * Body: image (file)
      */
+    /** Requiere JWT con rol ADMIN o SUPERADMIN */
+    @GetMapping("/admin/all")
+    public ResponseEntity<List<UserWithStoreDTO>> listAllUsersWithStore() {
+        return ResponseEntity.ok(userService.listAllUsersWithStore());
+    }
+
     @PatchMapping("/profile-image")
     public ResponseEntity<Map<String, String>> uploadProfileImage(
             @RequestParam("image") MultipartFile image) {
