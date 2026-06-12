@@ -1,14 +1,20 @@
 package com.api.Users.service;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import com.api.Users.client.AuthClient;
+import com.api.Users.client.StoreClient;
 import com.api.Users.dto.MessageResponseDTO;
 import com.api.Users.dto.UserDTO;
 import com.api.Users.dto.UserResponseDTO;
+import com.api.Users.dto.UserWithStoreDTO;
 import com.api.Users.entity.User;
 import com.api.Users.exception.BadRequestException;
 import com.api.Users.exception.UnauthorizedUserException;
@@ -26,6 +32,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final AuthClient authClient;
     private final com.api.Users.client.MediaServiceClient mediaServiceClient;
+    private final StoreClient storeClient;
 
     /**
      * Metodo para crear usuario con foto de perfil
@@ -190,6 +197,40 @@ public class UserService {
         }
 
         return true;
+    }
+
+    public List<UserWithStoreDTO> listAllUsersWithStore() {
+        String role = RequestContext.getHeader("X-User-Role");
+        if (!"ADMIN".equals(role) && !"SUPERADMIN".equals(role))
+            throw new UnauthorizedUserException("Solo ADMIN o SUPERADMIN pueden acceder a este recurso");
+
+        List<User> users = userRepository.findAll();
+
+        // 1 HTTP call — mapa ownerId → tienda
+        Map<UUID, StoreClient.StoreInfo> storeByOwner = storeClient.getAllStores()
+                .stream()
+                .filter(s -> s.getOwnerId() != null)
+                .collect(Collectors.toMap(
+                        StoreClient.StoreInfo::getOwnerId,
+                        Function.identity(),
+                        (a, b) -> a));
+
+        return users.stream().map(user -> {
+            StoreClient.StoreInfo store = storeByOwner.get(user.getUserId());
+            return UserWithStoreDTO.builder()
+                    .userId(user.getUserId())
+                    .userName(user.getUserName())
+                    .phone(user.getPhone())
+                    .imageProfile(user.getImageProfile())
+                    .hasStore(store != null)
+                    .store(store != null ? UserWithStoreDTO.StoreDTO.builder()
+                            .storeId(store.getStoreId())
+                            .name(store.getName())
+                            .slug(store.getSlug())
+                            .isActive(store.getIsActive())
+                            .build() : null)
+                    .build();
+        }).collect(Collectors.toList());
     }
 
     /**

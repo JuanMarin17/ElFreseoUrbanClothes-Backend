@@ -74,6 +74,7 @@ public class StoreService {
     private StoreResponseDTO toResponse(Store store, String message, int status) {
         return StoreResponseDTO.builder()
                 .storeId(store.getStoreId())
+                .ownerId(store.getOwnerId())
                 .name(store.getName())
                 .slug(store.getSlug())
                 .description(store.getDescription())

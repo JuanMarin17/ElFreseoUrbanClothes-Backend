@@ -99,6 +99,7 @@ services:
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       AUTH_SERVICE_URL: http://auth-service:8082/api/v1
       USERS_SERVICE_URL: http://auth-service:8082/api/v1
+      STORE_SERVICE_URL: http://store-service:8081/api/v1
       NAME_CLOUD: ${NAME_CLOUD}
       KEY_CLOUD: ${KEY_CLOUD}
       SECRET_CLOUD: ${SECRET_CLOUD}
