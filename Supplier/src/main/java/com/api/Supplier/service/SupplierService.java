@@ -1,21 +1,27 @@
 package com.api.Supplier.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.api.Supplier.client.ProductClient;
 import com.api.Supplier.dto.MessageResponseDTO;
+import com.api.Supplier.dto.ProductSummaryDTO;
 import com.api.Supplier.dto.SupplierRequestDTO;
 import com.api.Supplier.dto.SupplierResponseDTO;
 import com.api.Supplier.entity.StoreSupplier;
 import com.api.Supplier.entity.Supplier;
+import com.api.Supplier.entity.SupplierProduct;
 import com.api.Supplier.exception.BadRequestException;
 import com.api.Supplier.exception.SupplierAlreadyExistsException;
 import com.api.Supplier.exception.SupplierNotFoundException;
+import com.api.Supplier.exception.SupplierProductAlreadyLinkedException;
 import com.api.Supplier.exception.UnauthorizedUserException;
 import com.api.Supplier.repository.StoreSupplierRepository;
+import com.api.Supplier.repository.SupplierProductRepository;
 import com.api.Supplier.repository.SupplierRepository;
 import com.common_request_context_starter.context.RequestContext;
 
@@ -27,6 +33,8 @@ public class SupplierService {
 
     private final SupplierRepository supplierRepository;
     private final StoreSupplierRepository storeSupplierRepository;
+    private final SupplierProductRepository supplierProductRepository;
+    private final ProductClient productClient;
 
     // ── Crear proveedor y vincularlo a la tienda ─────────────────────────────
     @Transactional
@@ -135,6 +143,72 @@ public class SupplierService {
         response.setMessage("Proveedor desactivado correctamente");
         response.setStatus(200);
         return response;
+    }
+
+    // ── Vincular producto a proveedor ─────────────────────────────────────────
+    @Transactional
+    public MessageResponseDTO linkProductToSupplier(UUID supplierId, UUID productId) {
+        UUID storeId = getStoreIdFromHeader();
+
+        if (!storeSupplierRepository.existsByIdStoreIdAndIdSupplierId(storeId, supplierId))
+            throw new BadRequestException("El proveedor no pertenece a esta tienda");
+
+        if (!productClient.productExistsInStore(productId, storeId))
+            throw new BadRequestException("El producto no existe en esta tienda");
+
+        SupplierProduct.SupplierProductId id = new SupplierProduct.SupplierProductId();
+        id.setSupplierId(supplierId);
+        id.setProductId(productId);
+
+        if (supplierProductRepository.existsById(id))
+            throw new SupplierProductAlreadyLinkedException("El producto ya está vinculado a este proveedor");
+
+        SupplierProduct link = new SupplierProduct();
+        link.setId(id);
+        link.setStoreId(storeId);
+        supplierProductRepository.save(link);
+
+        MessageResponseDTO response = new MessageResponseDTO();
+        response.setMessage("Producto vinculado al proveedor correctamente");
+        response.setStatus(200);
+        return response;
+    }
+
+    // ── Desvincular producto de proveedor ─────────────────────────────────────
+    @Transactional
+    public MessageResponseDTO unlinkProductFromSupplier(UUID supplierId, UUID productId) {
+        UUID storeId = getStoreIdFromHeader();
+
+        if (!storeSupplierRepository.existsByIdStoreIdAndIdSupplierId(storeId, supplierId))
+            throw new BadRequestException("El proveedor no pertenece a esta tienda");
+
+        SupplierProduct.SupplierProductId id = new SupplierProduct.SupplierProductId();
+        id.setSupplierId(supplierId);
+        id.setProductId(productId);
+
+        if (!supplierProductRepository.existsById(id))
+            throw new BadRequestException("El producto no está vinculado a este proveedor");
+
+        supplierProductRepository.deleteById(id);
+
+        MessageResponseDTO response = new MessageResponseDTO();
+        response.setMessage("Producto desvinculado del proveedor correctamente");
+        response.setStatus(200);
+        return response;
+    }
+
+    // ── Obtener productos vinculados a un proveedor ───────────────────────────
+    public List<ProductSummaryDTO> getProductsBySupplier(UUID supplierId) {
+        UUID storeId = getStoreIdFromHeader();
+
+        if (!storeSupplierRepository.existsByIdStoreIdAndIdSupplierId(storeId, supplierId))
+            throw new BadRequestException("El proveedor no pertenece a esta tienda");
+
+        return supplierProductRepository.findByIdSupplierIdAndStoreId(supplierId, storeId)
+                .stream()
+                .map(link -> productClient.getProductById(link.getId().getProductId(), storeId).orElse(null))
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     // ── Helper: obtener storeId del header ───────────────────────────────────

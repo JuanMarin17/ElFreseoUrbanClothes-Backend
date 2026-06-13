@@ -84,6 +84,11 @@ services:
       context: .
       dockerfile: Dockerfile.payment
 
+  ia-store-builder-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ia-store-builder
+
   gateway:
     build:
       context: .

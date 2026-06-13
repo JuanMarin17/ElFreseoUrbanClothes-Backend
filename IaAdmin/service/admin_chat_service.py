@@ -54,7 +54,8 @@ async def process_admin_chat(
     # Sesión
     if dto.session_id:
         session = db.query(AdminChatSession).filter(
-            AdminChatSession.session_id == dto.session_id
+            AdminChatSession.session_id == dto.session_id,
+            AdminChatSession.store_id  == uuid.UUID(store_id)
         ).first()
         if not session:
             raise ValueError("Sesión no encontrada")

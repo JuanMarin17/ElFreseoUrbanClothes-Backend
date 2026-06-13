@@ -27,6 +27,9 @@ mercadopago:
   webhook-secret: ${MP_WEBHOOK_SECRET:test}
   notification-url: ${MP_NOTIFICATION_URL:http://localhost:8103}
 
+payment:
+  mock: ${PAYMENT_MOCK:true}
+
 management:
   endpoints:
     web:
