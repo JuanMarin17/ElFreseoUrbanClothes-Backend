@@ -64,11 +64,13 @@ async def admin_chat(
 @router.get("/sessions", response_model=List[UUID])
 async def get_sessions(
     admin_id: str = Depends(get_admin_id),
+    store_id: str = Depends(get_store_id),
     db: Session   = Depends(get_db)
 ):
-    """Lista sesiones del admin ordenadas por más reciente."""
+    """Lista sesiones del admin para la tienda actual, ordenadas por más reciente."""
     sessions = db.query(AdminChatSession).filter(
-        AdminChatSession.admin_id == UUID(admin_id)
+        AdminChatSession.admin_id == UUID(admin_id),
+        AdminChatSession.store_id == UUID(store_id)
     ).order_by(AdminChatSession.created_at.desc()).all()
     return [s.session_id for s in sessions]
 
@@ -76,9 +78,19 @@ async def get_sessions(
 @router.get("/sessions/{session_id}/history", response_model=List[ChatMessageResponse])
 async def get_history(
     session_id: UUID,
-    db: Session = Depends(get_db)
+    admin_id: str = Depends(get_admin_id),
+    store_id: str = Depends(get_store_id),
+    db: Session   = Depends(get_db)
 ):
-    """Historial de mensajes de una sesión."""
+    """Historial de mensajes de una sesión, validando que pertenezca a la tienda actual."""
+    session = db.query(AdminChatSession).filter(
+        AdminChatSession.session_id == session_id,
+        AdminChatSession.admin_id  == UUID(admin_id),
+        AdminChatSession.store_id  == UUID(store_id)
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
     messages = db.query(AdminChatMessage).filter(
         AdminChatMessage.session_id == session_id
     ).order_by(AdminChatMessage.created_at.asc()).all()
