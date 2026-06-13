@@ -107,9 +107,9 @@ async def process_admin_chat(
     else:
         ai_response = generate_admin_response(history, context)
 
-    # Guardar respuesta
+    # Guardar respuesta limpia (sin ACTION tags)
     db.add(AdminChatMessage(
-        session_id=session.session_id, role="assistant", content=ai_response
+        session_id=session.session_id, role="assistant", content=_clean_response(ai_response)
     ))
     db.commit()
 
