@@ -54,4 +54,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedUserException e) {
         return buildResponse(HttpStatus.FORBIDDEN, e.getMessage(), null);
     }
+
+    @ExceptionHandler(SupplierProductAlreadyLinkedException.class)
+    public ResponseEntity<Map<String, Object>> handleSupplierProductAlreadyLinked(SupplierProductAlreadyLinkedException e) {
+        return buildResponse(HttpStatus.CONFLICT, e.getMessage(), null);
+    }
 }

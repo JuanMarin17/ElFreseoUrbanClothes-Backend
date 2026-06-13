@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import com.api.Transaction.enums.SubscriptionStatus;
 import com.api.Transaction.enums.TransactionStatus;
 import com.api.Transaction.enums.TransactionType;
 import com.api.Transaction.exception.PlanNotFoundException;
+import com.api.Transaction.exception.SubscriptionNotFoundException;
 import com.api.Transaction.exception.UnauthorizedException;
 import com.api.Transaction.repository.PlanChangeHistoryRepository;
 import com.api.Transaction.repository.PlanRepository;
@@ -37,6 +39,9 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class TransactionService {
+
+    @Value("${payment.mock:false}")
+    private boolean paymentMock;
 
     private final PlanRepository planRepository;
     private final StoreSubscriptionRepository subscriptionRepository;
@@ -61,7 +66,7 @@ public class TransactionService {
         tx.setType(resolveType(current, dto.getPlanName()));
         Transaction saved = transactionRepository.save(tx);
 
-        if (dto.getPlanName() == PlanName.GRATUITO) {
+        if (dto.getPlanName() == PlanName.GRATUITO || paymentMock) {
             saved.setStatus(TransactionStatus.APPROVED);
             transactionRepository.save(saved);
             activateSubscription(dto.getStoreId(), plan, current, saved.getType());
@@ -135,7 +140,7 @@ public class TransactionService {
 
     public SubscriptionResponseDTO getActiveSubscription(UUID storeId) {
         return toSubResponse(subscriptionRepository.findByStoreIdAndStatus(storeId, SubscriptionStatus.ACTIVE)
-                .orElseThrow(() -> new RuntimeException("No hay suscripción activa")));
+                .orElseThrow(() -> new SubscriptionNotFoundException("No hay suscripción activa para esta tienda")));
     }
 
     public StoreLimitsResponseDTO getStoreLimits(UUID storeId) {
@@ -180,7 +185,7 @@ public class TransactionService {
     public void cancelSubscription(UUID storeId) {
         validateOwner();
         StoreSubscription sub = subscriptionRepository.findByStoreIdAndStatus(storeId, SubscriptionStatus.ACTIVE)
-                .orElseThrow(() -> new RuntimeException("No hay suscripción activa"));
+                .orElseThrow(() -> new SubscriptionNotFoundException("No hay suscripción activa para cancelar"));
         sub.setStatus(SubscriptionStatus.CANCELLED);
         subscriptionRepository.save(sub);
         PlanChangeHistory h = new PlanChangeHistory();
