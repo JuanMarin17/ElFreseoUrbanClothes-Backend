@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class TransactionService {
 
+    @Value("${payment.mock:false}")
+    private boolean paymentMock;
+
     private final PlanRepository planRepository;
     private final StoreSubscriptionRepository subscriptionRepository;
     private final TransactionRepository transactionRepository;
@@ -62,7 +66,7 @@ public class TransactionService {
         tx.setType(resolveType(current, dto.getPlanName()));
         Transaction saved = transactionRepository.save(tx);
 
-        if (dto.getPlanName() == PlanName.GRATUITO) {
+        if (dto.getPlanName() == PlanName.GRATUITO || paymentMock) {
             saved.setStatus(TransactionStatus.APPROVED);
             transactionRepository.save(saved);
             activateSubscription(dto.getStoreId(), plan, current, saved.getType());

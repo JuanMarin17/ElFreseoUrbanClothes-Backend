@@ -29,7 +29,6 @@ HELP.md
 *.log
 *.jar
 *.war
-*.txt
 
 # OS
 .DS_Store
