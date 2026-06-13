@@ -10,6 +10,7 @@ import lombok.Data;
 @Builder
 public class StockAlertDTO {
 
+    private UUID storeId;
     private UUID productId;
     private String productName;
     private UUID variantId;
