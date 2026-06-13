@@ -47,8 +47,3 @@ store:
 media:
   service:
     url: ${MEDIA_SERVICE_URL:http://localhost:8096}
-
-cloudinary:
-  cloud_name: ${NAME_CLOUD}
-  api_key: ${KEY_CLOUD}
-  api_secret: ${SECRET_CLOUD}
