@@ -23,6 +23,7 @@ import com.api.Transaction.enums.SubscriptionStatus;
 import com.api.Transaction.enums.TransactionStatus;
 import com.api.Transaction.enums.TransactionType;
 import com.api.Transaction.exception.PlanNotFoundException;
+import com.api.Transaction.exception.SubscriptionNotFoundException;
 import com.api.Transaction.exception.UnauthorizedException;
 import com.api.Transaction.repository.PlanChangeHistoryRepository;
 import com.api.Transaction.repository.PlanRepository;
@@ -135,7 +136,7 @@ public class TransactionService {
 
     public SubscriptionResponseDTO getActiveSubscription(UUID storeId) {
         return toSubResponse(subscriptionRepository.findByStoreIdAndStatus(storeId, SubscriptionStatus.ACTIVE)
-                .orElseThrow(() -> new RuntimeException("No hay suscripción activa")));
+                .orElseThrow(() -> new SubscriptionNotFoundException("No hay suscripción activa para esta tienda")));
     }
 
     public StoreLimitsResponseDTO getStoreLimits(UUID storeId) {
@@ -180,7 +181,7 @@ public class TransactionService {
     public void cancelSubscription(UUID storeId) {
         validateOwner();
         StoreSubscription sub = subscriptionRepository.findByStoreIdAndStatus(storeId, SubscriptionStatus.ACTIVE)
-                .orElseThrow(() -> new RuntimeException("No hay suscripción activa"));
+                .orElseThrow(() -> new SubscriptionNotFoundException("No hay suscripción activa para cancelar"));
         sub.setStatus(SubscriptionStatus.CANCELLED);
         subscriptionRepository.save(sub);
         PlanChangeHistory h = new PlanChangeHistory();
