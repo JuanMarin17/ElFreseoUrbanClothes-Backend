@@ -21,6 +21,7 @@ public class StoreUser {
     @Column(nullable = false)
     private StoreRole role;
 
+    @Builder.Default
     @Column(nullable = false)
     private boolean isActive = true;
 
