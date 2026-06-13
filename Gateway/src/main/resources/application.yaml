@@ -55,6 +55,13 @@ spring:
               /api/v1/upload/**,
               /api/v1/cloudinary/**
 
+        # ── Catálogo global (público — sin JWT) ──────────────────────────────────
+        - id: catalog-global-public
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/products/all/active
+            - Method=GET
+
         # ── Product ───────────────────────────────────────────────────────────────
         - id: product-routes
           uri: http://localhost:8084
@@ -95,7 +102,8 @@ spring:
           predicates:
             - Path=/api/v1/users/me,
               /api/v1/users/update,
-              /api/v1/users/profile-image
+              /api/v1/users/profile-image,
+              /api/v1/users/admin/**
           filters:
             - JwtValidationFilter
 
@@ -188,7 +196,14 @@ spring:
           filters:
             - JwtValidationFilter
 
-        # ── Reviews ─────────────────────────────────────────────────────────
+        # ── Community Reviews públicos (GET /reviews — listado sin auth) ──────
+        - id: community-reviews-public
+          uri: http://localhost:8095
+          predicates:
+            - Path=/api/v1/reviews
+            - Method=GET
+
+        # ── Reviews (protegidas con JWT) ─────────────────────────────────────
         - id: reviews-routes
           uri: http://localhost:8095
           predicates:

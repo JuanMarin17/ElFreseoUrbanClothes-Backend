@@ -40,6 +40,10 @@ auth:
   service:
     url: ${AUTH_SERVICE_URL:http://localhost:8082/api/v1}
 
+store:
+  service:
+    url: ${STORE_SERVICE_URL:http://localhost:8081/api/v1}
+
 media:
   service:
     url: ${MEDIA_SERVICE_URL:http://localhost:8096}
