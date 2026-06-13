@@ -192,31 +192,43 @@ def generate_admin_response(messages: list, context: str = "") -> str:
         raise RuntimeError(f"Error Groq: {e}")
 
 
+GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"]
+
 def analyze_product_image(image_base64: str, mime_type: str, context: str = "") -> str:
-    """Gemini Vision para analizar imagen de producto."""
-    try:
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        image_data = base64.b64decode(image_base64)
+    """Gemini Vision para analizar imagen de producto. Intenta modelos alternativos si hay cuota agotada."""
+    image_data = base64.b64decode(image_base64)
 
-        prompt = (
-            f"{ADMIN_SYSTEM_PROMPT}\n\n"
-            "Analiza esta imagen de producto de ropa urbana y entrega:\n"
-            "1. Calidad general (iluminación, nitidez, encuadre, fondo) puntuada del 1 al 10\n"
-            "2. ¿Necesita eliminar el fondo? Explica por qué con criterio profesional\n"
-            "3. Ajustes recomendados de brillo, contraste y nitidez (valores entre 0.8 y 1.5)\n"
-            "4. Nombre de producto sugerido basado en lo que ves (estilo ropa urbana colombiana)\n"
-            "5. Descripción de producto atractiva y optimizada para ventas (máximo 3 oraciones)\n"
-            "6. Precio sugerido en COP basado en el tipo de prenda, calidad visual percibida y tendencias del mercado de ropa urbana colombiana (plataforma Vexio)\n"
-            "7. Tips adicionales para mejorar la foto\n\n"
-            f"Contexto adicional del administrador: {context or 'Ninguno'}\n\n"
-            "Al final incluye la acción: ACTION:ANALYZE_IMAGE|removeBackground:true_o_false|brightness:valor|contrast:valor|sharpness:valor"
-        )
+    prompt = (
+        f"{ADMIN_SYSTEM_PROMPT}\n\n"
+        "Analiza esta imagen de producto de ropa urbana y entrega:\n"
+        "1. Calidad general (iluminación, nitidez, encuadre, fondo) puntuada del 1 al 10\n"
+        "2. ¿Necesita eliminar el fondo? Explica por qué con criterio profesional\n"
+        "3. Ajustes recomendados de brillo, contraste y nitidez (valores entre 0.8 y 1.5)\n"
+        "4. Nombre de producto sugerido basado en lo que ves (estilo ropa urbana colombiana)\n"
+        "5. Descripción de producto atractiva y optimizada para ventas (máximo 3 oraciones)\n"
+        "6. Precio sugerido en COP basado en el tipo de prenda, calidad visual percibida y tendencias del mercado de ropa urbana colombiana (plataforma Vexio)\n"
+        "7. Tips adicionales para mejorar la foto\n\n"
+        f"Contexto adicional del administrador: {context or 'Ninguno'}\n\n"
+        "Al final incluye la acción: ACTION:ANALYZE_IMAGE|removeBackground:true_o_false|brightness:valor|contrast:valor|sharpness:valor"
+    )
 
-        response = model.generate_content([
-            prompt,
-            {"mime_type": mime_type, "data": image_data}
-        ])
-        return response.text
+    last_error = None
+    for model_name in GEMINI_MODELS:
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content([
+                prompt,
+                {"mime_type": mime_type, "data": image_data}
+            ])
+            return response.text
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "quota" in error_str.lower():
+                last_error = e
+                continue
+            raise RuntimeError(f"Error Gemini ({model_name}): {e}")
 
-    except Exception as e:
-        raise RuntimeError(f"Error Gemini: {e}")
+    raise RuntimeError(
+        "El servicio de análisis de imágenes no está disponible en este momento por límite de cuota. "
+        "Por favor intenta de nuevo más tarde."
+    )
