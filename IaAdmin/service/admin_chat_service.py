@@ -99,11 +99,17 @@ async def process_admin_chat(
 
     # Llamada a IA
     if dto.image_base64:
-        ai_response = analyze_product_image(
-            dto.image_base64,
-            dto.image_mime_type or "image/jpeg",
-            dto.message
-        )
+        try:
+            ai_response = analyze_product_image(
+                dto.image_base64,
+                dto.image_mime_type or "image/jpeg",
+                dto.message
+            )
+        except RuntimeError as e:
+            return AdminChatResponse(
+                session_id=session.session_id,
+                message=str(e)
+            )
     else:
         ai_response = generate_admin_response(history, context)
 
