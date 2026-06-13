@@ -15,4 +15,11 @@ public class WebClientConfig {
                 .baseUrl(baseUrl)
                 .build();
     }
+
+    @Bean
+    public WebClient authWebClient(WebClient.Builder builder, @Value("${auth.service.url}") String baseUrl){
+        return builder
+                .baseUrl(baseUrl)
+                .build();
+    }
 }

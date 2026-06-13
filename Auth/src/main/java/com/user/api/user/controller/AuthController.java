@@ -19,6 +19,7 @@ import com.user.api.user.dto.LoginRequestDTO;
 import com.user.api.user.dto.MessageResponseDTO;
 import com.user.api.user.dto.EmailRequestDTO;
 import com.user.api.user.dto.ForgotPasswordRequestDTO;
+import com.user.api.user.dto.UserInfoResponseDTO;
 import com.user.api.user.dto.UserRequestDTO;
 import com.user.api.user.dto.ValidationCodeDTO;
 // import com.user.api.user.dto.UserResponseDTO;
@@ -95,6 +96,11 @@ public class AuthController {
     @GetMapping("/getEmailById/{id}")
     public ResponseEntity<String> getEmail(@PathVariable UUID id){
         return ResponseEntity.status(HttpStatus.OK).body(authService.getEmailByUserId(id));
+    }
+
+    @GetMapping("/getUserInfo/{id}")
+    public ResponseEntity<UserInfoResponseDTO> getUserInfo(@PathVariable UUID id){
+        return ResponseEntity.status(HttpStatus.OK).body(authService.getUserInfo(id));
     }
 
     @PostMapping("/refresh-token")

@@ -22,12 +22,10 @@ import com.api.Users.exception.UserNotFoundException;
 import com.api.Users.repository.UserRepository;
 import com.common_request_context_starter.context.RequestContext;
 
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-@Data
 public class UserService {
     private final UserRepository userRepository;
     private final AuthClient authClient;
