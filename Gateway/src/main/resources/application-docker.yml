@@ -68,7 +68,7 @@ spring:
         - id: stock-alert-routes
           uri: http://product-service:8084
           predicates:
-            - Path=/api/v1/alerts/stock/stream
+            - Path=/api/v1/alerts/stock/stream/**
 
         # ── Variantes ─────────────────────────────────────────────────────────
         - id: variant-routes
