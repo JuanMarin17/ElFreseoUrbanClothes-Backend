@@ -249,6 +249,15 @@ public class AuthService {
                 .getEmail().toLowerCase();
     }
 
+    public com.user.api.user.dto.UserInfoResponseDTO getUserInfo(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+        return new com.user.api.user.dto.UserInfoResponseDTO(
+                user.getUser_id(),
+                user.getEmail().toLowerCase(),
+                user.getCreateAt());
+    }
+
     public JwtResponseDTO refreshToken(String token) {
         String newToken = jwtService.refrechToken(token);
         JwtResponseDTO response = new JwtResponseDTO();
