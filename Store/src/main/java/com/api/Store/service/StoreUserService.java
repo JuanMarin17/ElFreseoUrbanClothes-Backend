@@ -1,6 +1,8 @@
 package com.api.Store.service;
 
+import com.api.Store.client.AuthClient;
 import com.api.Store.client.UserClient;
+import com.api.Store.client.dto.AuthUserInfoDTO;
 import com.api.Store.client.dto.UserInfoDTO;
 import com.api.Store.dto.StoreUserRequestDTO;
 import com.api.Store.dto.StoreUserResponseDTO;
@@ -29,6 +31,7 @@ public class StoreUserService {
     private final StoreUserRepository storeUserRepository;
     private final HeaderUtil headerUtil;
     private final UserClient userClient;
+    private final AuthClient authClient;
 
     // ── 1. Agregar usuario a tienda ──────────────────────────────────────────
     @Transactional
@@ -133,13 +136,16 @@ public class StoreUserService {
     }
 
     private StoreUserResponseDTO toResponse(StoreUser u, UserInfoDTO info) {
+        UUID userId = u.getId().getUserId();
+        AuthUserInfoDTO authInfo = authClient.getUserInfo(userId).orElse(null);
         return StoreUserResponseDTO.builder()
-                .userId(u.getId().getUserId())
+                .userId(userId)
                 .storeId(u.getId().getStoreId())
                 .role(u.getRole())
                 .isActive(u.isActive())
                 .userName(info != null ? info.getUserName() : null)
-                .userEmail(info != null ? info.getUserEmail() : null)
+                .userEmail(authInfo != null ? authInfo.getEmail() : (info != null ? info.getUserEmail() : null))
+                .createAt(authInfo != null ? authInfo.getCreateAt() : null)
                 .build();
     }
 }
