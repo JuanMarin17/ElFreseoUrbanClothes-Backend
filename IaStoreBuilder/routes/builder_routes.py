@@ -1,10 +1,18 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from models.database import get_db, BuilderSession, BuilderMessage
 from schemas.builder_schemas import BuilderChatRequest, BuilderChatResponse, ChatMessageResponse
 from service.builder_chat_service import process_builder_chat
+from service.image_generator import generate_image
+from pydantic import BaseModel
 from typing import Optional, List
 from uuid import UUID
+import base64
+
+
+class ImageGenerateRequest(BaseModel):
+    prompt: str
 
 router = APIRouter(prefix="/api/v1/ia/builder", tags=["IA Store Builder"])
 
@@ -65,3 +73,21 @@ async def get_history(
         BuilderMessage.session_id == session_id
     ).order_by(BuilderMessage.created_at.asc()).all()
     return messages
+
+
+# ─── Generación de imágenes ───────────────────────────────────────────────────
+
+@router.post("/generate-image")
+async def generate_store_image(
+    dto: ImageGenerateRequest,
+    owner_id: str = Depends(get_owner_id)
+):
+    """
+    Genera una imagen para la tienda (banner, logo, fondo) usando Imagen 3 de Google.
+    Devuelve la imagen en base64.
+    """
+    image_bytes = generate_image(dto.prompt)
+    return JSONResponse({
+        "image_base64": base64.b64encode(image_bytes).decode("utf-8"),
+        "mime_type": "image/png"
+    })
