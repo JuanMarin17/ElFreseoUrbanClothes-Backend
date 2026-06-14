@@ -42,7 +42,7 @@ def _clean_response(response: str) -> str:
 async def process_builder_chat(
     dto: BuilderChatRequest,
     owner_id: str,
-    store_id: str,
+    store_id: str | None,
     jwt_token: str,
     db: Session
 ) -> BuilderChatResponse:
@@ -57,7 +57,7 @@ async def process_builder_chat(
     else:
         session = BuilderSession(
             owner_id=uuid.UUID(owner_id),
-            store_id=uuid.UUID(store_id)
+            store_id=uuid.UUID(store_id) if store_id else None
         )
         db.add(session)
         db.commit()
@@ -75,14 +75,16 @@ async def process_builder_chat(
     ).order_by(BuilderMessage.created_at.asc()).all()
     history = [{"role": m.role, "content": m.content} for m in messages[-CONTEXT_WINDOW:]]
 
-    # Contexto de la tienda (info + settings en paralelo)
-    results = await asyncio.gather(
-        store_client.get_store_info(store_id),
-        store_client.get_store_settings(store_id, jwt_token),
-        return_exceptions=True,
-    )
-    store_info = results[0] if isinstance(results[0], dict) else {}
-    settings   = results[1] if isinstance(results[1], dict) else {}
+    # Contexto de la tienda (solo si ya existe)
+    store_info, settings = {}, {}
+    if store_id:
+        results = await asyncio.gather(
+            store_client.get_store_info(store_id),
+            store_client.get_store_settings(store_id, jwt_token),
+            return_exceptions=True,
+        )
+        store_info = results[0] if isinstance(results[0], dict) else {}
+        settings   = results[1] if isinstance(results[1], dict) else {}
     context = build_builder_context(store_info, settings)
 
     # Llamada a IA
