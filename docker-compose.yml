@@ -811,6 +811,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/ia_store_builder
       GROQ_API_KEY: ${GROQ_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
       STORE_SERVICE_URL: http://store-service:8081
     depends_on:
       postgres:
