@@ -50,10 +50,11 @@ async def process_builder_chat(
     # Sesión
     if dto.session_id:
         session = db.query(BuilderSession).filter(
-            BuilderSession.session_id == dto.session_id
+            BuilderSession.session_id == dto.session_id,
+            BuilderSession.owner_id == uuid.UUID(owner_id)
         ).first()
         if not session:
-            raise ValueError("Sesión no encontrada")
+            raise ValueError("Sesión no encontrada o no pertenece al usuario")
     else:
         session = BuilderSession(
             owner_id=uuid.UUID(owner_id),
