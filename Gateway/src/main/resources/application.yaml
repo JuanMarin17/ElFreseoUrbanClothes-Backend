@@ -141,6 +141,14 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Promotion pública (vitrina sin JWT) ───────────────────────────────
+        - id: promotion-public-routes
+          uri: http://localhost:8091
+          predicates:
+            - Path=/api/v1/promotions/getActivePromotions,
+              /api/v1/coupons/getActiveCoupons
+            - Method=GET
+
         # ── Promotion ─────────────────────────────────────────────────────────
         - id: promotion-routes
           uri: http://localhost:8091
@@ -234,6 +242,15 @@ spring:
             - Path=/api/v1/ia/admin/**
           filters:
             - JwtValidationFilter
+
+        # ── IA Store Builder ─────────────────────────────────────────────────
+        - id: ia-builder-routes
+          uri: http://localhost:8113
+          predicates:
+            - Path=/api/v1/ia/builder/**
+          filters:
+            - JwtValidationFilter
+
         # ── Transaction / Billing (público para ver planes) ───────────────────
         - id: transaction-plans-public
           uri: http://localhost:8103
