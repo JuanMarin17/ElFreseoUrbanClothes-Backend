@@ -105,8 +105,16 @@ def _process_builder_action(session_id: UUID, ai_response: str) -> BuilderChatRe
 
     response = BuilderChatResponse(session_id=session_id, message=_clean_response(ai_response))
 
+    # ── Plan de suscripción ───────────────────────────────────────────────────
+    if "ACTION:SUGGEST_PLAN" in ai_response:
+        data = _extract_action_data(ai_response)
+        response.action = "SUGGEST_PLAN"
+        response.action_data = {
+            "plan": data.get("plan", "GRATUITO"),
+        }
+
     # ── Identidad básica ──────────────────────────────────────────────────────
-    if "ACTION:SUGGEST_BASIC" in ai_response:
+    elif "ACTION:SUGGEST_BASIC" in ai_response:
         data = _extract_action_data(ai_response)
         response.action = "SUGGEST_BASIC"
         response.action_data = {
@@ -119,14 +127,18 @@ def _process_builder_action(session_id: UUID, ai_response: str) -> BuilderChatRe
         data = _extract_action_data(ai_response)
         response.action = "SUGGEST_STYLES"
         response.action_data = {
-            "cardBg":           data.get("cardBg", "#ffffff"),
             "colorBoton":       data.get("colorBoton", "#000000"),
             "colorTitulo":      data.get("colorTitulo", "#000000"),
             "colorParrafo":     data.get("colorParrafo", "#333333"),
+            "cardBg":           data.get("cardBg", "#ffffff"),
             "cardBorderColor1": data.get("cardBorderColor1", "#cccccc"),
             "cardBorderColor2": data.get("cardBorderColor2", "#cccccc"),
             "cardBorderWidth":  data.get("cardBorderWidth", "1"),
             "cardRadius":       data.get("cardRadius", "8"),
+            "cardShadow":       data.get("cardShadow", "none"),
+            "buttonRadius":     data.get("buttonRadius", "8"),
+            "titleFont":        data.get("titleFont", "Bebas Neue"),
+            "bodyFont":         data.get("bodyFont", "Inter"),
         }
 
     # ── Componentes visuales (banner, header, footer) ─────────────────────────
@@ -137,20 +149,52 @@ def _process_builder_action(session_id: UUID, ai_response: str) -> BuilderChatRe
             "banner": {
                 "title": data.get("bannerTitle", ""),
                 "font":  data.get("bannerFont", "Bebas Neue"),
+                "size":  data.get("bannerSize", "48"),
                 "color": data.get("bannerColor", "#ffffff"),
                 "bg":    data.get("bannerBg", "#000000"),
+                "image": data.get("bannerImage", ""),
             },
             "header": {
                 "logo":  data.get("headerLogo", ""),
+                "items": data.get("headerItems", "Inicio,Productos,Contacto"),
                 "font":  data.get("headerFont", "Inter"),
+                "size":  data.get("headerSize", "16"),
                 "color": data.get("headerColor", "#ffffff"),
                 "bg":    data.get("headerBg", "#000000"),
             },
             "footer": {
                 "text":  data.get("footerText", ""),
                 "font":  data.get("footerFont", "Montserrat"),
+                "size":  data.get("footerSize", "14"),
                 "color": data.get("footerColor", "#888888"),
                 "bg":    data.get("footerBg", "#111111"),
+            },
+        }
+
+    # ── Widgets (sidebar + searchbar) ─────────────────────────────────────────
+    elif "ACTION:SUGGEST_WIDGETS" in ai_response:
+        data = _extract_action_data(ai_response)
+        response.action = "SUGGEST_WIDGETS"
+        response.action_data = {
+            "sidebar": {
+                "visible": data.get("sidebarVisible", "false"),
+                "bg":      data.get("sidebarBg", "#ffffff"),
+                "color":   data.get("sidebarColor", "#000000"),
+                "font":    data.get("sidebarFont", "Inter"),
+                "width":   data.get("sidebarWidth", "240"),
+                "items":   data.get("sidebarItems", ""),
+                "border":  data.get("sidebarBorder", "#eeeeee"),
+                "radius":  data.get("sidebarRadius", "8"),
+            },
+            "searchbar": {
+                "visible":          data.get("searchbarVisible", "true"),
+                "bg":               data.get("searchbarBg", "#ffffff"),
+                "color":            data.get("searchbarColor", "#000000"),
+                "placeholderColor": data.get("searchbarPlaceholderColor", "#999999"),
+                "placeholder":      data.get("searchbarPlaceholder", "Buscar productos..."),
+                "border":           data.get("searchbarBorder", "#cccccc"),
+                "radius":           data.get("searchbarRadius", "24"),
+                "icon":             data.get("searchbarIcon", "true"),
             },
         }
 
