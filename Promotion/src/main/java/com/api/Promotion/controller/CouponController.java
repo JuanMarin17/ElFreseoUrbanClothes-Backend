@@ -39,7 +39,7 @@ public class CouponController {
         return ResponseEntity.ok(couponService.getActiveCoupons());
     }
 
-    @GetMapping("/all")
+    @GetMapping("/getAllCoupons")
     public ResponseEntity<List<CouponResponseDTO>> getAllCoupons() {
         return ResponseEntity.ok(couponService.getAllCoupons());
     }
