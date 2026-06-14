@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from models.database import create_tables
 from routes.builder_routes import router
 from exceptions.handlers import general_exception_handler, value_error_handler
@@ -7,12 +6,6 @@ from service.ai_service import groq_client
 
 app = FastAPI(title="IA Store Builder", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.on_event("startup")
 async def startup():

@@ -53,6 +53,7 @@ public class JwtValidationFilter extends AbstractGatewayFilterFactory<Object> {
                         .getPayload();
 
                 ServerHttpRequest.Builder builder = request.mutate()
+                        .header("Authorization", authHeader)
                         .header("X-User-Id", claims.get("user_id", String.class))
                         .header("X-User-Name", claims.getSubject())
                         .header("X-User-Role", claims.get("role", String.class))
