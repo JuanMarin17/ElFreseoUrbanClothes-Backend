@@ -1,12 +1,20 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from models.database import get_db, ChatMessage, ChatSession, StockNotification
 from schemas.chat_schemas import (
     ChatRequest, ChatResponse, ChatMessageResponse, StockNotificationResponse
 )
 from service.chat_service import process_chat
+from service.image_generator import generate_image
+from pydantic import BaseModel
 from typing import List
 from uuid import UUID
+import base64
+
+
+class ImageGenerateRequest(BaseModel):
+    prompt: str
 
 router = APIRouter(prefix="/api/v1/ia/user", tags=["IA User"])
 
@@ -96,3 +104,21 @@ async def cancel_stock_notification(
         raise HTTPException(status_code=404, detail="Notificación no encontrada")
     db.delete(notif)
     db.commit()
+
+
+# ─── Generación de imágenes ───────────────────────────────────────────────────
+
+@router.post("/generate-image")
+async def generate_user_image(
+    dto: ImageGenerateRequest,
+    user_id: str = Depends(get_user_id)
+):
+    """
+    Genera una imagen usando Imagen 3 de Google.
+    Devuelve la imagen en base64.
+    """
+    image_bytes = generate_image(dto.prompt)
+    return JSONResponse({
+        "image_base64": base64.b64encode(image_bytes).decode("utf-8"),
+        "mime_type": "image/png"
+    })
