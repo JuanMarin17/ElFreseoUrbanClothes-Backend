@@ -13,19 +13,22 @@ class BuilderChatResponse(BaseModel):
     session_id: UUID
     message: str
     action: Optional[str] = None
-    # Acciones posibles (action + action_data):
+    # Acciones posibles por paso (action + action_data):
     #
-    # SUGERENCIAS (el frontend las aplica al wizard — no guardan solas)
-    #   SUGGEST_BASIC        → action_data: {name, description}
-    #   SUGGEST_STYLES       → action_data: {cardBg, colorBoton, colorTitulo, colorParrafo,
-    #                                         cardBorderColor1, cardBorderColor2,
-    #                                         cardBorderWidth, cardRadius}
-    #   SUGGEST_COMPONENTS   → action_data: {banner:{title,font,color,bg},
-    #                                         header:{logo,font,color,bg},
-    #                                         footer:{text,font,color,bg}}
-    #   SUGGEST_LAYOUT       → action_data: {layoutId, layoutTitle, layoutDescription}
-    #   SUGGEST_LEGAL        → action_data: {legalName, idNumber}
-    #   SUGGEST_PAYMENT      → action_data: {paymentMethod, shipping}
+    #   PASO 1  SUGGEST_PLAN       → {plan: GRATUITO|BASICO|PRO|PREMIUM}
+    #   PASO 2  SUGGEST_BASIC      → {name, description}
+    #   PASO 3  SUGGEST_LEGAL      → {legalName, idNumber}
+    #   PASO 4  SUGGEST_PAYMENT    → {paymentMethod, shipping}
+    #   PASO 5  SUGGEST_LAYOUT     → {layoutId, layoutTitle, layoutDescription}
+    #   PASO 6  SUGGEST_STYLES     → {colorBoton, colorTitulo, colorParrafo, cardBg,
+    #                                  cardBorderColor1, cardBorderColor2, cardBorderWidth,
+    #                                  cardRadius, cardShadow, buttonRadius, titleFont, bodyFont}
+    #   PASO 7  SUGGEST_COMPONENTS → {banner:{title,font,size,color,bg,image},
+    #                                  header:{logo,items,font,size,color,bg},
+    #                                  footer:{text,font,size,color,bg}}
+    #   PASO 8  SUGGEST_WIDGETS    → {sidebar:{visible,bg,color,font,width,items,border,radius},
+    #                                  searchbar:{visible,bg,color,placeholderColor,
+    #                                             placeholder,border,radius,icon}}
     action_data: Optional[Dict[str, Any]] = None
 
 
