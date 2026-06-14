@@ -32,4 +32,17 @@ public class StoreClient {
             return false;
         }
     }
+
+    /** Retorna el rol del usuario en la tienda ("OWNER", "ADMIN", "STAFF") o null si no pertenece */
+    public String getUserStoreRole(UUID storeId, UUID userId) {
+        try {
+            return restClient.get()
+                    .uri("/stores/{storeId}/isOwner/{userId}", storeId, userId)
+                    .retrieve()
+                    .body(String.class);
+        } catch (Exception e) {
+            log.warn("No se pudo obtener el rol del usuario {} en tienda {}: {}", userId, storeId, e.getMessage());
+            return null;
+        }
+    }
 }
