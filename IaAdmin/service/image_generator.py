@@ -2,14 +2,15 @@ from google import genai
 from google.genai import types
 from config.settings import GEMINI_API_KEY
 
-_client = genai.Client(api_key=GEMINI_API_KEY)
-
 
 def generate_image(prompt: str, aspect_ratio: str = "1:1") -> bytes:
     """Genera una imagen con Gemini 2.0 Flash (gratuito) y devuelve los bytes PNG."""
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY no está configurada")
     try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
         full_prompt = f"{prompt}. Aspect ratio: {aspect_ratio}." if aspect_ratio != "1:1" else prompt
-        response = _client.models.generate_content(
+        response = client.models.generate_content(
             model="gemini-2.0-flash-preview-image-generation",
             contents=full_prompt,
             config=types.GenerateContentConfig(
