@@ -15,7 +15,7 @@ class BuilderSession(Base):
     __tablename__ = "builder_session"
     session_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     owner_id   = Column(UUID(as_uuid=True), nullable=False)
-    store_id   = Column(UUID(as_uuid=True), nullable=False)
+    store_id   = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
