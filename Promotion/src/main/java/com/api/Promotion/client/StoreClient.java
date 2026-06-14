@@ -36,10 +36,13 @@ public class StoreClient {
     /** Retorna el rol del usuario en la tienda ("OWNER", "ADMIN", "STAFF") o null si no pertenece */
     public String getUserStoreRole(UUID storeId, UUID userId) {
         try {
-            return restClient.get()
+            String raw = restClient.get()
                     .uri("/stores/{storeId}/isOwner/{userId}", storeId, userId)
                     .retrieve()
                     .body(String.class);
+            if (raw == null) return null;
+            // StringHttpMessageConverter devuelve el JSON con comillas: "OWNER" → las quitamos
+            return raw.replace("\"", "").trim();
         } catch (Exception e) {
             log.warn("No se pudo obtener el rol del usuario {} en tienda {}: {}", userId, storeId, e.getMessage());
             return null;
