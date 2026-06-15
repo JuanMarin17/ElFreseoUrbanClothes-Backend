@@ -161,10 +161,10 @@ public class AuthService {
 
     public MessageResponseDTO login(LoginRequestDTO loginRequestDTO) {
         User user = userRepository.findByEmail(loginRequestDTO.getEmail().toLowerCase())
-                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+                .orElseThrow(() -> new IncorrectCredentialsException("Credenciales incorrectas"));
 
         if (!passwordEncoder.matches(loginRequestDTO.getPassword(), user.getPassword())) {
-            throw new IncorrectCredentialsException("Correo o contraseña incorrectos");
+            throw new IncorrectCredentialsException("Credenciales incorrectas");
         }
 
         String code = otpService.generateOtp(user.getSecretKey().getSecretKey());
@@ -177,7 +177,7 @@ public class AuthService {
 
     public JwtResponseDTO loginSecondStep(ValidationCodeDTO validationCodeDTO, String ipAddress, String userAgent) {
         User user = userRepository.findByEmail(validationCodeDTO.getEmail().toLowerCase())
-                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+                .orElseThrow(() -> new IncorrectCredentialsException("Credenciales incorrectas"));
 
         Role role = user.getRoles().iterator().next();
 
