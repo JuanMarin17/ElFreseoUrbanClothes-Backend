@@ -42,6 +42,11 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.getReviewsByProduct(productId));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<List<ReviewResponseDTO>> getMyReviewsAlias() {
+        return ResponseEntity.ok(reviewService.getMyReviews());
+    }
+
     @GetMapping("/me/products")
     public ResponseEntity<List<ReviewResponseDTO>> getMyReviews() {
         return ResponseEntity.ok(reviewService.getMyReviews());
