@@ -40,7 +40,6 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         "/api/v1/products/all/active",
         "/api/v1/promotions/getActivePromotions",
         "/api/v1/coupons/getActiveCoupons",
-        "/api/v1/reviews",
         "/api/v1/upload",
         "/api/v1/cloudinary",
         "/api/v1/alerts/stock/stream",
@@ -69,7 +68,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         }
 
         // Rutas públicas: no requieren JWT
-        if (isPublicPath(path)) {
+        if (isPublicPath(path, method)) {
             return chain.filter(exchange);
         }
 
@@ -119,7 +118,9 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         }
     }
 
-    private boolean isPublicPath(String path) {
+    private boolean isPublicPath(String path, String method) {
+        // GET /api/v1/reviews exacto es público; /reviews/me y POST /reviews requieren JWT
+        if ("GET".equals(method) && "/api/v1/reviews".equals(path)) return true;
         return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
     }
 }
