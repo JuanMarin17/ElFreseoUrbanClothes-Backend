@@ -57,6 +57,7 @@
 
         # ── Catálogo global (público — sin JWT) ──────────────────────────────────
         - id: catalog-global-public
+          order: -1
           uri: http://localhost:8084
           predicates:
             - Path=/api/v1/products/all/active
@@ -142,6 +143,7 @@
 
         # ── Promotion pública (vitrina sin JWT) ───────────────────────────────
         - id: promotion-public-routes
+          order: -1
           uri: http://localhost:8091
           predicates:
             - Path=/api/v1/promotions/getActivePromotions,
@@ -204,6 +206,7 @@
 
         # ── Community Reviews públicos (GET /reviews — listado sin auth) ──────
         - id: community-reviews-public
+          order: -1
           uri: http://localhost:8095
           predicates:
             - Path=/api/v1/reviews
