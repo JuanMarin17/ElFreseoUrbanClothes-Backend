@@ -60,7 +60,6 @@
           uri: http://localhost:8084
           predicates:
             - Path=/api/v1/products/all/active
-            - Method=GET
 
         # ── Product ───────────────────────────────────────────────────────────────
         - id: product-routes
@@ -208,7 +207,6 @@
           uri: http://localhost:8095
           predicates:
             - Path=/api/v1/reviews
-            - Method=GET
 
         # ── Reviews (protegidas con JWT) ─────────────────────────────────────
         - id: reviews-routes
