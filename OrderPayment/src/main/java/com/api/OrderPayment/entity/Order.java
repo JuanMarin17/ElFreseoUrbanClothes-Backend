@@ -1,6 +1,8 @@
 package com.api.OrderPayment.entity;
 
+import com.api.OrderPayment.dto.order.ShippingAddressDTO;
 import com.api.OrderPayment.enums.OrderStatus;
+import com.api.OrderPayment.enums.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -68,9 +70,15 @@ public class Order {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal total;
 
-    /** Dirección de envío */
-    @Column
-    private String shippingAddress;
+    @Embedded
+    private ShippingAddressDTO shippingAddress;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method")
+    private PaymentMethod paymentMethod;
+
+    @Column(name = "shipping_cost", precision = 12, scale = 2)
+    private BigDecimal shippingCost;
 
     /** Notas adicionales del cliente */
     @Column(length = 500)

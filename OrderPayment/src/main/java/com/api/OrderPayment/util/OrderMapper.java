@@ -21,6 +21,7 @@ public class OrderMapper {
     public OrderResponseDTO toDTO(Order order, UserInfoDTO userInfo) {
         return OrderResponseDTO.builder()
                 .id(order.getId())
+                .orderId(order.getId())
                 .userId(order.getUserId())
                 .customerName(userInfo != null ? userInfo.getUserName() : null)
                 .customerEmail(userInfo != null ? userInfo.getUserEmail() : null)
@@ -33,6 +34,8 @@ public class OrderMapper {
                 .discount(order.getDiscount())
                 .total(order.getTotal())
                 .shippingAddress(order.getShippingAddress())
+                .paymentMethod(order.getPaymentMethod())
+                .shippingCost(order.getShippingCost())
                 .notes(order.getNotes())
                 .payment(order.getPayment() != null ? toPaymentDTO(order.getPayment()) : null)
                 .createdAt(order.getCreatedAt())
