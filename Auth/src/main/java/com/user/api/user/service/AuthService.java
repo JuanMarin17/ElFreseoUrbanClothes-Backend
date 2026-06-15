@@ -143,13 +143,15 @@ public class AuthService {
 
         Role role = user.getRoles().iterator().next();
         String userName = usersClient.getUserName(user.getUser_id());
-        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase());
 
+        UUID sessionId = null;
         try {
-            userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
+            sessionId = userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
         } catch (Exception e) {
             log.warn("No se pudo guardar la sesión tras el registro: {}", e.getMessage());
         }
+
+        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase(), sessionId);
 
         emailService.sendWelcome(validationCodeDTO.getEmail().toLowerCase());
 
@@ -186,13 +188,15 @@ public class AuthService {
         }
 
         String userName = usersClient.getUserName(user.getUser_id());
-        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase());
 
+        UUID sessionId = null;
         try {
-            userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
+            sessionId = userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
         } catch (Exception e) {
             log.warn("No se pudo guardar la sesión tras el login: {}", e.getMessage());
         }
+
+        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase(), sessionId);
 
         JwtResponseDTO response = new JwtResponseDTO();
         response.setJwt(token);
