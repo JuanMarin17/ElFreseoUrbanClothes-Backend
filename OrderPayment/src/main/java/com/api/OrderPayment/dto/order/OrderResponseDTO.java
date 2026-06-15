@@ -2,6 +2,7 @@ package com.api.OrderPayment.dto.order;
 
 import com.api.OrderPayment.dto.payment.PaymentResponseDTO;
 import com.api.OrderPayment.enums.OrderStatus;
+import com.api.OrderPayment.enums.PaymentMethod;
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,6 +15,7 @@ import java.util.UUID;
 @Builder
 public class OrderResponseDTO {
     private UUID id;
+    private UUID orderId;
     private UUID userId;
     private String customerName;
     private String customerEmail;
@@ -25,7 +27,9 @@ public class OrderResponseDTO {
     private BigDecimal tax;
     private BigDecimal discount;
     private BigDecimal total;
-    private String shippingAddress;
+    private ShippingAddressDTO shippingAddress;
+    private PaymentMethod paymentMethod;
+    private BigDecimal shippingCost;
     private String notes;
     private PaymentResponseDTO payment;
     private LocalDateTime createdAt;
