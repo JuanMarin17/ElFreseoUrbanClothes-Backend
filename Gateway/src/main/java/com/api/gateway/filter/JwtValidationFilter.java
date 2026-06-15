@@ -101,6 +101,10 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                     .header("X-User-Role", claims.get("role", String.class))
                     .header("X-User-Email", claims.get("email", String.class));
 
+            String sessionId = claims.get("session_id", String.class);
+            if (sessionId != null) builder.header("X-Session-Id", sessionId);
+            if (storeId != null) builder.header("X-Store-Id", storeId);
+
             if (storeId != null)
                 builder.header("X-Store-Id", storeId);
 

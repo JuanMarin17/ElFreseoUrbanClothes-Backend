@@ -38,18 +38,29 @@ public class JwtService {
      * @param rolId
      * @return
      */
-    public String generateToken(UUID userId, String fullName, String rolId, String email) {
+    public String generateToken(UUID userId, String fullName, String rolId, String email, UUID sessionId) {
+        Map<String, Object> claims = new java.util.HashMap<>();
+        claims.put("user_id", userId);
+        claims.put("role", rolId);
+        claims.put("email", email);
+        if (sessionId != null) {
+            claims.put("session_id", sessionId.toString());
+        }
 
         return Jwts.builder()
-                .claims(Map.of(
-                        "user_id", userId,
-                        "role", rolId,
-                        "email", email)) // Playload
-                .subject(fullName) // Quien es el usuario
+                .claims(claims)
+                .subject(fullName)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + tokenExpiration))
-                .signWith(getSignKey()) // Firma digital
-                .compact(); // Convierte al string final
+                .signWith(getSignKey())
+                .compact();
+    }
+
+    public UUID extractSessionId(String token) {
+        return extractClaims(token, claims -> {
+            String sessionId = claims.get("session_id", String.class);
+            return sessionId != null ? UUID.fromString(sessionId) : null;
+        });
     }
 
     /**
@@ -141,7 +152,9 @@ public class JwtService {
             throw new RuntimeException("Token is invalid " + e.getMessage());
         }
 
-        return generateToken(UUID.fromString(claims.get("user_id", String.class)), claims.getSubject(), claims.get("role", String.class), claims.get("email", String.class));
+        String rawSessionId = claims.get("session_id", String.class);
+        UUID sessionId = rawSessionId != null ? UUID.fromString(rawSessionId) : null;
+        return generateToken(UUID.fromString(claims.get("user_id", String.class)), claims.getSubject(), claims.get("role", String.class), claims.get("email", String.class), sessionId);
     }
 
 }
