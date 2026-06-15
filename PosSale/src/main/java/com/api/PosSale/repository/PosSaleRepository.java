@@ -2,6 +2,8 @@ package com.api.PosSale.repository;
 
 import com.api.PosSale.entity.PosSale;
 import com.api.PosSale.enums.PosSaleStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -12,7 +14,9 @@ import java.util.UUID;
 
 public interface PosSaleRepository extends JpaRepository<PosSale, UUID> {
 
-    List<PosSale> findByStoreIdOrderByCreatedAtDesc(UUID storeId);
+    Page<PosSale> findByStoreIdOrderByCreatedAtDesc(UUID storeId, Pageable pageable);
+
+    Page<PosSale> findByStoreIdAndStatusOrderByCreatedAtDesc(UUID storeId, PosSaleStatus status, Pageable pageable);
 
     Optional<PosSale> findBySaleIdAndStoreId(UUID saleId, UUID storeId);
 
@@ -23,7 +27,7 @@ public interface PosSaleRepository extends JpaRepository<PosSale, UUID> {
 
     boolean existsBySaleNumber(String saleNumber);
 
-    long countByCreatedAtGreaterThanEqual(LocalDateTime from);
+    long countByStoreIdAndCreatedAtGreaterThanEqual(UUID storeId, LocalDateTime from);
 
     @Query("SELECT COUNT(s) FROM PosSale s WHERE s.storeId = :storeId AND s.status = :status AND s.createdAt >= :from")
     long countByStoreIdAndStatusAndCreatedAtGreaterThanEqual(UUID storeId, PosSaleStatus status, LocalDateTime from);

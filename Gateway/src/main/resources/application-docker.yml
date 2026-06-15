@@ -252,6 +252,14 @@ spring:
             - JwtValidationFilter
 
         # ── POS Sale (ventas en punto de venta) ───────────────────────────────
+        # u{2500}u{2500} Sesiones de usuario (requiere JWT) u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}
+        - id: auth-session-routes
+          uri: http://auth-service:8082
+          predicates:
+            - Path=/api/v1/auth/sessions/**
+          filters:
+            - JwtValidationFilter
+
         - id: pos-sale-routes
           uri: http://pos-sale-service:8105
           predicates:

@@ -6,45 +6,48 @@ import com.api.PosSale.dto.DailySummaryResponseDTO;
 import com.api.PosSale.dto.PosSaleResponseDTO;
 import com.api.PosSale.entity.PosSale;
 import com.api.PosSale.entity.PosSaleItem;
+import com.api.PosSale.enums.PosPaymentMethod;
 import com.api.PosSale.enums.PosSaleStatus;
+import com.api.PosSale.exception.ForbiddenException;
 import com.api.PosSale.exception.PosSaleNotFoundException;
 import com.api.PosSale.repository.PosSaleRepository;
 import com.api.PosSale.util.PosSaleMapper;
-import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PosSaleService {
 
+    private static final Set<String> ALLOWED_ROLES = Set.of("ADMIN", "OWNER", "EMPLOYEE");
+
     private final PosSaleRepository saleRepository;
     private final InventoryClient inventoryClient;
     private final PosSaleMapper mapper;
-
-    private final AtomicLong saleCounter = new AtomicLong(1);
-
-    @PostConstruct
-    void initCounter() {
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        long today = saleRepository.countByCreatedAtGreaterThanEqual(startOfDay);
-        saleCounter.set(today + 1);
-    }
+    private final HttpServletRequest httpRequest;
 
     @Transactional
     public PosSaleResponseDTO createSale(UUID storeId, UUID employeeId, CreatePosSaleRequestDTO dto) {
-        log.info("Creando venta POS: storeId={}, employee={}", storeId, employeeId);
+        validateRole();
+
+        if (dto.getItems() == null || dto.getItems().isEmpty()) {
+            throw new IllegalArgumentException("El carrito está vacío");
+        }
 
         BigDecimal subtotal = dto.getItems().stream()
                 .map(item -> {
@@ -58,14 +61,25 @@ public class PosSaleService {
         BigDecimal globalDiscount = dto.getDiscount() != null ? dto.getDiscount() : BigDecimal.ZERO;
         BigDecimal total = subtotal.subtract(globalDiscount).max(BigDecimal.ZERO);
 
-        BigDecimal amountReceived = dto.getAmountReceived() != null ? dto.getAmountReceived() : total;
-        BigDecimal change = amountReceived.subtract(total).max(BigDecimal.ZERO);
+        BigDecimal amountReceived;
+        BigDecimal change;
+
+        if (dto.getPaymentMethod() == PosPaymentMethod.CASH) {
+            amountReceived = dto.getAmountReceived() != null ? dto.getAmountReceived() : BigDecimal.ZERO;
+            if (amountReceived.compareTo(total) < 0) {
+                throw new IllegalArgumentException("Monto recibido insuficiente");
+            }
+            change = amountReceived.subtract(total).max(BigDecimal.ZERO);
+        } else {
+            amountReceived = total;
+            change = BigDecimal.ZERO;
+        }
 
         PosSale sale = PosSale.builder()
                 .storeId(storeId)
                 .employeeId(employeeId)
                 .customerId(dto.getCustomerId())
-                .saleNumber(generateSaleNumber())
+                .saleNumber(generateSaleNumber(storeId))
                 .status(PosSaleStatus.COMPLETED)
                 .subtotal(subtotal)
                 .discount(globalDiscount)
@@ -101,7 +115,6 @@ public class PosSaleService {
         PosSale saved = saleRepository.save(sale);
         log.info("Venta POS creada: {}", saved.getSaleNumber());
 
-        // Notificar al servicio de inventario (fallo tolerado para no bloquear la venta)
         items.forEach(item -> {
             if (item.getVariantId() != null) {
                 inventoryClient.registerOutMovement(storeId, item.getVariantId(), item.getQuantity());
@@ -112,44 +125,63 @@ public class PosSaleService {
     }
 
     @Transactional(readOnly = true)
-    public List<PosSaleResponseDTO> getSalesByStore(UUID storeId) {
-        return saleRepository.findByStoreIdOrderByCreatedAtDesc(storeId)
+    public List<PosSaleResponseDTO> getSalesByStore(UUID storeId, PosSaleStatus status, int page, int size) {
+        validateRole();
+        Pageable pageable = PageRequest.of(page, size);
+        if (status != null) {
+            return saleRepository.findByStoreIdAndStatusOrderByCreatedAtDesc(storeId, status, pageable)
+                    .stream().map(mapper::toDTO).toList();
+        }
+        return saleRepository.findByStoreIdOrderByCreatedAtDesc(storeId, pageable)
                 .stream().map(mapper::toDTO).toList();
     }
 
     @Transactional(readOnly = true)
     public PosSaleResponseDTO getSale(UUID storeId, UUID saleId) {
+        validateRole();
         return mapper.toDTO(findSale(storeId, saleId));
     }
 
     @Transactional(readOnly = true)
     public List<PosSaleResponseDTO> getSalesByCustomer(UUID storeId, UUID customerId) {
+        validateRole();
         return saleRepository.findByStoreIdAndCustomerIdOrderByCreatedAtDesc(storeId, customerId)
                 .stream().map(mapper::toDTO).toList();
     }
 
     @Transactional(readOnly = true)
     public List<PosSaleResponseDTO> getSalesByDateRange(UUID storeId, LocalDateTime from, LocalDateTime to) {
+        validateRole();
         return saleRepository.findByStoreIdAndCreatedAtBetweenOrderByCreatedAtDesc(storeId, from, to)
                 .stream().map(mapper::toDTO).toList();
     }
 
     @Transactional
     public PosSaleResponseDTO cancelSale(UUID storeId, UUID saleId) {
+        validateRole();
         PosSale sale = findSale(storeId, saleId);
 
-        if (sale.getStatus() != PosSaleStatus.COMPLETED) {
-            throw new IllegalStateException(
-                    "Solo se pueden cancelar ventas en estado COMPLETED. Estado actual: " + sale.getStatus());
+        if (sale.getStatus() == PosSaleStatus.CANCELLED) {
+            throw new IllegalArgumentException("La venta ya está cancelada");
         }
 
         sale.setStatus(PosSaleStatus.CANCELLED);
+        sale.setCancelledAt(LocalDateTime.now());
+        PosSale saved = saleRepository.save(sale);
         log.info("Venta POS cancelada: {}", sale.getSaleNumber());
-        return mapper.toDTO(saleRepository.save(sale));
+
+        sale.getItems().forEach(item -> {
+            if (item.getVariantId() != null) {
+                inventoryClient.registerInMovement(storeId, item.getVariantId(), item.getQuantity());
+            }
+        });
+
+        return mapper.toDTO(saved);
     }
 
     @Transactional(readOnly = true)
     public DailySummaryResponseDTO getDailySummary(UUID storeId) {
+        validateRole();
         LocalDate today = LocalDate.now();
         LocalDateTime from = today.atStartOfDay();
         LocalDateTime to = today.atTime(23, 59, 59);
@@ -157,25 +189,32 @@ public class PosSaleService {
         List<PosSale> sales = saleRepository
                 .findByStoreIdAndCreatedAtBetweenOrderByCreatedAtDesc(storeId, from, to);
 
-        BigDecimal totalRevenue = sales.stream()
+        List<PosSale> completed = sales.stream()
                 .filter(s -> s.getStatus() == PosSaleStatus.COMPLETED)
+                .toList();
+
+        BigDecimal totalRevenue = completed.stream()
                 .map(PosSale::getTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal totalDiscount = sales.stream()
-                .filter(s -> s.getStatus() == PosSaleStatus.COMPLETED)
+        BigDecimal totalDiscount = completed.stream()
                 .map(PosSale::getDiscount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        long completed = sales.stream().filter(s -> s.getStatus() == PosSaleStatus.COMPLETED).count();
-        long cancelled = sales.stream().filter(s -> s.getStatus() == PosSaleStatus.CANCELLED).count();
+        long cancelledCount = sales.stream()
+                .filter(s -> s.getStatus() == PosSaleStatus.CANCELLED).count();
+
+        BigDecimal averageSale = completed.isEmpty()
+                ? BigDecimal.ZERO
+                : totalRevenue.divide(BigDecimal.valueOf(completed.size()), 2, RoundingMode.HALF_UP);
 
         return DailySummaryResponseDTO.builder()
                 .date(today)
-                .totalSales(completed)
-                .cancelledSales(cancelled)
+                .totalSales(completed.size())
+                .cancelledSales(cancelledCount)
                 .totalRevenue(totalRevenue)
                 .totalDiscount(totalDiscount)
+                .averageSale(averageSale)
                 .build();
     }
 
@@ -184,13 +223,24 @@ public class PosSaleService {
                 .orElseThrow(() -> new PosSaleNotFoundException("Venta no encontrada: " + saleId));
     }
 
-    private String generateSaleNumber() {
-        String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String seq = String.format("%06d", saleCounter.getAndIncrement());
+    private void validateRole() {
+        String role = httpRequest.getHeader("X-User-Role");
+        if (role == null || !ALLOWED_ROLES.contains(role.toUpperCase())) {
+            throw new ForbiddenException("No tienes permiso para acceder al módulo POS");
+        }
+    }
+
+    private String generateSaleNumber(UUID storeId) {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        long count = saleRepository.countByStoreIdAndCreatedAtGreaterThanEqual(storeId, startOfDay);
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+        String seq = String.format("%03d", count + 1);
         String candidate = "POS-" + date + "-" + seq;
 
         while (saleRepository.existsBySaleNumber(candidate)) {
-            seq = String.format("%06d", saleCounter.getAndIncrement());
+            count++;
+            seq = String.format("%03d", count + 1);
             candidate = "POS-" + date + "-" + seq;
         }
         return candidate;

@@ -30,6 +30,7 @@ public class PosSaleMapper {
                 .notes(sale.getNotes())
                 .createdAt(sale.getCreatedAt())
                 .updatedAt(sale.getUpdatedAt())
+                .cancelledAt(sale.getCancelledAt())
                 .build();
     }
 

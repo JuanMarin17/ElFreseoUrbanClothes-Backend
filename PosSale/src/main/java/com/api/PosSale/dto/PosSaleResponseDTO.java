@@ -31,4 +31,5 @@ public class PosSaleResponseDTO {
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime cancelledAt;
 }
