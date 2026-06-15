@@ -38,7 +38,7 @@ public class PromotionController {
         return ResponseEntity.ok(promotionService.getActivePromotions());
     }
 
-    @GetMapping("/all")
+    @GetMapping("/getAllPromotions")
     public ResponseEntity<List<PromotionResponseDTO>> getAllPromotions() {
         return ResponseEntity.ok(promotionService.getAllPromotions());
     }

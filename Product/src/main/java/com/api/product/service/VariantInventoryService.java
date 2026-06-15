@@ -80,6 +80,7 @@ public class VariantInventoryService {
         if (variant.getStock() <= variant.getMinStock()) {
             String variantLabel = buildVariantLabel(variant);
             stockAlertService.sendAlert(StockAlertDTO.builder()
+                    .storeId(variant.getProduct().getStoreId())
                     .productId(variant.getProduct().getProductId())
                     .productName(variant.getProduct().getName())
                     .variantId(variant.getVariantId())

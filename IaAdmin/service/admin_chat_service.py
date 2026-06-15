@@ -54,7 +54,8 @@ async def process_admin_chat(
     # Sesión
     if dto.session_id:
         session = db.query(AdminChatSession).filter(
-            AdminChatSession.session_id == dto.session_id
+            AdminChatSession.session_id == dto.session_id,
+            AdminChatSession.store_id  == uuid.UUID(store_id)
         ).first()
         if not session:
             raise ValueError("Sesión no encontrada")
@@ -99,17 +100,23 @@ async def process_admin_chat(
 
     # Llamada a IA
     if dto.image_base64:
-        ai_response = analyze_product_image(
-            dto.image_base64,
-            dto.image_mime_type or "image/jpeg",
-            dto.message
-        )
+        try:
+            ai_response = analyze_product_image(
+                dto.image_base64,
+                dto.image_mime_type or "image/jpeg",
+                dto.message
+            )
+        except RuntimeError as e:
+            return AdminChatResponse(
+                session_id=session.session_id,
+                message=str(e)
+            )
     else:
         ai_response = generate_admin_response(history, context)
 
-    # Guardar respuesta
+    # Guardar respuesta limpia (sin ACTION tags)
     db.add(AdminChatMessage(
-        session_id=session.session_id, role="assistant", content=ai_response
+        session_id=session.session_id, role="assistant", content=_clean_response(ai_response)
     ))
     db.commit()
 
