@@ -148,11 +148,17 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                 .timeout(Duration.ofSeconds(2))
                 .map(response -> true)
                 .onErrorResume(WebClientResponseException.class, e -> {
-                    // Auth responde 404 → sesión cerrada o inexistente
-                    return Mono.just(false);
+                    if (e.getStatusCode().value() == 404) {
+                        // Única señal real de sesión cerrada: Auth dice explícitamente que no existe
+                        log.warn("Session {} closed or not found (404)", sessionId);
+                        return Mono.just(false);
+                    }
+                    // 401, 403, 5xx u otros errores de Auth → fail open
+                    log.error("Auth returned {} for session check, failing open", e.getStatusCode().value());
+                    return Mono.just(true);
                 })
                 .onErrorResume(Exception.class, e -> {
-                    // Auth caído o timeout → fail open para no bloquear todo el sistema
+                    // Timeout o Auth caído → fail open
                     log.error("Auth unreachable for session check (failing open): {}", e.getMessage());
                     return Mono.just(true);
                 });
