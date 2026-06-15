@@ -25,7 +25,7 @@ public class UserSessionService {
     @Value("${security.jwt.token-expiration}")
     private Long tokenExpiration;
 
-    public void saveSession(UUID userId, String ipAddress, String userAgent) {
+    public UUID saveSession(UUID userId, String ipAddress, String userAgent) {
         OffsetDateTime now = OffsetDateTime.now();
 
         UserSession session = new UserSession();
@@ -39,7 +39,7 @@ public class UserSessionService {
         session.setExpiresAt(now.plusSeconds(tokenExpiration / 1000));
         session.setActive(true);
 
-        userSessionRepository.save(session);
+        return userSessionRepository.save(session).getId();
     }
 
     public List<UserSessionResponseDTO> getActiveSessions(UUID userId) {
@@ -47,6 +47,9 @@ public class UserSessionService {
         if (requestingId == null || !UUID.fromString(requestingId).equals(userId)) {
             throw new RuntimeException("No tienes permiso para ver estas sesiones");
         }
+
+        String currentSessionIdHeader = RequestContext.getHeader("X-Session-Id");
+        UUID currentSessionId = currentSessionIdHeader != null ? UUID.fromString(currentSessionIdHeader) : null;
 
         return userSessionRepository.findByUserIdAndActiveTrue(userId)
                 .stream()
@@ -60,8 +63,18 @@ public class UserSessionService {
                         .lastSeenAt(s.getLastSeenAt())
                         .expiresAt(s.getExpiresAt())
                         .active(s.isActive())
+                        .current(s.getId().equals(currentSessionId))
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    public void deactivateAllSessions() {
+        String requestingId = RequestContext.getHeader("X-User-Id");
+        if (requestingId == null) {
+            throw new UserNotFoundException("Usuario no autenticado");
+        }
+        UUID userId = UUID.fromString(requestingId);
+        userSessionRepository.deactivateAllByUserId(userId);
     }
 
     public void deactivateSession(UUID sessionId) {

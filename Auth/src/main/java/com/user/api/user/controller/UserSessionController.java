@@ -29,4 +29,10 @@ public class UserSessionController {
         userSessionService.deactivateSession(sessionId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deactivateAllSessions() {
+        userSessionService.deactivateAllSessions();
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
 }
