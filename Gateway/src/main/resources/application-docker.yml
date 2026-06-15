@@ -1,4 +1,4 @@
-# Perfil activo cuando se corre con Docker Compose.
+﻿# Perfil activo cuando se corre con Docker Compose.
 # Reemplaza todos los "localhost" del application.yaml por los nombres de servicio de Docker.
 spring:
   codec:
@@ -55,6 +55,13 @@ spring:
               /api/v1/cloudinary/**
 
         # ── Product ───────────────────────────────────────────────────────────
+        # u{2500}u{2500} Catu{00E1}logo global (pu{00FA}blico u{2014} sin JWT) u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}
+        - id: catalog-global-public
+          uri: http://product-service:8084
+          predicates:
+            - Path=/api/v1/products/all/active
+            - Method=GET
+
         - id: product-routes
           uri: http://product-service:8084
           predicates:
