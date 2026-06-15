@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import com.user.api.user.dto.JwtResponseDTO;
 import com.user.api.user.dto.LoginRequestDTO;
 import com.user.api.user.dto.MessageResponseDTO;
@@ -45,9 +47,12 @@ public class AuthController {
 
     @PostMapping("/registerSecondStep")
     public ResponseEntity<JwtResponseDTO> registerSecondStep(
-            @Valid @RequestBody ValidationCodeDTO verificationCodeDTO) {
+            @Valid @RequestBody ValidationCodeDTO verificationCodeDTO,
+            HttpServletRequest request) {
 
-        JwtResponseDTO response = authService.registerSecondStep(verificationCodeDTO);
+        String ip = resolveIp(request);
+        String userAgent = request.getHeader("User-Agent");
+        JwtResponseDTO response = authService.registerSecondStep(verificationCodeDTO, ip, userAgent);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
 
     }
@@ -69,9 +74,13 @@ public class AuthController {
     }
 
     @PostMapping("/loginSecondStep")
-    public ResponseEntity<JwtResponseDTO> loginSecondStep(@Valid @RequestBody ValidationCodeDTO validationCodeDTO) {
+    public ResponseEntity<JwtResponseDTO> loginSecondStep(
+            @Valid @RequestBody ValidationCodeDTO validationCodeDTO,
+            HttpServletRequest request) {
 
-        JwtResponseDTO responseDTO = authService.loginSecondStep(validationCodeDTO);
+        String ip = resolveIp(request);
+        String userAgent = request.getHeader("User-Agent");
+        JwtResponseDTO responseDTO = authService.loginSecondStep(validationCodeDTO, ip, userAgent);
         return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
 
     }
@@ -107,5 +116,13 @@ public class AuthController {
     public ResponseEntity<JwtResponseDTO> refreshToken(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.replace("Bearer ", "");
         return ResponseEntity.status(HttpStatus.OK).body(authService.refreshToken(token));
+    }
+
+    private String resolveIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

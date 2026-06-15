@@ -70,12 +70,13 @@ public class OrderController {
 
     /** Cancelar una orden (solo PENDING o CONFIRMED) */
     @DeleteMapping("/{orderId}")
-    public ResponseEntity<OrderResponseDTO> cancelOrder(
+    public ResponseEntity<Void> cancelOrder(
             @PathVariable UUID storeId,
             @PathVariable UUID orderId) {
 
         UUID userId = headerUtil.requireUserId();
-        return ResponseEntity.ok(orderService.cancelOrder(orderId, userId));
+        orderService.cancelOrder(orderId, userId);
+        return ResponseEntity.noContent().build();
     }
 
     // ─── Endpoints de administración ───────────────────────────────────────────

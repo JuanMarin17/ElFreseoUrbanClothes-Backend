@@ -3,6 +3,7 @@ package com.api.PosSale.controller;
 import com.api.PosSale.dto.CreatePosSaleRequestDTO;
 import com.api.PosSale.dto.DailySummaryResponseDTO;
 import com.api.PosSale.dto.PosSaleResponseDTO;
+import com.api.PosSale.enums.PosSaleStatus;
 import com.api.PosSale.service.PosSaleService;
 import com.api.PosSale.util.HeaderUtil;
 import jakarta.validation.Valid;
@@ -44,8 +45,12 @@ public class PosSaleController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PosSaleResponseDTO>> listSales(@PathVariable UUID storeId) {
-        return ResponseEntity.ok(saleService.getSalesByStore(storeId));
+    public ResponseEntity<List<PosSaleResponseDTO>> listSales(
+            @PathVariable UUID storeId,
+            @RequestParam(required = false) PosSaleStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(saleService.getSalesByStore(storeId, status, page, size));
     }
 
     @GetMapping("/daily")
