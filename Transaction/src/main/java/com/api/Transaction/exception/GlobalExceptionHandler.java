@@ -31,6 +31,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, e.getMessage(), null);
     }
 
+    @ExceptionHandler(SubscriptionNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleSubscriptionNotFound(SubscriptionNotFoundException e) {
+        return buildResponse(HttpStatus.NOT_FOUND, e.getMessage(), null);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception e) {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,

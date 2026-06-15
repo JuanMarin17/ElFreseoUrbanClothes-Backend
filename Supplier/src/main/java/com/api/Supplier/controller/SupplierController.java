@@ -3,6 +3,8 @@ package com.api.Supplier.controller;
 import java.util.List;
 import java.util.UUID;
 
+import com.api.Supplier.dto.ProductSummaryDTO;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -62,5 +64,26 @@ public class SupplierController {
     @DeleteMapping("/{supplierId}")
     public ResponseEntity<MessageResponseDTO> deactivateSupplier(@PathVariable UUID supplierId) {
         return ResponseEntity.ok(supplierService.deactivateSupplier(supplierId));
+    }
+
+    // ── Productos vinculados al proveedor ────────────────────────────────────
+
+    @PostMapping("/{supplierId}/products/{productId}")
+    public ResponseEntity<MessageResponseDTO> linkProduct(
+            @PathVariable UUID supplierId,
+            @PathVariable UUID productId) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(supplierService.linkProductToSupplier(supplierId, productId));
+    }
+
+    @DeleteMapping("/{supplierId}/products/{productId}")
+    public ResponseEntity<MessageResponseDTO> unlinkProduct(
+            @PathVariable UUID supplierId,
+            @PathVariable UUID productId) {
+        return ResponseEntity.ok(supplierService.unlinkProductFromSupplier(supplierId, productId));
+    }
+
+    @GetMapping("/{supplierId}/products")
+    public ResponseEntity<List<ProductSummaryDTO>> getProductsBySupplier(@PathVariable UUID supplierId) {
+        return ResponseEntity.ok(supplierService.getProductsBySupplier(supplierId));
     }
 }

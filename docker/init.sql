@@ -23,3 +23,4 @@ CREATE DATABASE payments;
 CREATE DATABASE customer;
 CREATE DATABASE pos_sale;
 CREATE DATABASE transaction;
+CREATE DATABASE ia_store_builder;

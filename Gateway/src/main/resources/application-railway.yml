@@ -75,7 +75,7 @@ spring:
         - id: stock-alert-routes
           uri: http://product-service.railway.internal:8084
           predicates:
-            - Path=/api/v1/alerts/stock/stream
+            - Path=/api/v1/alerts/stock/stream/**
 
         # ── Variantes ─────────────────────────────────────────────────────────
         - id: variant-routes
@@ -223,6 +223,14 @@ spring:
           uri: http://ia-admin-service.railway.internal:8102
           predicates:
             - Path=/api/v1/ia/admin/**
+          filters:
+            - JwtValidationFilter
+
+        # ── IA Store Builder ──────────────────────────────────────────────────
+        - id: ia-builder-routes
+          uri: http://ia-store-builder-service.railway.internal:8113
+          predicates:
+            - Path=/api/v1/ia/builder/**
           filters:
             - JwtValidationFilter
 

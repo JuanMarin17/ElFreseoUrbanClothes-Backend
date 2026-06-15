@@ -16,6 +16,7 @@ import com.api.Promotion.entity.CouponRedemption;
 import com.api.Promotion.exception.BadRequestException;
 import com.api.Promotion.exception.PromotionNotFoundException;
 import com.api.Promotion.exception.UnauthorizedException;
+import com.api.Promotion.client.StoreClient;
 import com.api.Promotion.repository.CouponRedemptionRepository;
 import com.api.Promotion.repository.CouponRepository;
 import com.common_request_context_starter.context.RequestContext;
@@ -28,6 +29,7 @@ public class CouponService {
 
     private final CouponRepository couponRepository;
     private final CouponRedemptionRepository redemptionRepository;
+    private final StoreClient storeClient;
 
     // ── Crear cupón ───────────────────────────────────────────────────────────
     public CouponResponseDTO createCoupon(CouponRequestDTO dto) {
@@ -191,9 +193,26 @@ public class CouponService {
     }
 
     private void validateAdminOrOwner() {
-        String role = RequestContext.getHeader("X-User-Role");
-        if (!"ADMIN".equals(role) && !"OWNER".equals(role))
-            throw new UnauthorizedException("Solo el ADMIN u OWNER pueden realizar esta acción");
+        // Platform ADMIN siempre tiene acceso
+        String platformRole = RequestContext.getHeader("X-User-Role");
+        if ("ADMIN".equals(platformRole)) return;
+
+        // Para roles de tienda (OWNER, ADMIN) se consulta el Store service
+        String userIdStr = RequestContext.getHeader("X-User-Id");
+        if (userIdStr == null || userIdStr.isBlank())
+            throw new UnauthorizedException("No se pudo identificar al usuario");
+
+        UUID storeId = getStoreIdFromHeader();
+        UUID userId;
+        try {
+            userId = UUID.fromString(userIdStr);
+        } catch (IllegalArgumentException e) {
+            throw new UnauthorizedException("Formato de usuario inválido");
+        }
+
+        String storeRole = storeClient.getUserStoreRole(storeId, userId);
+        if (!"OWNER".equals(storeRole) && !"ADMIN".equals(storeRole))
+            throw new UnauthorizedException("Solo el OWNER o ADMIN de la tienda pueden realizar esta acción");
     }
 
     // ── Mappers ───────────────────────────────────────────────────────────────

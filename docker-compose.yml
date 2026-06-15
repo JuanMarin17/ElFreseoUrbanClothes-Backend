@@ -30,7 +30,7 @@ services:
     command: postgres -c max_connections=300   # 15 servicios x 5 pool = 75, con margen
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: root
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -59,15 +59,15 @@ services:
       # SPRING_DATASOURCE_URL sobreescribe spring.datasource.url del application.yaml
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/auth   # por si el YAML usa ${DB_URL}
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       USERS_SERVICE_URL: http://users-service:8083/api/v1
-      JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
-      MAIL_USERNAME: vexiomultistore@gmail.com
-      MAIL_PASSWORD: "fqqq kpuc qniw pwkb"
+      JWT_SECRET: ${JWT_SECRET}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy   # Espera que Postgres pase el healthcheck
@@ -92,10 +92,10 @@ services:
       SERVER_PORT: 8083
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/users
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/users
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       AUTH_SERVICE_URL: http://auth-service:8082/api/v1
       USERS_SERVICE_URL: http://auth-service:8082/api/v1
@@ -130,13 +130,13 @@ services:
       SERVER_PORT: 8081
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/store
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/store
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       USERS_SERVICE_URL: http://users-service:8083/api/v1
-      JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+      JWT_SECRET: ${JWT_SECRET}
       NAME_CLOUD: ${NAME_CLOUD}
       KEY_CLOUD: ${KEY_CLOUD}
       SECRET_CLOUD: ${SECRET_CLOUD}
@@ -167,10 +167,10 @@ services:
       SERVER_PORT: 8084
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/product
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/product
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       STORE_SERVICE_URL: http://store-service:8081/api/v1
       NAME_CLOUD: ${NAME_CLOUD}
@@ -201,12 +201,12 @@ services:
       SERVER_PORT: 8086
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cart
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/cart
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
-      JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+      JWT_SECRET: ${JWT_SECRET}
       STORE_SERVICE_URL: http://store-service:8081/api/v1
       PRODUCT_SERVICE_URL: http://product-service:8084/api/v1
     depends_on:
@@ -237,10 +237,10 @@ services:
       SERVER_PORT: 8085
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/supplier
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/supplier
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
     depends_on:
       postgres:
@@ -266,13 +266,13 @@ services:
       SERVER_PORT: 8088
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/support
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/support
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
-      MAIL_USERNAME: vexiomultistore@gmail.com
-      MAIL_PASSWORD: "fqqq kpuc qniw pwkb"
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -297,13 +297,19 @@ services:
       SERVER_PORT: 8091
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/promotion
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/promotion
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
+      STORE_SERVICE_URL: http://store-service:8081/api/v1
+      PRODUCT_SERVICE_URL: http://product-service:8084/api/v1
     depends_on:
       postgres:
+        condition: service_healthy
+      store-service:
+        condition: service_healthy
+      product-service:
         condition: service_healthy
     networks:
       - vexio-net
@@ -326,10 +332,10 @@ services:
       SERVER_PORT: 8093
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/loyalty
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/loyalty
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
     depends_on:
       postgres:
@@ -355,10 +361,10 @@ services:
       SERVER_PORT: 8094
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/preferences
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/preferences
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
     depends_on:
       postgres:
@@ -384,10 +390,10 @@ services:
       SERVER_PORT: 8095
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/reviews
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/reviews
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
     depends_on:
       postgres:
@@ -413,10 +419,10 @@ services:
       SERVER_PORT: 8101
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cms
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/cms
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       PREFERENCES_SERVICE_URL: http://preferences-service:8094
@@ -492,7 +498,7 @@ services:
     ports:
       - "127.0.0.1:8099:8099"
     environment:
-      DATABASE_URL: postgresql://postgres:root@postgres:5432/ia_user
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/ia_user
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GROQ_API_KEY: ${GROQ_API_KEY}
       PRODUCT_SERVICE_URL: http://product-service:8084
@@ -539,7 +545,7 @@ services:
     ports:
       - "127.0.0.1:8102:8102"
     environment:
-      DATABASE_URL: postgresql://postgres:root@postgres:5432/ia_admin
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/ia_admin
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GROQ_API_KEY: ${GROQ_API_KEY}
       STORE_SERVICE_URL: http://store-service:8081
@@ -587,7 +593,7 @@ services:
       SERVER_PORT: 8098
       DB_URL: jdbc:postgresql://postgres:5432/payments
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
       MP_CLIENT_ID: ${MP_CLIENT_ID}
       MP_CLIENT_SECRET: ${MP_CLIENT_SECRET}
@@ -624,10 +630,10 @@ services:
       SERVER_PORT: 8089
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inventory
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/inventory
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       PRODUCT_SERVICE_URL: http://product-service:8084
     depends_on:
@@ -656,10 +662,10 @@ services:
       SERVER_PORT: 8087
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_payment
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/order_payment
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       CART_SERVICE_URL: http://cart-service:8086/api/v1
     depends_on:
@@ -688,10 +694,10 @@ services:
       SERVER_PORT: 8092
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/returns
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/returns
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       ORDER_SERVICE_URL: http://order-payment-service:8087/api/v1
     depends_on:
@@ -720,10 +726,10 @@ services:
       SERVER_PORT: 8104
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/customer
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/customer
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
     depends_on:
       postgres:
@@ -749,10 +755,10 @@ services:
       SERVER_PORT: 8105
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pos_sale
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/pos_sale
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       INVENTORY_SERVICE_URL: http://inventory-service:8089/api/v1
     depends_on:
@@ -781,10 +787,10 @@ services:
       SERVER_PORT: 8103
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/transaction
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       DB_URL: jdbc:postgresql://postgres:5432/transaction
       DB_USER: postgres
-      DB_PASSWORD: root
+      DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
       MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
       MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
@@ -802,6 +808,32 @@ services:
       retries: 12
       start_period: 90s
 
+  ia-store-builder-service:
+    build:
+      context: ./IaStoreBuilder
+    container_name: ia-store-builder-service
+    ports:
+      - "127.0.0.1:8113:8113"
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@postgres:5432/ia_store_builder
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      STORE_SERVICE_URL: http://store-service:8081
+    depends_on:
+      postgres:
+        condition: service_healthy
+      store-service:
+        condition: service_healthy
+    networks:
+      - vexio-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8113/docs')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
   # ── GATEWAY (último en levantar) ─────────────────────────────────────────────
   # El Gateway enruta todas las peticiones externas a los microservicios.
   # SPRING_PROFILES_ACTIVE=docker activa application-docker.yml, que reemplaza
@@ -815,7 +847,7 @@ services:
       - "8080:8080"   # Único puerto expuesto al exterior; todo pasa por aquí
     environment:
       SERVER_PORT: 8080
-      JWT_SECRET: Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=
+      JWT_SECRET: ${JWT_SECRET}
       SPRING_PROFILES_ACTIVE: docker
     depends_on:
       auth-service:
@@ -861,6 +893,8 @@ services:
       pos-sale-service:
         condition: service_healthy
       transaction-service:
+        condition: service_healthy
+      ia-store-builder-service:
         condition: service_healthy
     networks:
       - vexio-net

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from models.database import get_db, AdminChatMessage, AdminChatSession
 from schemas.admin_schemas import (
@@ -8,9 +9,17 @@ from schemas.admin_schemas import (
 from service.admin_chat_service import process_admin_chat
 from service.ai_service import analyze_product_image
 from service.image_processor import enhance_image
+from service.image_generator import generate_image
 from service.client import store_client
-from typing import List
+from pydantic import BaseModel
+from typing import Optional, List
 from uuid import UUID
+import base64
+
+
+class ImageGenerateRequest(BaseModel):
+    prompt: str
+    aspect_ratio: Optional[str] = "1:1"
 
 router = APIRouter(prefix="/api/v1/ia/admin", tags=["IA Admin"])
 
@@ -64,11 +73,13 @@ async def admin_chat(
 @router.get("/sessions", response_model=List[UUID])
 async def get_sessions(
     admin_id: str = Depends(get_admin_id),
+    store_id: str = Depends(get_store_id),
     db: Session   = Depends(get_db)
 ):
-    """Lista sesiones del admin ordenadas por más reciente."""
+    """Lista sesiones del admin para la tienda actual, ordenadas por más reciente."""
     sessions = db.query(AdminChatSession).filter(
-        AdminChatSession.admin_id == UUID(admin_id)
+        AdminChatSession.admin_id == UUID(admin_id),
+        AdminChatSession.store_id == UUID(store_id)
     ).order_by(AdminChatSession.created_at.desc()).all()
     return [s.session_id for s in sessions]
 
@@ -76,9 +87,19 @@ async def get_sessions(
 @router.get("/sessions/{session_id}/history", response_model=List[ChatMessageResponse])
 async def get_history(
     session_id: UUID,
-    db: Session = Depends(get_db)
+    admin_id: str = Depends(get_admin_id),
+    store_id: str = Depends(get_store_id),
+    db: Session   = Depends(get_db)
 ):
-    """Historial de mensajes de una sesión."""
+    """Historial de mensajes de una sesión, validando que pertenezca a la tienda actual."""
+    session = db.query(AdminChatSession).filter(
+        AdminChatSession.session_id == session_id,
+        AdminChatSession.admin_id  == UUID(admin_id),
+        AdminChatSession.store_id  == UUID(store_id)
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
     messages = db.query(AdminChatMessage).filter(
         AdminChatMessage.session_id == session_id
     ).order_by(AdminChatMessage.created_at.asc()).all()
@@ -127,3 +148,23 @@ async def analyze_image(
     return await _process_admin_action(
         session.session_id, ai_response, dummy_dto, admin_id, store_id, ""
     )
+
+
+# ─── Generación de imágenes ───────────────────────────────────────────────────
+
+@router.post("/generate-image")
+async def generate_product_image(
+    dto: ImageGenerateRequest,
+    admin_id: str = Depends(get_admin_id),
+    store_id: str = Depends(get_store_id)
+):
+    """
+    Genera una imagen de producto usando Imagen 3 de Google.
+    aspect_ratio: "1:1" | "4:3" | "16:9" | "9:16"
+    Devuelve la imagen en base64.
+    """
+    image_bytes = generate_image(dto.prompt, dto.aspect_ratio)
+    return JSONResponse({
+        "image_base64": base64.b64encode(image_bytes).decode("utf-8"),
+        "mime_type": "image/png"
+    })
