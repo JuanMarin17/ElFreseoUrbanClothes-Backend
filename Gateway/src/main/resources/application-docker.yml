@@ -1,4 +1,4 @@
-﻿# Perfil activo cuando se corre con Docker Compose.
+# Perfil activo cuando se corre con Docker Compose.
 # Reemplaza todos los "localhost" del application.yaml por los nombres de servicio de Docker.
 spring:
   codec:
@@ -21,23 +21,25 @@ spring:
               /api/v1/auth/deactivateAccount,
               /api/v1/auth/refresh-token
 
-        # ── Cart (antes de store-routes para mayor especificidad) ─────────────
+        # ── Auth sessions (requiere JWT) ──────────────────────────────────────
+        - id: auth-session-routes
+          uri: http://auth-service:8082
+          predicates:
+            - Path=/api/v1/auth/sessions/**
+
+        # ── Cart ───────────────────────────────────────────────────────────────
         - id: cart-routes
           uri: http://cart-service:8086
           predicates:
             - Path=/api/v1/stores/*/cart,
               /api/v1/stores/*/cart/**
-          filters:
-            - JwtValidationFilter
 
-        # ── Orders (antes de store-routes para mayor especificidad) ──────────
+        # ── Orders ────────────────────────────────────────────────────────────
         - id: order-routes
           uri: http://order-payment-service:8087
           predicates:
             - Path=/api/v1/stores/*/orders,
               /api/v1/stores/*/orders/**
-          filters:
-            - JwtValidationFilter
 
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
@@ -46,7 +48,7 @@ spring:
             - Path=/api/v1/stores,
               /api/v1/stores/**
 
-        # ── Media service (público — Cloudinary controla el abuso) ──────────
+        # ── Media service (público) ───────────────────────────────────────────
         - id: media-routes
           uri: http://media-service:8096
           predicates:
@@ -54,28 +56,25 @@ spring:
               /api/v1/upload/**,
               /api/v1/cloudinary/**
 
-        # ── Product ───────────────────────────────────────────────────────────
-        # u{2500}u{2500} Catu{00E1}logo global (pu{00FA}blico u{2014} sin JWT) u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}
+        # ── Catálogo global (público) ─────────────────────────────────────────
         - id: catalog-global-public
           uri: http://product-service:8084
           predicates:
             - Path=/api/v1/products/all/active
-            - Method=GET
 
+        # ── Product ───────────────────────────────────────────────────────────
         - id: product-routes
           uri: http://product-service:8084
           predicates:
             - Path=/api/v1/products/**,
               /api/v1/categories/**,
               /api/v1/brands/**
-          filters:
-            - JwtValidationFilter
 
-        # ── Alertas de stock SSE (sin JWT para que el frontend pueda conectarse)
+        # ── Alertas de stock SSE (público) ───────────────────────────────────
         - id: stock-alert-routes
           uri: http://product-service:8084
           predicates:
-            - Path=/api/v1/alerts/stock/stream/**
+            - Path=/api/v1/alerts/stock/stream
 
         # ── Variantes ─────────────────────────────────────────────────────────
         - id: variant-routes
@@ -83,10 +82,8 @@ spring:
           predicates:
             - Path=/api/v1/variants,
               /api/v1/variants/**
-          filters:
-            - JwtValidationFilter
 
-        # ── Usuarios público (sin JWT) ────────────────────────────────────────
+        # ── Usuarios público ──────────────────────────────────────────────────
         - id: users-public-routes
           uri: http://users-service:8083
           predicates:
@@ -101,25 +98,20 @@ spring:
           predicates:
             - Path=/api/v1/users/me,
               /api/v1/users/update,
-              /api/v1/users/profile-image
-          filters:
-            - JwtValidationFilter
+              /api/v1/users/profile-image,
+              /api/v1/users/admin/**
 
         # ── Supplier ──────────────────────────────────────────────────────────
         - id: supplier-routes
           uri: http://supplier-service:8085
           predicates:
             - Path=/api/v1/suppliers/**
-          filters:
-            - JwtValidationFilter
 
         # ── Support ───────────────────────────────────────────────────────────
         - id: support-routes
           uri: http://support-service:8088
           predicates:
             - Path=/api/v1/support/**
-          filters:
-            - JwtValidationFilter
 
         # ── Preferences ───────────────────────────────────────────────────────
         - id: preferences-routes
@@ -127,8 +119,6 @@ spring:
           predicates:
             - Path=/api/v1/wishlist/**,
               /api/v1/preferences/**
-          filters:
-            - JwtValidationFilter
 
         # ── Inventory ─────────────────────────────────────────────────────────
         - id: inventory-routes
@@ -136,8 +126,6 @@ spring:
           predicates:
             - Path=/api/v1/inventory/**,
               /api/v1/locations/**
-          filters:
-            - JwtValidationFilter
 
         # ── Promotion ─────────────────────────────────────────────────────────
         - id: promotion-routes
@@ -145,94 +133,80 @@ spring:
           predicates:
             - Path=/api/v1/promotions/**,
               /api/v1/coupons/**
-          filters:
-            - JwtValidationFilter
 
         # ── Returns ───────────────────────────────────────────────────────────
         - id: returns-routes
           uri: http://returns-service:8092
           predicates:
             - Path=/api/v1/returns/**
-          filters:
-            - JwtValidationFilter
 
         # ── Reports ───────────────────────────────────────────────────────────
         - id: reports-routes
           uri: http://reports-service:8100
           predicates:
             - Path=/api/v1/reports/**
-          filters:
-            - JwtValidationFilter
 
-        # ── Payment OAuth (callback público, MP no manda JWT) ─────────────────
+        # ── Payment OAuth (público) ───────────────────────────────────────────
         - id: payment-oauth-public-routes
           uri: http://payment-service:8098
           predicates:
             - Path=/api/v1/oauth/callback,
               /api/v1/payments/webhook
 
-        # ── Payment (protegido) ───────────────────────────────────────────────
+        # ── Payment ───────────────────────────────────────────────────────────
         - id: payment-routes
           uri: http://payment-service:8098
           predicates:
             - Path=/api/v1/payments/**,
               /api/v1/oauth/**
-          filters:
-            - JwtValidationFilter
 
-        # ── LoyalCustomer (internas entre microservicios, sin JWT) ────────────
+        # ── LoyalCustomer (internas) ──────────────────────────────────────────
         - id: loyalty-internal-routes
           uri: http://loyal-customer-service:8093
           predicates:
             - Path=/api/v1/loyalty/internal/**
 
-        # ── LoyalCustomer (protegidas) ────────────────────────────────────────
+        # ── LoyalCustomer ─────────────────────────────────────────────────────
         - id: loyalty-routes
           uri: http://loyal-customer-service:8093
           predicates:
             - Path=/api/v1/loyalty/**
-          filters:
-            - JwtValidationFilter
+
+        # ── Community Reviews (público GET /reviews) ──────────────────────────
+        - id: community-reviews-public
+          uri: http://reviews-service:8095
+          predicates:
+            - Path=/api/v1/reviews
 
         # ── Reviews ───────────────────────────────────────────────────────────
         - id: reviews-routes
           uri: http://reviews-service:8095
           predicates:
             - Path=/api/v1/reviews/**
-          filters:
-            - JwtValidationFilter
 
         # ── CMS ───────────────────────────────────────────────────────────────
         - id: cms-routes
           uri: http://cms-service:8101
           predicates:
             - Path=/api/v1/cms/**
-          filters:
-            - JwtValidationFilter
 
         # ── IA User ───────────────────────────────────────────────────────────
         - id: ia-user-routes
           uri: http://ia-user-service:8099
           predicates:
             - Path=/api/v1/ia/user/**
-          filters:
-            - JwtValidationFilter
 
         # ── IA Admin ──────────────────────────────────────────────────────────
         - id: ia-admin-routes
           uri: http://ia-admin-service:8102
           predicates:
             - Path=/api/v1/ia/admin/**
-          filters:
-            - JwtValidationFilter
 
         # ── IA Store Builder ──────────────────────────────────────────────────
         - id: ia-builder-routes
           uri: http://ia-store-builder-service:8113
           predicates:
             - Path=/api/v1/ia/builder/**
-          filters:
-            - JwtValidationFilter
 
         # ── Transaction / Billing (público para ver planes) ───────────────────
         - id: transaction-plans-public
@@ -243,34 +217,20 @@ spring:
               /api/v1/transactions/limits/**,
               /api/v1/transactions/webhook
 
-        # ── Transaction / Billing (protegido) ────────────────────────────────
+        # ── Transaction / Billing ─────────────────────────────────────────────
         - id: transaction-routes
           uri: http://transaction-service:8103
           predicates:
             - Path=/api/v1/transactions/**
-          filters:
-            - JwtValidationFilter
 
         # ── Customer (gestión de clientes por tienda) ─────────────────────────
         - id: customer-routes
           uri: http://customer-service:8104
           predicates:
             - Path=/api/v1/stores/*/customers/**
-          filters:
-            - JwtValidationFilter
 
         # ── POS Sale (ventas en punto de venta) ───────────────────────────────
-        # u{2500}u{2500} Sesiones de usuario (requiere JWT) u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}
-        - id: auth-session-routes
-          uri: http://auth-service:8082
-          predicates:
-            - Path=/api/v1/auth/sessions/**
-          filters:
-            - JwtValidationFilter
-
         - id: pos-sale-routes
           uri: http://pos-sale-service:8105
           predicates:
             - Path=/api/v1/stores/*/pos/**
-          filters:
-            - JwtValidationFilter

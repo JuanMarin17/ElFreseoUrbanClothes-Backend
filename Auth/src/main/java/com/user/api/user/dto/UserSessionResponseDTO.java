@@ -18,4 +18,5 @@ public class UserSessionResponseDTO {
     private OffsetDateTime lastSeenAt;
     private OffsetDateTime expiresAt;
     private boolean active;
+    private boolean current;
 }
