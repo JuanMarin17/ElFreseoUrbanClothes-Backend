@@ -109,6 +109,8 @@ public class OrderService {
                 .discount(totalDiscount)
                 .total(finalTotal)
                 .shippingAddress(dto.getShippingAddress())
+                .paymentMethod(dto.getPaymentMethod())
+                .shippingCost(dto.getShippingCost())
                 .notes(dto.getNotes())
                 .build();
 

@@ -1,4 +1,4 @@
-# Perfil activo en Railway. Usa la red privada interna de Railway (.railway.internal).
+﻿# Perfil activo en Railway. Usa la red privada interna de Railway (.railway.internal).
 # Activar con: SPRING_PROFILES_ACTIVE=railway
 spring:
   codec:
@@ -55,6 +55,13 @@ spring:
               /api/v1/cloudinary/**
 
         # ── Product ───────────────────────────────────────────────────────────
+        # u{2500}u{2500} Catu{00E1}logo global (pu{00FA}blico u{2014} sin JWT) u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}
+        - id: catalog-global-public
+          uri: http://product-service.railway.internal:8084
+          predicates:
+            - Path=/api/v1/products/all/active
+            - Method=GET
+
         - id: product-routes
           uri: http://product-service.railway.internal:8084
           predicates:
@@ -253,6 +260,14 @@ spring:
             - JwtValidationFilter
 
         # ── POS Sale (ventas en punto de venta) ───────────────────────────────
+        # u{2500}u{2500} Sesiones de usuario (requiere JWT) u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}
+        - id: auth-session-routes
+          uri: http://auth-service.railway.internal:8082
+          predicates:
+            - Path=/api/v1/auth/sessions/**
+          filters:
+            - JwtValidationFilter
+
         - id: pos-sale-routes
           uri: http://pos-sale-service.railway.internal:8105
           predicates:

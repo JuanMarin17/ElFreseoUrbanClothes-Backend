@@ -62,12 +62,13 @@ public class CartController {
 
     /** Eliminar un ítem del carrito */
     @DeleteMapping("/items/{cartItemId}")
-    public ResponseEntity<CartResponseDTO> removeItem(
+    public ResponseEntity<Void> removeItem(
             @PathVariable UUID storeId,
             @PathVariable UUID cartItemId) {
 
         UUID userId = requireUserId();
-        return ResponseEntity.ok(cartService.removeItem(storeId, userId, cartItemId));
+        cartService.removeItem(storeId, userId, cartItemId);
+        return ResponseEntity.noContent().build();
     }
 
     /** Vaciar y eliminar el carrito completo */

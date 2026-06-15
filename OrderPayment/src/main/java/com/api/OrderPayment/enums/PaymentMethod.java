@@ -5,5 +5,8 @@ public enum PaymentMethod {
     DEBIT_CARD,
     TRANSFER,
     CASH_ON_DELIVERY,
-    DIGITAL_WALLET
+    DIGITAL_WALLET,
+    PSE,
+    EFECTY,
+    CONTRA_ENTREGA
 }

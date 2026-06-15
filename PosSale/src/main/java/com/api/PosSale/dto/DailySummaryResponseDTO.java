@@ -15,4 +15,5 @@ public class DailySummaryResponseDTO {
     private long cancelledSales;
     private BigDecimal totalRevenue;
     private BigDecimal totalDiscount;
+    private BigDecimal averageSale;
 }
