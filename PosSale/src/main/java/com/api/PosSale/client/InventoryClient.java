@@ -24,6 +24,14 @@ public class InventoryClient {
      * El servicio de Inventory usa el header X-Store-Id y X-User-Id para el contexto.
      */
     public void registerOutMovement(UUID storeId, UUID variantId, int quantity) {
+        sendMovement(storeId, variantId, quantity, "OUT");
+    }
+
+    public void registerInMovement(UUID storeId, UUID variantId, int quantity) {
+        sendMovement(storeId, variantId, quantity, "IN");
+    }
+
+    private void sendMovement(UUID storeId, UUID variantId, int quantity, String type) {
         try {
             webClient.post()
                     .uri(baseUrl + "/inventory/movements")
@@ -31,15 +39,15 @@ public class InventoryClient {
                     .bodyValue(Map.of(
                             "variantId", variantId.toString(),
                             "quantity", quantity,
-                            "movementType", "OUT"
+                            "movementType", type
                     ))
                     .retrieve()
                     .toBodilessEntity()
                     .block();
 
-            log.info("Movimiento OUT registrado: variantId={}, qty={}", variantId, quantity);
+            log.info("Movimiento {} registrado: variantId={}, qty={}", type, variantId, quantity);
         } catch (Exception e) {
-            log.warn("No se pudo registrar movimiento de inventario para variantId={}: {}", variantId, e.getMessage());
+            log.warn("No se pudo registrar movimiento {} para variantId={}: {}", type, variantId, e.getMessage());
         }
     }
 }
