@@ -147,7 +147,6 @@
           predicates:
             - Path=/api/v1/promotions/getActivePromotions,
               /api/v1/coupons/getActiveCoupons
-            - Method=GET
 
         # ── Promotion ─────────────────────────────────────────────────────────
         - id: promotion-routes

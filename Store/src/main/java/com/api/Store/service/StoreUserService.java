@@ -126,7 +126,7 @@ public class StoreUserService {
     public StoreRole getUserRole(UUID userId, UUID storeId) {
         return storeUserRepository.findByIdUserIdAndIdStoreId(userId, storeId)
                 .map(StoreUser::getRole)
-                .orElseThrow(() -> new RuntimeException("El usuario no pertenece a esta tienda"));
+                .orElse(null);
     }
 
     // ── Mapper ───────────────────────────────────────────────────────────────
