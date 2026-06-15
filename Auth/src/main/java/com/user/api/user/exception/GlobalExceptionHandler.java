@@ -36,6 +36,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), null);
     }
 
+    // Credenciales incorrectas status 401
+    @ExceptionHandler(IncorrectCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleIncorrectCredentials(IncorrectCredentialsException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), null);
+    }
+
     // OTP inválido o expirado status 401
     @ExceptionHandler(InvalidOtpException.class)
     public ResponseEntity<Map<String, Object>> handleInvalidOtp(InvalidOtpException ex) {
