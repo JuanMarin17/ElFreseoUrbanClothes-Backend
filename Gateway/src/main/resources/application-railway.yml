@@ -1,4 +1,8 @@
-﻿# Perfil activo en Railway. Usa la red privada interna de Railway (.railway.internal).
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:http://auth-service:8082/api/v1}
+
+# Perfil activo en Railway. Usa la red privada interna de Railway (.railway.internal).
 # Activar con: SPRING_PROFILES_ACTIVE=railway
 spring:
   codec:

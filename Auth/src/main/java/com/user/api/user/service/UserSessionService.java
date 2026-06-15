@@ -77,6 +77,12 @@ public class UserSessionService {
         userSessionRepository.deactivateAllByUserId(userId);
     }
 
+    public boolean isSessionActive(UUID sessionId) {
+        return userSessionRepository.findById(sessionId)
+                .map(UserSession::isActive)
+                .orElse(false);
+    }
+
     public void deactivateSession(UUID sessionId) {
         String requestingId = RequestContext.getHeader("X-User-Id");
         if (requestingId == null) {
