@@ -139,9 +139,26 @@ public class PromotionService {
     }
 
     private void validateAdminOrOwner() {
-        String role = RequestContext.getHeader("X-User-Role");
-        if (!"ADMIN".equals(role) && !"OWNER".equals(role))
-            throw new UnauthorizedException("Solo el ADMIN u OWNER pueden realizar esta acción");
+        // Platform ADMIN siempre tiene acceso
+        String platformRole = RequestContext.getHeader("X-User-Role");
+        if ("ADMIN".equals(platformRole)) return;
+
+        // Para roles de tienda (OWNER, ADMIN) se consulta el Store service
+        String userIdStr = RequestContext.getHeader("X-User-Id");
+        if (userIdStr == null || userIdStr.isBlank())
+            throw new UnauthorizedException("No se pudo identificar al usuario");
+
+        UUID storeId = getStoreIdFromHeader();
+        UUID userId;
+        try {
+            userId = UUID.fromString(userIdStr);
+        } catch (IllegalArgumentException e) {
+            throw new UnauthorizedException("Formato de usuario inválido");
+        }
+
+        String storeRole = storeClient.getUserStoreRole(storeId, userId);
+        if (!"OWNER".equals(storeRole) && !"ADMIN".equals(storeRole))
+            throw new UnauthorizedException("Solo el OWNER o ADMIN de la tienda pueden realizar esta acción");
     }
 
     // ── Mappers ────────────────────────────────────────────────────────────────

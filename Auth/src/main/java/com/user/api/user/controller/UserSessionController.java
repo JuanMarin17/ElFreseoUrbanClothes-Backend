@@ -1,0 +1,32 @@
+package com.user.api.user.controller;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.user.api.user.dto.UserSessionResponseDTO;
+import com.user.api.user.service.UserSessionService;
+
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/auth/sessions")
+public class UserSessionController {
+
+    private final UserSessionService userSessionService;
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<List<UserSessionResponseDTO>> getSessions(@PathVariable UUID userId) {
+        return ResponseEntity.ok(userSessionService.getActiveSessions(userId));
+    }
+
+    @DeleteMapping("/{sessionId}")
+    public ResponseEntity<Void> deactivateSession(@PathVariable UUID sessionId) {
+        userSessionService.deactivateSession(sessionId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+}
