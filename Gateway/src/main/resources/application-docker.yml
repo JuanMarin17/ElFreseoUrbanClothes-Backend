@@ -1,3 +1,7 @@
+auth:
+  service:
+    url: http://auth-service:8082/api/v1
+
 # Perfil activo cuando se corre con Docker Compose.
 # Reemplaza todos los "localhost" del application.yaml por los nombres de servicio de Docker.
 spring:
