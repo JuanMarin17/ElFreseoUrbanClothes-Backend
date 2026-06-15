@@ -79,11 +79,12 @@ public class PaymentService {
     public PaymentResponseDTO getPaymentByOrder(UUID orderId, UUID userId) {
         orderService.findOrderForUser(orderId, userId);
 
-        Payment payment = paymentRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new PaymentException(
-                        "No se encontró pago para la orden: " + orderId));
-
-        return orderMapper.toPaymentDTO(payment);
+        return paymentRepository.findByOrderId(orderId)
+                .map(orderMapper::toPaymentDTO)
+                .orElse(PaymentResponseDTO.builder()
+                        .orderId(orderId)
+                        .status(PaymentStatus.PENDING)
+                        .build());
     }
 
     @Transactional

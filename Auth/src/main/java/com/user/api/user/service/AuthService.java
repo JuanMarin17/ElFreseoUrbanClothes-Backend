@@ -32,7 +32,9 @@ import com.user.api.user.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -45,6 +47,7 @@ public class AuthService {
     private final OtpService otpService;
     private final RoleRepository roleRepository;
     private final UsersClient usersClient;
+    private final UserSessionService userSessionService;
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
@@ -128,7 +131,7 @@ public class AuthService {
     }
 
     @Transactional
-    public JwtResponseDTO registerSecondStep(ValidationCodeDTO validationCodeDTO) {
+    public JwtResponseDTO registerSecondStep(ValidationCodeDTO validationCodeDTO, String ipAddress, String userAgent) {
         validateCode(validationCodeDTO);
 
         User user = userRepository.findByEmail(validationCodeDTO.getEmail().toLowerCase())
@@ -141,6 +144,12 @@ public class AuthService {
         Role role = user.getRoles().iterator().next();
         String userName = usersClient.getUserName(user.getUser_id());
         String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase());
+
+        try {
+            userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
+        } catch (Exception e) {
+            log.warn("No se pudo guardar la sesión tras el registro: {}", e.getMessage());
+        }
 
         emailService.sendWelcome(validationCodeDTO.getEmail().toLowerCase());
 
@@ -166,7 +175,7 @@ public class AuthService {
         return response;
     }
 
-    public JwtResponseDTO loginSecondStep(ValidationCodeDTO validationCodeDTO) {
+    public JwtResponseDTO loginSecondStep(ValidationCodeDTO validationCodeDTO, String ipAddress, String userAgent) {
         User user = userRepository.findByEmail(validationCodeDTO.getEmail().toLowerCase())
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
 
@@ -178,6 +187,12 @@ public class AuthService {
 
         String userName = usersClient.getUserName(user.getUser_id());
         String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase());
+
+        try {
+            userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
+        } catch (Exception e) {
+            log.warn("No se pudo guardar la sesión tras el login: {}", e.getMessage());
+        }
 
         JwtResponseDTO response = new JwtResponseDTO();
         response.setJwt(token);
