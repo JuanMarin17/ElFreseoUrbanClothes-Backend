@@ -84,6 +84,15 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         String authHeader = request.getHeaders().getFirst("Authorization");
         String storeId = request.getHeaders().getFirst("X-Store-Id");
 
+        // Fallback para descarga de CSV: browser no puede enviar Authorization header en downloads
+        if ((authHeader == null || !authHeader.startsWith("Bearer "))
+                && path.endsWith("/sales/export")) {
+            String queryToken = request.getQueryParams().getFirst("token");
+            if (queryToken != null && !queryToken.isBlank()) {
+                authHeader = "Bearer " + queryToken;
+            }
+        }
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             log.warn("JWT Filter (UNAUTHORIZED - no token) | Path: {}", path);
