@@ -1,6 +1,7 @@
 package com.api.Support.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class SupportService {
     private final SupportTicketRepository ticketRepository;
     private final SupportMessageRepository messageRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     // ── Crear ticket ─────────────────────────────────────────────────────────
     public TicketResponseDTO createTicket(TicketRequestDTO dto) {
@@ -40,9 +42,22 @@ public class SupportService {
         ticket.setUserId(userId);
         ticket.setUserEmail(userEmail);
         ticket.setSubject(dto.getSubject());
+        ticket.setStoreId(dto.getStoreId());
 
         SupportTicket saved = ticketRepository.save(ticket);
         emailService.sendTicketCreatedEmail(userEmail, saved.getSubject(), saved.getTicketId());
+
+        if (saved.getStoreId() != null) {
+            try {
+                notificationService.notifyStore(saved.getStoreId(), "new-ticket", Map.of(
+                        "ticketId", saved.getTicketId(),
+                        "subject", saved.getSubject(),
+                        "userEmail", userEmail));
+            } catch (Exception e) {
+                // notificación no bloquea la respuesta
+            }
+        }
+
         return toTicketResponse(saved);
     }
 

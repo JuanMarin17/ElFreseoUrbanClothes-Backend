@@ -198,6 +198,8 @@ public class AuthService {
 
         String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase(), sessionId);
 
+        emailService.sendNewLoginAlert(user.getEmail().toLowerCase(), ipAddress, userAgent);
+
         JwtResponseDTO response = new JwtResponseDTO();
         response.setJwt(token);
         response.setMessage("Se inicio sesión correctamente");
