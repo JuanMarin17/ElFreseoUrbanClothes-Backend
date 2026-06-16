@@ -36,6 +36,18 @@ public class NotificationService {
         send(userEmitters, userId, event);
     }
 
+    public void sendSessionAlert(UUID userId, String ip, String userAgent) {
+        NotificationEvent event = NotificationEvent.builder()
+                .type("SESSION_ALERT")
+                .title("Nuevo inicio de sesión")
+                .message("Se detectó un acceso a tu cuenta desde un nuevo dispositivo.")
+                .data(Map.of(
+                        "ip", ip != null ? ip : "Desconocida",
+                        "device", userAgent != null ? userAgent : "Desconocido"))
+                .build();
+        send(userEmitters, userId, event);
+    }
+
     private SseEmitter subscribe(Map<UUID, CopyOnWriteArrayList<SseEmitter>> map, UUID key) {
         SseEmitter emitter = new SseEmitter(0L);
         map.computeIfAbsent(key, k -> new CopyOnWriteArrayList<>()).add(emitter);

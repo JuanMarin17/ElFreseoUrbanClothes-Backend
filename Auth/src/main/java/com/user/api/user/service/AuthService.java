@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.common_request_context_starter.context.RequestContext;
+import com.user.api.user.client.NotificationClient;
 import com.user.api.user.client.UsersClient;
 import com.user.api.user.dto.EmailRequestDTO;
 import com.user.api.user.dto.ForgotPasswordRequestDTO;
@@ -48,6 +49,7 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final UsersClient usersClient;
     private final UserSessionService userSessionService;
+    private final NotificationClient notificationClient;
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
@@ -199,6 +201,7 @@ public class AuthService {
         String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase(), sessionId);
 
         emailService.sendNewLoginAlert(user.getEmail().toLowerCase(), ipAddress, userAgent);
+        notificationClient.sendSessionAlert(user.getUser_id(), ipAddress, userAgent);
 
         JwtResponseDTO response = new JwtResponseDTO();
         response.setJwt(token);
