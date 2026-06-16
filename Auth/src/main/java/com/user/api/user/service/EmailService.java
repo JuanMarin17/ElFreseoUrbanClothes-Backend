@@ -38,9 +38,9 @@ public class EmailService {
     }
 
     public void sendNewLoginAlert(String to, String ipAddress, String userAgent) {
-        String subject = "Aviso de seguridad: nuevo inicio de sesión detectado";
-        String html = buildNewLoginHtml(ipAddress, userAgent);
         try {
+            String subject = "Aviso de seguridad: nuevo inicio de sesión detectado";
+            String html = buildNewLoginHtml(ipAddress, userAgent);
             send(to, subject, html);
         } catch (Exception e) {
             log.warn("No se pudo enviar alerta de inicio de sesión a {}: {}", to, e.getMessage());
