@@ -30,6 +30,9 @@ public class SupportTicket {
     @Column(name = "user_email")
     private String userEmail;
 
+    @Column(name = "store_id")
+    private UUID storeId;
+
     private String subject;
 
     @Enumerated(EnumType.STRING)

@@ -1,6 +1,7 @@
 package com.api.Reviews.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,6 +35,7 @@ public class ReviewService {
     private final ProductReviewRepository reviewRepository;
     private final ReviewReactionRepository reactionRepository;
     private final ReviewReplyRepository replyRepository;
+    private final NotificationService notificationService;
 
     public ReviewResponseDTO createReview(ReviewRequestDTO dto) {
         UUID userId = getUserIdFromHeader();
@@ -49,12 +51,27 @@ public class ReviewService {
 
         ProductReview review = new ProductReview();
         review.setProductId(dto.getProductId());
+        review.setStoreId(dto.getStoreId());
         review.setUserId(userId);
         review.setRating(dto.getRating());
         review.setTitle(dto.getTitle());
         review.setBody(dto.getBody());
 
-        return toReviewResponse(reviewRepository.save(review));
+        ProductReview saved = reviewRepository.save(review);
+
+        if (saved.getStoreId() != null) {
+            try {
+                notificationService.notifyStore(saved.getStoreId(), "new-review", Map.of(
+                        "reviewId", saved.getReviewId(),
+                        "productId", saved.getProductId(),
+                        "rating", saved.getRating(),
+                        "userId", userId));
+            } catch (Exception e) {
+                // notificación no bloquea la respuesta
+            }
+        }
+
+        return toReviewResponse(saved);
     }
 
     public List<ReviewResponseDTO> getReviewsByProduct(UUID productId) {
