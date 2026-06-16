@@ -2,7 +2,6 @@ package com.api.OrderPayment.controller;
 
 import com.api.OrderPayment.dto.notification.SessionAlertRequestDTO;
 import com.api.OrderPayment.service.NotificationService;
-import com.api.OrderPayment.util.HeaderUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +14,6 @@ import java.util.UUID;
 public class NotificationController {
 
     private final NotificationService notificationService;
-    private final HeaderUtil headerUtil;
 
     /** Stream SSE para admin/owner: órdenes nuevas */
     @GetMapping("/stores/{storeId}/notifications/admin/stream")
@@ -23,10 +21,9 @@ public class NotificationController {
         return notificationService.subscribeStore(storeId);
     }
 
-    /** Stream SSE para el usuario autenticado: cambios de estado y pagos */
-    @GetMapping("/notifications/user/stream")
-    public SseEmitter userStream() {
-        UUID userId = headerUtil.requireUserId();
+    /** Stream SSE para el usuario: cambios de estado, pagos y alertas de sesión */
+    @GetMapping("/notifications/user/{userId}/stream")
+    public SseEmitter userStream(@PathVariable UUID userId) {
         return notificationService.subscribeUser(userId);
     }
 
