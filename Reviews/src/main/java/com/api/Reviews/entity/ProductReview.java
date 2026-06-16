@@ -23,6 +23,9 @@ public class ProductReview {
     @Column(name = "product_id")
     private UUID productId;
 
+    @Column(name = "store_id")
+    private UUID storeId;
+
     @Column(name = "user_id")
     private UUID userId;
 

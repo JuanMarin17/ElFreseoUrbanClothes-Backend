@@ -1,5 +1,6 @@
 package com.api.OrderPayment.service;
 
+import com.api.OrderPayment.dto.notification.NotificationEvent;
 import com.api.OrderPayment.dto.payment.PaymentResponseDTO;
 import com.api.OrderPayment.dto.payment.ProcessPaymentRequestDTO;
 import com.api.OrderPayment.dto.payment.RefundRequestDTO;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -28,6 +30,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final OrderMapper orderMapper;
+    private final NotificationService notificationService;
 
     @Transactional
     public PaymentResponseDTO processPayment(UUID orderId, UUID userId, ProcessPaymentRequestDTO dto) {
@@ -71,6 +74,23 @@ public class PaymentService {
         }
 
         orderRepository.save(order);
+
+        try {
+            notificationService.notifyUser(order.getUserId(), NotificationEvent.builder()
+                    .type("PAYMENT_RESULT")
+                    .title(paymentApproved ? "Pago aprobado" : "Pago rechazado")
+                    .message(paymentApproved
+                            ? "Tu pago para la orden " + order.getOrderNumber() + " fue aprobado exitosamente"
+                            : "Tu pago para la orden " + order.getOrderNumber() + " fue rechazado")
+                    .data(Map.of(
+                            "orderId", orderId,
+                            "orderNumber", order.getOrderNumber(),
+                            "status", paymentStatus,
+                            "amount", order.getTotal()))
+                    .build());
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificación de resultado de pago: {}", e.getMessage());
+        }
 
         return orderMapper.toPaymentDTO(payment);
     }
