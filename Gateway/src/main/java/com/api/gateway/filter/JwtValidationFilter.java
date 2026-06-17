@@ -178,6 +178,10 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
 
     private boolean isPublicPath(String path, String method) {
         if ("GET".equals(method) && "/api/v1/reviews".equals(path)) return true;
+        // Store endpoints públicos para la landing page (solo lectura)
+        if ("GET".equals(method) && "/api/v1/stores".equals(path)) return true;
+        if ("GET".equals(method) && path.startsWith("/api/v1/stores/getBySlug/")) return true;
+        if ("GET".equals(method) && "/api/v1/stores/settings/getSettings".equals(path)) return true;
         // SSE streams: EventSource del browser no soporta Authorization header
         if (path.contains("/notifications/") && path.endsWith("/stream")) return true;
         return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
