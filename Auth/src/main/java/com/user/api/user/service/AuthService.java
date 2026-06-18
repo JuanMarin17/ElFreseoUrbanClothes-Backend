@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.common_request_context_starter.context.RequestContext;
+import com.user.api.user.client.NotificationClient;
 import com.user.api.user.client.UsersClient;
 import com.user.api.user.dto.EmailRequestDTO;
 import com.user.api.user.dto.ForgotPasswordRequestDTO;
@@ -48,6 +49,7 @@ public class AuthService {
     private final RoleRepository roleRepository;
     private final UsersClient usersClient;
     private final UserSessionService userSessionService;
+    private final NotificationClient notificationClient;
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
@@ -143,13 +145,15 @@ public class AuthService {
 
         Role role = user.getRoles().iterator().next();
         String userName = usersClient.getUserName(user.getUser_id());
-        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase());
 
+        UUID sessionId = null;
         try {
-            userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
+            sessionId = userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
         } catch (Exception e) {
             log.warn("No se pudo guardar la sesión tras el registro: {}", e.getMessage());
         }
+
+        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase(), sessionId);
 
         emailService.sendWelcome(validationCodeDTO.getEmail().toLowerCase());
 
@@ -186,13 +190,18 @@ public class AuthService {
         }
 
         String userName = usersClient.getUserName(user.getUser_id());
-        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase());
 
+        UUID sessionId = null;
         try {
-            userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
+            sessionId = userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
         } catch (Exception e) {
             log.warn("No se pudo guardar la sesión tras el login: {}", e.getMessage());
         }
+
+        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), user.getEmail().toLowerCase(), sessionId);
+
+        emailService.sendNewLoginAlert(user.getEmail().toLowerCase(), ipAddress, userAgent);
+        notificationClient.sendSessionAlert(user.getUser_id(), ipAddress, userAgent);
 
         JwtResponseDTO response = new JwtResponseDTO();
         response.setJwt(token);

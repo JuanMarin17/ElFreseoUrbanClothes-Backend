@@ -29,4 +29,18 @@ public class UserSessionController {
         userSessionService.deactivateSession(sessionId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deactivateAllSessions() {
+        userSessionService.deactivateAllSessions();
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    /** Endpoint interno — llamado por el Gateway para verificar si una sesión sigue activa. Sin JWT. */
+    @GetMapping("/internal/{sessionId}/active")
+    public ResponseEntity<Void> isSessionActive(@PathVariable UUID sessionId) {
+        return userSessionService.isSessionActive(sessionId)
+                ? ResponseEntity.ok().build()
+                : ResponseEntity.notFound().build();
+    }
 }
