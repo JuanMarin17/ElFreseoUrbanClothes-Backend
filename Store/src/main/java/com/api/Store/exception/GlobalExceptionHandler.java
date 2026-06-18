@@ -54,6 +54,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage(), null);
     }
 
+    // ── Acción no autorizada (rol insuficiente) ──────────────────────────────
+    @ExceptionHandler(UnauthorizedStoreActionException.class)
+    public ResponseEntity<Map<String, Object>> handleUnauthorizedStoreAction(UnauthorizedStoreActionException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), null);
+    }
+
     // ── Error genérico ────────────────────────────────────────────────────────
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {

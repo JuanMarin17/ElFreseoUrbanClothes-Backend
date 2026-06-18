@@ -4,16 +4,17 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Data
 @Builder
-public class NotificationEvent {
+public class NotificationResponseDTO {
     private UUID id;
     private String type;
     private String title;
     private String message;
-    private Object data;
-    @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private Map<String, Object> data;
+    private Boolean read;
+    private LocalDateTime createdAt;
 }

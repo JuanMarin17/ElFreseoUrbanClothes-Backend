@@ -34,6 +34,9 @@ public class Store {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "disabled_reason")
+    private String disabledReason;
+
     @Builder.Default
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
