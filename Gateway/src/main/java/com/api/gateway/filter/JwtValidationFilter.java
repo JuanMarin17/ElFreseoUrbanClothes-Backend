@@ -1,10 +1,12 @@
 package com.api.gateway.filter;
 
+import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 
 import javax.crypto.SecretKey;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -12,6 +14,8 @@ import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ServerWebExchange;
 
 import io.jsonwebtoken.Claims;
@@ -26,6 +30,12 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
 
     @Value("${security.jwt.secret-key}")
     private String secretKey;
+
+    private final WebClient authWebClient;
+
+    public JwtValidationFilter(@Qualifier("authWebClient") WebClient authWebClient) {
+        this.authWebClient = authWebClient;
+    }
 
     private static final List<String> PUBLIC_PATHS = List.of(
         "/api/v1/auth/register",
@@ -62,12 +72,10 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         String path = request.getURI().getPath();
         String method = request.getMethod().name();
 
-        // Siempre dejar pasar OPTIONS (preflight CORS)
         if ("OPTIONS".equals(method)) {
             return chain.filter(exchange);
         }
 
-        // Rutas públicas: no requieren JWT
         if (isPublicPath(path, method)) {
             return chain.filter(exchange);
         }
@@ -76,10 +84,18 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         String authHeader = request.getHeaders().getFirst("Authorization");
         String storeId = request.getHeaders().getFirst("X-Store-Id");
 
+        // Fallback para descarga de CSV: browser no puede enviar Authorization header en downloads
+        if ((authHeader == null || !authHeader.startsWith("Bearer "))
+                && path.endsWith("/sales/export")) {
+            String queryToken = request.getQueryParams().getFirst("token");
+            if (queryToken != null && !queryToken.isBlank()) {
+                authHeader = "Bearer " + queryToken;
+            }
+        }
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            log.warn("JWT Filter took {} ms (UNAUTHORIZED - no token) | Path: {}",
-                    System.currentTimeMillis() - startTime, path);
+            log.warn("JWT Filter (UNAUTHORIZED - no token) | Path: {}", path);
             return exchange.getResponse().setComplete();
         }
 
@@ -101,26 +117,70 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                     .header("X-User-Role", claims.get("role", String.class))
                     .header("X-User-Email", claims.get("email", String.class));
 
-            if (storeId != null)
-                builder.header("X-Store-Id", storeId);
+            String sessionId = claims.get("session_id", String.class);
+            if (sessionId != null) builder.header("X-Session-Id", sessionId);
+            if (storeId != null) builder.header("X-Store-Id", storeId);
 
             ServerHttpRequest enrichedRequest = builder.build();
+            ServerWebExchange enrichedExchange = exchange.mutate().request(enrichedRequest).build();
 
-            return chain.filter(exchange.mutate().request(enrichedRequest).build())
-                    .doFinally(signalType -> log.info("JWT Filter completed in {} ms | Path: {}",
-                            System.currentTimeMillis() - startTime, path));
+            // Tokens sin session_id (emitidos antes del deploy): dejar pasar
+            if (sessionId == null) {
+                return chain.filter(enrichedExchange)
+                        .doFinally(s -> log.info("JWT Filter {}ms (no session check) | {}", System.currentTimeMillis() - startTime, path));
+            }
+
+            // Tokens con session_id: verificar que la sesión siga activa en Auth
+            return checkSessionActive(sessionId)
+                    .flatMap(active -> {
+                        if (!active) {
+                            log.warn("JWT Filter (UNAUTHORIZED - session closed) | sessionId={} | Path={}", sessionId, path);
+                            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                            return exchange.getResponse().setComplete();
+                        }
+                        return chain.filter(enrichedExchange)
+                                .doFinally(s -> log.info("JWT Filter {}ms | {}", System.currentTimeMillis() - startTime, path));
+                    });
 
         } catch (Exception e) {
-            log.error("Jwt validation failed in {} ms: {} | Path: {}",
-                    System.currentTimeMillis() - startTime, e.getMessage(), path);
+            log.error("JWT validation failed in {}ms: {} | Path: {}", System.currentTimeMillis() - startTime, e.getMessage(), path);
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
     }
 
+    private Mono<Boolean> checkSessionActive(String sessionId) {
+        return authWebClient.get()
+                .uri("/auth/sessions/internal/" + sessionId + "/active")
+                .retrieve()
+                .toBodilessEntity()
+                .timeout(Duration.ofSeconds(2))
+                .map(response -> true)
+                .onErrorResume(WebClientResponseException.class, e -> {
+                    if (e.getStatusCode().value() == 404) {
+                        // Única señal real de sesión cerrada: Auth dice explícitamente que no existe
+                        log.warn("Session {} closed or not found (404)", sessionId);
+                        return Mono.just(false);
+                    }
+                    // 401, 403, 5xx u otros errores de Auth → fail open
+                    log.error("Auth returned {} for session check, failing open", e.getStatusCode().value());
+                    return Mono.just(true);
+                })
+                .onErrorResume(Exception.class, e -> {
+                    // Timeout o Auth caído → fail open
+                    log.error("Auth unreachable for session check (failing open): {}", e.getMessage());
+                    return Mono.just(true);
+                });
+    }
+
     private boolean isPublicPath(String path, String method) {
-        // GET /api/v1/reviews exacto es público; /reviews/me y POST /reviews requieren JWT
         if ("GET".equals(method) && "/api/v1/reviews".equals(path)) return true;
+        // Store endpoints públicos para la landing page (solo lectura)
+        if ("GET".equals(method) && "/api/v1/stores".equals(path)) return true;
+        if ("GET".equals(method) && path.startsWith("/api/v1/stores/getBySlug/")) return true;
+        if ("GET".equals(method) && "/api/v1/stores/settings/getSettings".equals(path)) return true;
+        // SSE streams: EventSource del browser no soporta Authorization header
+        if (path.contains("/notifications/") && path.endsWith("/stream")) return true;
         return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
     }
 }

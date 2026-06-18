@@ -1,3 +1,7 @@
+auth:
+  service:
+    url: http://auth-service:8082/api/v1
+
 # Perfil activo cuando se corre con Docker Compose.
 # Reemplaza todos los "localhost" del application.yaml por los nombres de servicio de Docker.
 spring:
@@ -40,6 +44,12 @@ spring:
           predicates:
             - Path=/api/v1/stores/*/orders,
               /api/v1/stores/*/orders/**
+
+        # ── Notifications (stream SSE público, resto requiere JWT) ────────────
+        - id: notification-routes
+          uri: http://order-payment-service:8087
+          predicates:
+            - Path=/api/v1/notifications/**
 
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes

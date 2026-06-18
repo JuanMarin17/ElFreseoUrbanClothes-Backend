@@ -22,4 +22,10 @@ public class WebClientConfig {
                 .baseUrl(baseUrl)
                 .build();
     }
+
+    @Bean("notificationWebClient")
+    public WebClient notificationWebClient(WebClient.Builder builder,
+                                           @Value("${notifications.service.url}") String baseUrl) {
+        return builder.baseUrl(baseUrl).build();
+    }
 }

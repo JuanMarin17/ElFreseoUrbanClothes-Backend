@@ -3,6 +3,7 @@ package com.api.OrderPayment.service;
 import com.api.OrderPayment.client.CartClient;
 import com.api.OrderPayment.client.PromotionClient;
 import com.api.OrderPayment.client.UserClient;
+import com.api.OrderPayment.dto.notification.NotificationEvent;
 import com.api.OrderPayment.client.dto.CartResponseDTO;
 import com.api.OrderPayment.client.dto.CouponValidationDTO;
 import com.api.OrderPayment.client.dto.UserInfoDTO;
@@ -44,6 +45,7 @@ public class OrderService {
     private final PromotionClient promotionClient;
     private final UserClient userClient;
     private final OrderMapper orderMapper;
+    private final NotificationService notificationService;
 
     private final AtomicLong orderCounter = new AtomicLong(1);
 
@@ -143,6 +145,21 @@ public class OrderService {
         } catch (Exception e) {
             log.warn("No se pudo vaciar el carrito automáticamente. Orden creada: {}. Error: {}",
                     saved.getOrderNumber(), e.getMessage());
+        }
+
+        try {
+            notificationService.notifyStore(storeId, NotificationEvent.builder()
+                    .type("NEW_ORDER")
+                    .title("Nueva orden recibida")
+                    .message("Orden " + saved.getOrderNumber() + " · $" + saved.getTotal())
+                    .data(Map.of(
+                            "orderId", saved.getId(),
+                            "orderNumber", saved.getOrderNumber(),
+                            "total", saved.getTotal(),
+                            "userId", userId))
+                    .build());
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificación de nueva orden: {}", e.getMessage());
         }
 
         return orderMapper.toDTO(saved);
@@ -267,7 +284,21 @@ public class OrderService {
 
         log.info("Actualizando estado de orden {}: {} → {}", order.getOrderNumber(), order.getStatus(), dto.getStatus());
         order.setStatus(dto.getStatus());
-        return orderMapper.toDTO(orderRepository.save(order));
+        OrderResponseDTO result = orderMapper.toDTO(orderRepository.save(order));
+        try {
+            notificationService.notifyUser(order.getUserId(), NotificationEvent.builder()
+                    .type("ORDER_STATUS_CHANGED")
+                    .title("Estado de tu orden actualizado")
+                    .message("Tu orden " + order.getOrderNumber() + " está ahora en estado " + dto.getStatus())
+                    .data(Map.of(
+                            "orderId", orderId,
+                            "orderNumber", order.getOrderNumber(),
+                            "status", dto.getStatus()))
+                    .build());
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificación de cambio de estado: {}", e.getMessage());
+        }
+        return result;
     }
 
     @Transactional
@@ -281,7 +312,21 @@ public class OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
         log.info("Orden cancelada: {}", order.getOrderNumber());
-        return orderMapper.toDTO(orderRepository.save(order));
+        OrderResponseDTO cancelled = orderMapper.toDTO(orderRepository.save(order));
+        try {
+            notificationService.notifyUser(order.getUserId(), NotificationEvent.builder()
+                    .type("ORDER_CANCELLED")
+                    .title("Orden cancelada")
+                    .message("Tu orden " + order.getOrderNumber() + " ha sido cancelada")
+                    .data(Map.of(
+                            "orderId", orderId,
+                            "orderNumber", order.getOrderNumber(),
+                            "status", "CANCELLED"))
+                    .build());
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificación de cancelación: {}", e.getMessage());
+        }
+        return cancelled;
     }
 
     public Order findOrderForUser(UUID orderId, UUID userId) {

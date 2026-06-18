@@ -1,3 +1,7 @@
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8082/api/v1}
+
 spring:
   application:
     name: api-gateway
@@ -41,6 +45,12 @@ spring:
           predicates:
             - Path=/api/v1/stores/*/orders,
               /api/v1/stores/*/orders/**
+
+        # ── Notifications (stream SSE público, resto requiere JWT) ────────────
+        - id: notification-routes
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/v1/notifications/**
 
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
@@ -208,6 +218,12 @@ spring:
           uri: http://localhost:8113
           predicates:
             - Path=/api/v1/ia/builder/**
+
+        # ── Admin Reports (SUPERADMIN) ───────────────────────────────────────
+        - id: admin-reports-routes
+          uri: http://localhost:8103
+          predicates:
+            - Path=/api/v1/admin/reports/**
 
         # ── Transaction / Billing (público para ver planes) ───────────────────
         - id: transaction-plans-public
