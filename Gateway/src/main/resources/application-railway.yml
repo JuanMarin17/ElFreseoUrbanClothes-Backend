@@ -43,6 +43,12 @@ spring:
           filters:
             - JwtValidationFilter
 
+        # ── Notifications (stream SSE público, resto requiere JWT) ────────────
+        - id: notification-routes
+          uri: http://order-payment-service.railway.internal:8087
+          predicates:
+            - Path=/api/v1/notifications/**
+
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
           uri: http://store-service.railway.internal:8081

@@ -4,9 +4,18 @@ from uuid import UUID
 from datetime import datetime
 
 
+class BuilderChatContext(BaseModel):
+    path: Optional[str] = None
+    step: Optional[str] = None
+    stepIndex: Optional[int] = None
+    totalSteps: Optional[int] = None
+    completedStep: Optional[int] = None
+
+
 class BuilderChatRequest(BaseModel):
     session_id: Optional[UUID] = None
     message: str
+    context: Optional[BuilderChatContext] = None
 
 
 class BuilderChatResponse(BaseModel):

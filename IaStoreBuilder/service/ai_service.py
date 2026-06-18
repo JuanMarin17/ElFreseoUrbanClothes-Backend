@@ -117,8 +117,31 @@ REGLAS DE COMPORTAMIENTO
 """
 
 
-def build_builder_context(store_info: dict, settings: dict) -> str:
+def build_builder_context(store_info: dict, settings: dict, frontend_context: dict | None = None) -> str:
     parts = []
+
+    if frontend_context:
+        step_label = frontend_context.get("step")
+        step_index = frontend_context.get("stepIndex")
+        total_steps = frontend_context.get("totalSteps")
+        path = frontend_context.get("path")
+        frontend_completed = frontend_context.get("completedStep")
+
+        if step_label or step_index is not None:
+            lines = ["=== PASO ACTUAL DEL USUARIO (reportado por el frontend) ==="]
+            if step_label:
+                lines.append(f"El usuario está viendo ahora: {step_label}")
+            if step_index is not None and total_steps is not None:
+                lines.append(f"Posición en el wizard: paso {step_index} de {total_steps}")
+            if path:
+                lines.append(f"Ruta: {path}")
+            if frontend_completed is not None:
+                lines.append(f"Pasos marcados como completados (frontend): {frontend_completed}")
+            lines.append(
+                "Enfoca tu respuesta y tus sugerencias específicamente en este paso "
+                "(por ejemplo, si el paso es de información legal, no sugieras colores ni layout)."
+            )
+            parts.append("\n".join(lines))
 
     if store_info:
         parts.append(
@@ -130,7 +153,16 @@ def build_builder_context(store_info: dict, settings: dict) -> str:
 
     if settings:
         step = settings.get("completedStep", 0)
-        parts.append(f"=== PROGRESO DE CONFIGURACIÓN ===\nPaso completado: {step}/9")
+        parts.append(f"=== PROGRESO DE CONFIGURACIÓN (backend) ===\nPaso completado: {step}/9")
+
+        frontend_completed = frontend_context.get("completedStep") if frontend_context else None
+        if frontend_completed is not None and frontend_completed != step:
+            parts.append(
+                f"⚠ Discrepancia de progreso: el frontend reporta completedStep={frontend_completed}, "
+                f"pero el backend tiene registrado completedStep={step}. "
+                "Si es relevante, confírmale al dueño en qué paso quedó realmente antes de continuar, "
+                "en vez de asumir cuál de las dos fuentes es correcta."
+            )
 
         if settings.get("plan"):
             parts.append(f"PASO 1 (Plan): {json.dumps(settings['plan'], default=str)}")

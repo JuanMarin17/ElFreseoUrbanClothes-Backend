@@ -2,6 +2,7 @@ package com.api.OrderPayment.controller;
 
 import com.api.OrderPayment.dto.order.CreateOrderRequestDTO;
 import com.api.OrderPayment.dto.order.OrderResponseDTO;
+import com.api.OrderPayment.dto.order.QuickBuyRequestDTO;
 import com.api.OrderPayment.dto.order.UpdateOrderStatusRequestDTO;
 import com.api.OrderPayment.enums.OrderStatus;
 import com.api.OrderPayment.service.OrderService;
@@ -49,6 +50,17 @@ public class OrderController {
         if (dto == null) dto = new CreateOrderRequestDTO();
         OrderResponseDTO response = orderService.createOrderFromCart(storeId, userId, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /** Compra rápida: crea una orden desde un único producto sin pasar por el carrito */
+    @PostMapping("/quick-buy")
+    public ResponseEntity<OrderResponseDTO> quickBuy(
+            @PathVariable UUID storeId,
+            @Valid @RequestBody QuickBuyRequestDTO dto) {
+
+        UUID userId = headerUtil.requireUserId();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(orderService.createQuickBuyOrder(storeId, userId, dto));
     }
 
     /** Listar las órdenes del usuario en esta tienda */

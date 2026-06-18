@@ -18,6 +18,7 @@ public class StoreResponseDTO {
     private String slug;
     private String description;
     private Boolean isActive;
+    private String disabledReason;
     private String message;
     private Integer status;
 }
