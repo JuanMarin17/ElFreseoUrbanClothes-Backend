@@ -46,6 +46,12 @@ spring:
             - Path=/api/v1/stores/*/orders,
               /api/v1/stores/*/orders/**
 
+        # ── Notifications (stream SSE público, resto requiere JWT) ────────────
+        - id: notification-routes
+          uri: http://localhost:8087
+          predicates:
+            - Path=/api/v1/notifications/**
+
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
           uri: http://localhost:8081
