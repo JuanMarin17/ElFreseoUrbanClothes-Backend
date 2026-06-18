@@ -86,7 +86,8 @@ async def process_builder_chat(
         )
         store_info = results[0] if isinstance(results[0], dict) else {}
         settings   = results[1] if isinstance(results[1], dict) else {}
-    context = build_builder_context(store_info, settings)
+    frontend_context = dto.context.model_dump() if dto.context else None
+    context = build_builder_context(store_info, settings, frontend_context)
 
     # Llamada a IA
     ai_response = generate_builder_response(history, context)
