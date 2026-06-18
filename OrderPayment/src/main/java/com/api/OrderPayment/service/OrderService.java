@@ -8,6 +8,7 @@ import com.api.OrderPayment.client.dto.CouponValidationDTO;
 import com.api.OrderPayment.client.dto.UserInfoDTO;
 import com.api.OrderPayment.dto.order.CreateOrderRequestDTO;
 import com.api.OrderPayment.dto.order.OrderResponseDTO;
+import com.api.OrderPayment.dto.order.QuickBuyRequestDTO;
 import com.api.OrderPayment.dto.order.UpdateOrderStatusRequestDTO;
 import com.api.OrderPayment.entity.Order;
 import com.api.OrderPayment.entity.OrderItem;
@@ -142,6 +143,78 @@ public class OrderService {
         } catch (Exception e) {
             log.warn("No se pudo vaciar el carrito automáticamente. Orden creada: {}. Error: {}",
                     saved.getOrderNumber(), e.getMessage());
+        }
+
+        return orderMapper.toDTO(saved);
+    }
+
+    @Transactional
+    public OrderResponseDTO createQuickBuyOrder(UUID storeId, UUID userId, QuickBuyRequestDTO dto) {
+        log.info("Creando orden rápida: storeId={}, userId={}, productId={}", storeId, userId, dto.getProductId());
+
+        BigDecimal unitPrice = dto.getUnitPrice();
+        BigDecimal subtotal = unitPrice
+                .multiply(BigDecimal.valueOf(dto.getQuantity()))
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal couponDiscount = BigDecimal.ZERO;
+        String appliedCoupon = null;
+
+        if (dto.getCouponCode() != null && !dto.getCouponCode().isBlank()) {
+            Optional<CouponValidationDTO> couponOpt = promotionClient.validateCoupon(
+                    dto.getCouponCode(), storeId, userId);
+
+            if (couponOpt.isPresent()) {
+                CouponValidationDTO coupon = couponOpt.get();
+                if ("PERCENTAGE".equals(coupon.getDiscountType())) {
+                    couponDiscount = subtotal
+                            .multiply(coupon.getDiscount().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))
+                            .setScale(2, RoundingMode.HALF_UP);
+                } else {
+                    couponDiscount = coupon.getDiscount().min(subtotal);
+                }
+                appliedCoupon = dto.getCouponCode().toUpperCase();
+                log.info("Cupón '{}' aplicado: descuento={}", appliedCoupon, couponDiscount);
+            } else {
+                throw new IllegalArgumentException(
+                        "Cupón inválido, inactivo o ya utilizado: " + dto.getCouponCode());
+            }
+        }
+
+        BigDecimal finalTotal = subtotal.subtract(couponDiscount).max(BigDecimal.ZERO);
+
+        Order order = Order.builder()
+                .userId(userId)
+                .storeId(storeId)
+                .orderNumber(generateOrderNumber())
+                .status(OrderStatus.PENDING)
+                .subtotal(subtotal)
+                .tax(BigDecimal.ZERO)
+                .discount(couponDiscount)
+                .total(finalTotal)
+                .shippingAddress(dto.getShippingAddress())
+                .paymentMethod(dto.getPaymentMethod())
+                .shippingCost(dto.getShippingCost())
+                .notes(dto.getNotes())
+                .build();
+
+        OrderItem item = OrderItem.builder()
+                .order(order)
+                .productId(dto.getProductId())
+                .productName(dto.getProductName())
+                .variantName(dto.getVariantName())
+                .quantity(dto.getQuantity())
+                .unitPrice(unitPrice)
+                .subtotal(subtotal)
+                .build();
+
+        order.getItems().add(item);
+
+        Order saved = orderRepository.save(order);
+        log.info("Orden rápida creada: orderNumber={}", saved.getOrderNumber());
+
+        if (appliedCoupon != null) {
+            promotionClient.redeemCoupon(appliedCoupon, storeId, userId);
         }
 
         return orderMapper.toDTO(saved);
