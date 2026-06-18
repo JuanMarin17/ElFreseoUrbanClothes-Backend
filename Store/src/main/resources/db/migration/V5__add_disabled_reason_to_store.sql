@@ -1,0 +1,1 @@
+ALTER TABLE store ADD COLUMN IF NOT EXISTS disabled_reason TEXT;

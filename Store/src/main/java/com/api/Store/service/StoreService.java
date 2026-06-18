@@ -2,13 +2,17 @@ package com.api.Store.service;
 
 import com.api.Store.dto.StoreCreateRequestDTO;
 import com.api.Store.dto.StoreResponseDTO;
+import com.api.Store.dto.StoreToggleStatusRequestDTO;
 import com.api.Store.entity.Store;
 import com.api.Store.entity.StoreUser;
 import com.api.Store.enums.StoreRole;
 import com.api.Store.exception.StoreAlreadyExistsException;
 import com.api.Store.exception.StoreNotFoundException;
+import com.api.Store.exception.UnauthorizedStoreActionException;
+import com.api.Store.client.NotificationClient;
 import com.api.Store.repository.StoreRepository;
 import com.api.Store.repository.StoreUserRepository;
+import com.api.Store.util.HeaderUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +29,8 @@ public class StoreService {
     private final StoreRepository storeRepository;
     private final StoreUserRepository storeUserRepository;
     private final StoreCmsService cmsService;
+    private final HeaderUtil headerUtil;
+    private final NotificationClient notificationClient;
 
     // ── 1. Crear tienda ──────────────────────────────────────────────────────
     @Transactional
@@ -70,6 +76,32 @@ public class StoreService {
         return toResponse(store, "Tienda encontrada", 200);
     }
 
+    // ── 3. Inhabilitar / habilitar tienda (solo SUPERADMIN) ──────────────────
+    @Transactional
+    public StoreResponseDTO toggleStatus(UUID storeId, StoreToggleStatusRequestDTO dto) {
+        String role = headerUtil.getHeader("X-User-Role").orElse(null);
+        if (!"SUPERADMIN".equals(role))
+            throw new UnauthorizedStoreActionException("Solo SUPERADMIN puede inhabilitar o habilitar tiendas");
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new StoreNotFoundException("Tienda no encontrada con id: " + storeId));
+
+        store.setIsActive(dto.getIsActive());
+        store.setDisabledReason(Boolean.TRUE.equals(dto.getIsActive()) ? null : dto.getReason());
+
+        Store saved = storeRepository.save(store);
+
+        notificationClient.sendStoreStatusChanged(
+                saved.getOwnerId(), saved.getStoreId(), saved.getName(),
+                Boolean.TRUE.equals(dto.getIsActive()), saved.getDisabledReason());
+
+        String message = Boolean.TRUE.equals(dto.getIsActive())
+                ? "Tienda habilitada correctamente"
+                : "Tienda inhabilitada correctamente";
+
+        return toResponse(saved, message, 200);
+    }
+
     // ── Mapper ───────────────────────────────────────────────────────────────
     private StoreResponseDTO toResponse(Store store, String message, int status) {
         return StoreResponseDTO.builder()
@@ -79,6 +111,7 @@ public class StoreService {
                 .slug(store.getSlug())
                 .description(store.getDescription())
                 .isActive(store.getIsActive())
+                .disabledReason(store.getDisabledReason())
                 .message(message)
                 .status(status)
                 .build();

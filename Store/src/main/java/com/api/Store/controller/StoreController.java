@@ -2,6 +2,7 @@ package com.api.Store.controller;
 
 import com.api.Store.dto.StoreCreateRequestDTO;
 import com.api.Store.dto.StoreResponseDTO;
+import com.api.Store.dto.StoreToggleStatusRequestDTO;
 import com.api.Store.service.StoreService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +53,14 @@ public class StoreController {
     @GetMapping
     public ResponseEntity<List<StoreResponseDTO>> getAllStores() {
         return ResponseEntity.ok(storeService.getAllStores());
+    }
+
+    /** Inhabilitar o habilitar una tienda (solo SUPERADMIN) */
+    @PatchMapping("/{storeId}/toggle-status")
+    public ResponseEntity<StoreResponseDTO> toggleStatus(
+            @PathVariable UUID storeId,
+            @Valid @RequestBody StoreToggleStatusRequestDTO dto) {
+        return ResponseEntity.ok(storeService.toggleStatus(storeId, dto));
     }
 }
 
