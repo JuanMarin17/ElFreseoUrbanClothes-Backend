@@ -26,6 +26,16 @@ const upload = multer({
   },
 });
 
+const FOLDER_PATTERN = /^[a-zA-Z0-9/_-]{1,100}$/;
+
+const resolveFolder = (rawFolder) => {
+  const folder = rawFolder || 'general';
+  if (!FOLDER_PATTERN.test(folder)) {
+    return null;
+  }
+  return folder;
+};
+
 const compressToWebP = (buffer, mimetype) => {
   const isAnimated = mimetype === 'image/gif';
   return sharp(buffer, { animated: isAnimated })
@@ -48,7 +58,10 @@ const handleUpload = async (req, res) => {
     return res.status(400).json({ error: 'No se recibió ningún archivo' });
   }
 
-  const folder = req.query.folder || 'general';
+  const folder = resolveFolder(req.query.folder);
+  if (!folder) {
+    return res.status(400).json({ error: 'Parámetro "folder" inválido' });
+  }
 
   try {
     const webpBuffer = await compressToWebP(req.file.buffer, req.file.mimetype);
@@ -68,7 +81,10 @@ app.post('/api/v1/upload', upload.single('image'), handleUpload);
 app.post('/api/v1/cloudinary/upload', upload.single('image'), handleUpload);
 
 const handleSignature = (req, res) => {
-  const folder = req.query.folder || 'general';
+  const folder = resolveFolder(req.query.folder);
+  if (!folder) {
+    return res.status(400).json({ error: 'Parámetro "folder" inválido' });
+  }
   const timestamp = Math.round(Date.now() / 1000);
 
   const signature = cloudinary.utils.api_sign_request(

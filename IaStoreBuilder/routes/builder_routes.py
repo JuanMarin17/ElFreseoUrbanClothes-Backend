@@ -66,9 +66,17 @@ async def get_sessions(
 @router.get("/sessions/{session_id}/history", response_model=List[ChatMessageResponse])
 async def get_history(
     session_id: UUID,
-    db: Session = Depends(get_db)
+    owner_id: str = Depends(get_owner_id),
+    db: Session   = Depends(get_db)
 ):
-    """Historial de mensajes de una sesión de configuración."""
+    """Historial de mensajes de una sesión de configuración, validando que sea del dueño autenticado."""
+    session = db.query(BuilderSession).filter(
+        BuilderSession.session_id == session_id,
+        BuilderSession.owner_id   == UUID(owner_id)
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
     messages = db.query(BuilderMessage).filter(
         BuilderMessage.session_id == session_id
     ).order_by(BuilderMessage.created_at.asc()).all()

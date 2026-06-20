@@ -119,6 +119,13 @@ async def analyze_image(
     Analiza una imagen de producto directamente con Gemini Vision.
     Devuelve sugerencias + imagen mejorada en base64.
     """
+    role = await store_client.get_user_store_role(store_id, admin_id)
+    if role not in ("ADMIN", "OWNER"):
+        raise HTTPException(
+            status_code=403,
+            detail="Acceso denegado: el usuario no es ADMIN ni OWNER de esta tienda"
+        )
+
     ai_response = analyze_product_image(
         dto.image_base64, dto.mime_type, dto.context or ""
     )
@@ -163,6 +170,13 @@ async def generate_product_image(
     aspect_ratio: "1:1" | "4:3" | "16:9" | "9:16"
     Devuelve la imagen en base64.
     """
+    role = await store_client.get_user_store_role(store_id, admin_id)
+    if role not in ("ADMIN", "OWNER"):
+        raise HTTPException(
+            status_code=403,
+            detail="Acceso denegado: el usuario no es ADMIN ni OWNER de esta tienda"
+        )
+
     image_bytes = generate_image(dto.prompt, dto.aspect_ratio)
     return JSONResponse({
         "image_base64": base64.b64encode(image_bytes).decode("utf-8"),

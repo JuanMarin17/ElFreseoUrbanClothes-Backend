@@ -2,6 +2,7 @@ package com.user.api.user.client;
 
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -15,7 +16,7 @@ import reactor.core.publisher.Mono;
 public class UsersClient {
     private final WebClient userWebClient;
 
-    public UsersClient(WebClient userClient){
+    public UsersClient(@Qualifier("userWebClient") WebClient userClient){
         this.userWebClient = userClient;
     }
 

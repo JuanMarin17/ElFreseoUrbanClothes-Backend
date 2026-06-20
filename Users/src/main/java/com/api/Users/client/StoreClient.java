@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -17,7 +18,7 @@ public class StoreClient {
 
     private final WebClient storeWebClient;
 
-    public StoreClient(WebClient storeWebClient) {
+    public StoreClient(@Qualifier("storeWebClient") WebClient storeWebClient) {
         this.storeWebClient = storeWebClient;
     }
 

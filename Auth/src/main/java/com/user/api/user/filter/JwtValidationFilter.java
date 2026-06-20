@@ -49,6 +49,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
                 path.contains("/forgotPassword") ||
                 path.contains("/forgotPasswordSecondStep") ||
                 path.contains("/getEmailById") ||
+                path.contains("/getUserInfo") ||
                 path.contains("/sessions/internal/");
     }
 }
