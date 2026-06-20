@@ -65,9 +65,17 @@ async def get_sessions(
 @router.get("/sessions/{session_id}/history", response_model=List[ChatMessageResponse])
 async def get_history(
     session_id: UUID,
+    user_id: str = Depends(get_user_id),
     db: Session = Depends(get_db)
 ):
-    """Devuelve el historial de mensajes de una sesión."""
+    """Devuelve el historial de mensajes de una sesión, validando que sea del usuario autenticado."""
+    session = db.query(ChatSession).filter(
+        ChatSession.session_id == session_id,
+        ChatSession.user_id    == UUID(user_id)
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
     messages = db.query(ChatMessage).filter(
         ChatMessage.session_id == session_id
     ).order_by(ChatMessage.created_at.asc()).all()

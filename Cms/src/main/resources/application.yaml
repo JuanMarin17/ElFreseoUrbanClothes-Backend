@@ -29,8 +29,8 @@ gemini:
 
 preferences:
   service:
-    url: ${PREFERENCES_SERVICE_URL}
+    url: ${PREFERENCES_SERVICE_URL:http://localhost:8094/api/v1}
 
 product:
   service:
-    url: ${PRODUCT_SERVICE_URL}
+    url: ${PRODUCT_SERVICE_URL:http://localhost:8084/api/v1}

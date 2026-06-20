@@ -51,6 +51,23 @@ spring:
           predicates:
             - Path=/api/v1/notifications/**
 
+        # ── Streams SSE de admin por tienda (antes de store-routes: si no, los
+        #    intercepta /api/v1/stores/** y los manda al microservicio Store) ──
+        - id: order-admin-stream-routes
+          uri: http://order-payment-service:8087
+          predicates:
+            - Path=/api/v1/stores/*/notifications/admin/stream
+
+        - id: support-admin-stream-routes
+          uri: http://support-service:8088
+          predicates:
+            - Path=/api/v1/stores/*/support/notifications/stream
+
+        - id: reviews-admin-stream-routes
+          uri: http://reviews-service:8095
+          predicates:
+            - Path=/api/v1/stores/*/reviews/notifications/stream
+
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
           uri: http://store-service:8081

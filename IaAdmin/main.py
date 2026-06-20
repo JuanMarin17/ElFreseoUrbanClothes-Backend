@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from models.database import create_tables
 from routes.admin_routes import router
 from exceptions.handlers import general_exception_handler, value_error_handler
@@ -7,12 +6,9 @@ from service.ai_service import groq_client
 
 app = FastAPI(title="IA Admin Agent", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# El CORS se maneja centralizado en el Gateway (CorsWebFilter). Agregarlo también
+# aquí duplica el header Access-Control-Allow-Origin y el navegador rechaza la
+# respuesta con net::ERR_FAILED aunque el status real sea 200.
 
 @app.on_event("startup")
 async def startup():
