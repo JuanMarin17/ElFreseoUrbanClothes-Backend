@@ -2,7 +2,6 @@ package com.api.product.controller;
 
 import java.util.UUID;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,9 +11,11 @@ import com.api.product.service.StockAlertService;
 
 import lombok.RequiredArgsConstructor;
 
+// El CORS se maneja centralizado en el Gateway (CorsWebFilter). Agregarlo también
+// aquí duplica el header Access-Control-Allow-Origin y el navegador rechaza la
+// respuesta con net::ERR_FAILED aunque el status real sea 200.
 @RestController
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class StockAlertController {
 
     private final StockAlertService stockAlertService;
