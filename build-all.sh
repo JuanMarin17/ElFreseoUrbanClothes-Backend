@@ -36,10 +36,12 @@ build_node() {
   local name=$1
   local path=$2
   echo ""
-  echo "━━━ Instalando dependencias (Node.js): $name ━━━"
-  cd "$ROOT_DIR/$path"
-  npm install --silent
-  echo "✓ $name listo"
+  echo "━━━ Verificando (Node.js): $name ━━━"
+  if [ ! -f "$ROOT_DIR/$path/package.json" ]; then
+    echo "✗ $name: package.json no encontrado"
+    exit 1
+  fi
+  echo "✓ $name listo (Docker instala las dependencias al construir la imagen)"
 }
 
 echo "====================================================="
