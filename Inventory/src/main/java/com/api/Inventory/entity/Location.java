@@ -16,6 +16,10 @@ public class Location {
 
     private String name;
 
+    private String address;
+
+    private String description;
+
     @Column(name = "store_id")
     private UUID storeId;
 }
