@@ -2,8 +2,10 @@ package com.api.gateway.filter;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -35,6 +37,19 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     @Value("${rate-limit.window-seconds:60}")
     private int windowSeconds;
 
+    @Value("${rate-limit.strict-max-requests:5}")
+    private int strictMaxRequests;
+
+    // Rutas sensibles a fuerza bruta / abuso: límite propio, más estricto que el general.
+    private static final List<String> STRICT_EXACT_PATHS = List.of(
+        "/api/v1/auth/login",
+        "/api/v1/auth/register",
+        "/api/v1/ia/builder/chat"
+    );
+
+    private static final Pattern STORE_TOGGLE_STATUS_PATTERN =
+            Pattern.compile("^/api/v1/stores/[^/]+/toggle-status$");
+
     private final Map<String, RequestCounter> counters = new ConcurrentHashMap<>();
 
     @Override
@@ -50,7 +65,11 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        String key = resolveKey(request);
+        String path = request.getURI().getPath();
+        boolean strict = isStrictPath(path);
+        int limit = strict ? strictMaxRequests : maxRequests;
+        String key = resolveKey(request) + (strict ? "|strict:" + path : "");
+
         long windowMillis = windowSeconds * 1000L;
         long now = System.currentTimeMillis();
 
@@ -64,12 +83,16 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             count = ++counter.count;
         }
 
-        if (count > maxRequests) {
-            log.warn("Rate limit excedido | key={} | {} peticiones en {}s", key, count, windowSeconds);
+        if (count > limit) {
+            log.warn("Rate limit excedido | key={} | {} peticiones en {}s (límite={})", key, count, windowSeconds, limit);
             return tooManyRequests(exchange);
         }
 
         return chain.filter(exchange);
+    }
+
+    private boolean isStrictPath(String path) {
+        return STRICT_EXACT_PATHS.contains(path) || STORE_TOGGLE_STATUS_PATTERN.matcher(path).matches();
     }
 
     private String resolveKey(ServerHttpRequest request) {
