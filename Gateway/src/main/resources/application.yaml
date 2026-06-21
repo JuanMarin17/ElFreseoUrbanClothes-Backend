@@ -279,6 +279,7 @@ security:
 rate-limit:
   max-requests: ${RATE_LIMIT_MAX_REQUESTS:100}
   window-seconds: ${RATE_LIMIT_WINDOW_SECONDS:60}
+  strict-max-requests: ${RATE_LIMIT_STRICT_MAX_REQUESTS:5}
 
 management:
   endpoints:
