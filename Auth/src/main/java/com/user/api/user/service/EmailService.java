@@ -419,9 +419,9 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(html, true);
             mailSender.send(message);
-            log.info("Email enviado a: {}", to);
+            log.info("Email enviado a: {} | asunto: {}", to, subject);
         } catch (MessagingException e) {
-            log.error("Error al enviar email a {}: {}", to, e.getMessage());
+            log.error("Error al enviar email a {} | asunto: {} | {}", to, subject, e.getMessage());
             throw new RuntimeException("Error al enviar el correo electrónico");
         }
     }
