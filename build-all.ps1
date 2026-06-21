@@ -44,6 +44,7 @@ Build-Service "Promotion"      "Promotion"
 Build-Service "LoyalCustomer"  "LoyalCustomer"
 Build-Service "Preferences"    "Preferences"
 Build-Service "Reviews"        "Reviews"
+Build-Service "Payment"        "Payment"
 
 # 3. Servicios que dependen de otros
 Build-Service "Product"        "Product"
