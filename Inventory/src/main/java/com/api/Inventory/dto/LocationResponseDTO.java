@@ -8,5 +8,7 @@ import lombok.Data;
 public class LocationResponseDTO {
     private UUID locationId;
     private String name;
+    private String address;
+    private String description;
     private UUID storeId;
 }

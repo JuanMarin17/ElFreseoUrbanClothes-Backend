@@ -38,6 +38,10 @@ notifications:
   service:
     url: ${NOTIFICATIONS_SERVICE_URL:http://localhost:8087/api/v1}
 
+geo:
+  service:
+    url: ${GEO_SERVICE_URL:http://ip-api.com}
+
 security:
   jwt:
     secret-key: ${JWT_SECRET:Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=}
