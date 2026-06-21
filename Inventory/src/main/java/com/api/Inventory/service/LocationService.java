@@ -33,6 +33,8 @@ public class LocationService {
 
         Location location = new Location();
         location.setName(dto.getName());
+        location.setAddress(dto.getAddress());
+        location.setDescription(dto.getDescription());
         location.setStoreId(storeId);
 
         return toLocationResponse(locationRepository.save(location));
@@ -43,6 +45,23 @@ public class LocationService {
         UUID storeId = getStoreIdFromHeader();
         return locationRepository.findByStoreId(storeId)
                 .stream().map(this::toLocationResponse).toList();
+    }
+
+    // ── Editar ubicación ──────────────────────────────────────────────────────
+    public LocationResponseDTO updateLocation(UUID locationId, LocationRequestDTO dto) {
+        validateAdmin();
+
+        Location location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new InventoryNotFoundException("Ubicación no encontrada con id: " + locationId));
+
+        if (dto.getName() == null || dto.getName().isBlank())
+            throw new BadRequestException("El nombre de la ubicación es obligatorio");
+
+        location.setName(dto.getName());
+        location.setAddress(dto.getAddress());
+        location.setDescription(dto.getDescription());
+
+        return toLocationResponse(locationRepository.save(location));
     }
 
     // ── Eliminar ubicación ────────────────────────────────────────────────────
@@ -83,6 +102,8 @@ public class LocationService {
         LocationResponseDTO dto = new LocationResponseDTO();
         dto.setLocationId(l.getLocationId());
         dto.setName(l.getName());
+        dto.setAddress(l.getAddress());
+        dto.setDescription(l.getDescription());
         dto.setStoreId(l.getStoreId());
         return dto;
     }

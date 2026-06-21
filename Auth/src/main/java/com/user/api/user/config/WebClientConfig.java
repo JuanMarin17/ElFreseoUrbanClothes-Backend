@@ -21,4 +21,9 @@ public class WebClientConfig {
                                            @Value("${notifications.service.url}") String baseUrl) {
         return builder.baseUrl(baseUrl).build();
     }
+
+    @Bean("geoWebClient")
+    public WebClient geoWebClient(WebClient.Builder builder, @Value("${geo.service.url}") String baseUrl) {
+        return builder.baseUrl(baseUrl).build();
+    }
 }

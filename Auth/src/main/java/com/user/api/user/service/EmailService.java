@@ -1,5 +1,7 @@
 package com.user.api.user.service;
 
+import com.user.api.user.client.GeoLocationClient;
+import com.user.api.user.util.UserAgentParser;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final GeoLocationClient geoLocationClient;
 
     @Value("${spring.mail.username}")
     private String emailFrom;
@@ -37,10 +41,13 @@ public class EmailService {
         send(to, subject, html);
     }
 
+    @Async
     public void sendNewLoginAlert(String to, String ipAddress, String userAgent) {
         try {
             String subject = "Aviso de seguridad: nuevo inicio de sesión detectado";
-            String html = buildNewLoginHtml(ipAddress, userAgent);
+            String device = UserAgentParser.describe(userAgent);
+            String location = geoLocationClient.resolveLocation(ipAddress).orElse(null);
+            String html = buildNewLoginHtml(ipAddress, device, location);
             send(to, subject, html);
         } catch (Exception e) {
             log.warn("No se pudo enviar alerta de inicio de sesión a {}: {}", to, e.getMessage());
@@ -335,9 +342,16 @@ public class EmailService {
                 """;
     }
 
-    private String buildNewLoginHtml(String ipAddress, String userAgent) {
+    private String buildNewLoginHtml(String ipAddress, String device, String location) {
         String ip = ipAddress != null ? ipAddress : "Desconocida";
-        String ua = userAgent != null ? userAgent : "Desconocido";
+        String locationRow = location != null
+                ? """
+                  <tr>
+                    <td style="padding:14px 20px;font-size:12px;font-weight:700;color:#555555;border-bottom:1px solid #f0f0f0;">Ubicación aproximada</td>
+                    <td style="padding:14px 20px;font-size:13px;color:#222222;border-bottom:1px solid #f0f0f0;">%s</td>
+                  </tr>
+                  """.formatted(location)
+                : "";
         return """
                 <!DOCTYPE html>
                 <html lang="es">
@@ -375,9 +389,10 @@ public class EmailService {
                                 <td style="padding:14px 20px;font-size:13px;color:#222222;border-bottom:1px solid #f0f0f0;">%s</td>
                               </tr>
                               <tr>
-                                <td style="padding:14px 20px;font-size:12px;font-weight:700;color:#555555;">Dispositivo</td>
-                                <td style="padding:14px 20px;font-size:12px;color:#444444;word-break:break-all;">%s</td>
+                                <td style="padding:14px 20px;font-size:12px;font-weight:700;color:#555555;border-bottom:1px solid #f0f0f0;">Dispositivo</td>
+                                <td style="padding:14px 20px;font-size:13px;color:#222222;border-bottom:1px solid #f0f0f0;">%s</td>
                               </tr>
+                              %s
                             </table>
                             <table cellpadding="0" cellspacing="0" width="100%%">
                               <tr>
@@ -405,7 +420,7 @@ public class EmailService {
                   </table>
                 </body>
                 </html>
-                """.formatted(ip, ua);
+                """.formatted(ip, device, locationRow);
     }
 
     // ─── Send ─────────────────────────────────────────────────────────────────
