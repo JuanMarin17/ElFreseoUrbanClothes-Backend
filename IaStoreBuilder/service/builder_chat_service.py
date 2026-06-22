@@ -53,10 +53,11 @@ async def process_builder_chat(
     if dto.session_id:
         session = db.query(BuilderSession).filter(
             BuilderSession.session_id == dto.session_id,
-            BuilderSession.owner_id == uuid.UUID(owner_id)
+            BuilderSession.owner_id   == uuid.UUID(owner_id)
         ).first()
         if not session:
-            raise ValueError("Sesión no encontrada o no pertenece al usuario")
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Sesión no encontrada")
     else:
         session = BuilderSession(
             owner_id=uuid.UUID(owner_id),

@@ -15,8 +15,12 @@ from service.client import (
     store_client, product_client, promotions_client, loyalty_client
 )
 from schemas.admin_schemas import AdminChatRequest, AdminChatResponse
+from service.circuit_breaker import CircuitBreaker
 
 CONTEXT_WINDOW = 20
+
+# Instancias compartidas entre requests — rastrean fallos por servicio
+_cb_reports = CircuitBreaker("reports", failure_threshold=3, reset_timeout=30)
 
 
 def _extract_action_data(response: str) -> dict:
@@ -57,10 +61,12 @@ async def process_admin_chat(
     if dto.session_id:
         session = db.query(AdminChatSession).filter(
             AdminChatSession.session_id == dto.session_id,
+            AdminChatSession.admin_id  == uuid.UUID(admin_id),
             AdminChatSession.store_id  == uuid.UUID(store_id)
         ).first()
         if not session:
-            raise ValueError("Sesión no encontrada")
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Sesión no encontrada")
     else:
         session = AdminChatSession(
             admin_id=uuid.UUID(admin_id),
@@ -86,7 +92,7 @@ async def process_admin_chat(
     results = await asyncio.gather(
         store_client.get_store_info(store_id),
         product_client.get_active_products(store_id, jwt_token),
-        reports_client.get_dashboard(store_id, jwt_token),
+        _cb_reports.call(reports_client.get_dashboard(store_id, jwt_token)),
         inventory_client.get_balance(store_id, jwt_token),
         promotions_client.get_active_promotions(store_id, jwt_token),
         support_client.get_all_tickets(store_id, jwt_token),
@@ -313,6 +319,35 @@ async def _process_admin_action(
             response.generated_image_mime_type = "image/png"
         except Exception as e:
             response.message += f"\n\nNo se pudo generar la imagen: {e}"
+
+    # ── Generación de archivo de reporte (ACTION:GENERATE_REPORT) ────────────
+    elif "ACTION:GENERATE_REPORT" in ai_response:
+        data = _extract_action_data(ai_response)
+        fmt   = str(data.get("format", "excel")).lower()
+        rtype = str(data.get("type", "sales")).lower()
+        days  = int(data.get("days", 30))
+
+        if rtype == "sales":
+            report_data = await reports_client.get_sales(store_id, jwt_token, days)
+        elif rtype == "stock":
+            report_data = await reports_client.get_stock_report(store_id, jwt_token)
+        elif rtype == "orders":
+            report_data = await reports_client.get_orders_report(store_id, jwt_token, days)
+        else:
+            report_data = await reports_client.get_dashboard(store_id, jwt_token)
+
+        try:
+            from service.report_generator import generate_report
+            file_bytes, mime_type, filename = generate_report(report_data, rtype, fmt, days)
+            response.action       = "GENERATE_REPORT"
+            response.action_data  = {"format": fmt, "type": rtype, "days": days}
+            response.report_base64    = b64lib.b64encode(file_bytes).decode("utf-8")
+            response.report_mime_type = mime_type
+            response.report_filename  = filename
+            fmt_label = {"excel": "Excel", "pdf": "PDF", "chart": "gráfica"}.get(fmt, fmt)
+            response.message = _clean_response(ai_response) or f"Aquí tienes el reporte de {rtype} en formato {fmt_label}."
+        except Exception as e:
+            response.message = f"No se pudo generar el archivo: {e}"
 
     else:
         response.message = _clean_response(ai_response)

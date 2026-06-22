@@ -97,7 +97,7 @@ async def delete_session(
     ).first()
     if not session:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
-    db.query(ChatMessage).filter(ChatMessage.session_id == session_id).delete()
+    db.query(ChatMessage).filter(ChatMessage.session_id == session_id).delete(synchronize_session=False)
     db.delete(session)
     db.commit()
 
@@ -108,13 +108,14 @@ async def delete_all_sessions(
     db: Session = Depends(get_db)
 ):
     """Elimina todas las sesiones de chat del usuario y sus mensajes."""
-    sessions = db.query(ChatSession).filter(
-        ChatSession.user_id == UUID(user_id)
-    ).all()
-    for s in sessions:
-        db.query(ChatMessage).filter(ChatMessage.session_id == s.session_id).delete()
-        db.delete(s)
-    db.commit()
+    session_ids = [
+        s.session_id for s in
+        db.query(ChatSession).filter(ChatSession.user_id == UUID(user_id)).all()
+    ]
+    if session_ids:
+        db.query(ChatMessage).filter(ChatMessage.session_id.in_(session_ids)).delete(synchronize_session=False)
+        db.query(ChatSession).filter(ChatSession.user_id == UUID(user_id)).delete(synchronize_session=False)
+        db.commit()
 
 
 # ─── Notificaciones de stock ──────────────────────────────────────────────────

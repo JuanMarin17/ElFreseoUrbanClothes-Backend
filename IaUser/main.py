@@ -1,8 +1,12 @@
 import asyncio
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from models.database import create_tables
 from routes.chat_routes import router
-from exceptions.handlers import general_exception_handler, value_error_handler
+from exceptions.handlers import (
+    general_exception_handler, value_error_handler,
+    http_exception_handler, validation_exception_handler,
+)
 from service.session_cleaner import clean_old_sessions, start_cleaner
 from models.database import SessionLocal
 from service.ai_service import groq_client
@@ -33,6 +37,8 @@ async def startup():
         pass
 
 app.include_router(router)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 app.add_exception_handler(ValueError, value_error_handler)
 

@@ -124,7 +124,7 @@ public class AuthService {
             usersClient.createUser(userRegisterDTO);
         } catch (Exception e) {
             log.error("Error al crear perfil en Users para userId={}: {}", userSave.getUser_id(), e.getMessage());
-            throw new RuntimeException("No se pudo completar el registro, intente de nuevo");
+            throw e; // WebClientResponseException → GlobalExceptionHandler → 502
         }
 
         String userSecretKey = otpService.userSecretKey();
