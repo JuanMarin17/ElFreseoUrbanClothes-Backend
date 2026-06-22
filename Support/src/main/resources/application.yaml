@@ -34,6 +34,10 @@ spring:
           starttls:
             enable: true
 
+notifications:
+  service:
+    url: ${NOTIFICATIONS_SERVICE_URL:http://localhost:8087/api/v1}
+
 management:
   endpoints:
     web:
