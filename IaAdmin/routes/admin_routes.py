@@ -106,6 +106,45 @@ async def get_history(
     return messages
 
 
+# ─── Borrar sesiones ─────────────────────────────────────────────────────────
+
+@router.delete("/sessions/{session_id}", status_code=204)
+async def delete_session(
+    session_id: UUID,
+    admin_id: str = Depends(get_admin_id),
+    store_id: str = Depends(get_store_id),
+    db: Session   = Depends(get_db)
+):
+    """Elimina una sesión de chat y todos sus mensajes."""
+    session = db.query(AdminChatSession).filter(
+        AdminChatSession.session_id == session_id,
+        AdminChatSession.admin_id  == UUID(admin_id),
+        AdminChatSession.store_id  == UUID(store_id)
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+    db.query(AdminChatMessage).filter(AdminChatMessage.session_id == session_id).delete()
+    db.delete(session)
+    db.commit()
+
+
+@router.delete("/sessions", status_code=204)
+async def delete_all_sessions(
+    admin_id: str = Depends(get_admin_id),
+    store_id: str = Depends(get_store_id),
+    db: Session   = Depends(get_db)
+):
+    """Elimina todas las sesiones de chat del admin en esta tienda y sus mensajes."""
+    sessions = db.query(AdminChatSession).filter(
+        AdminChatSession.admin_id == UUID(admin_id),
+        AdminChatSession.store_id == UUID(store_id)
+    ).all()
+    for s in sessions:
+        db.query(AdminChatMessage).filter(AdminChatMessage.session_id == s.session_id).delete()
+        db.delete(s)
+    db.commit()
+
+
 # ─── Análisis de imagen directo (sin chat) ───────────────────────────────────
 
 @router.post("/image/analyze", response_model=AdminChatResponse)
