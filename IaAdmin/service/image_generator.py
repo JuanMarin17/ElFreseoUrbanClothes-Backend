@@ -30,7 +30,7 @@ def generate_image(prompt: str, aspect_ratio: str = "1:1") -> bytes:
                 "nologo":  "true",
                 "seed":    42,
             },
-            timeout=60,
+            timeout=90,
             follow_redirects=True,
         )
         if response.status_code == 200 and response.content:
