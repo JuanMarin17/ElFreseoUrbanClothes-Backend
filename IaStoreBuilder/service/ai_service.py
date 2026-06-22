@@ -5,7 +5,13 @@ from config.settings import GROQ_API_KEY
 groq_client = Groq(api_key=GROQ_API_KEY)
 
 BUILDER_SYSTEM_PROMPT = """
-Eres Vexio Builder, un asistente de inteligencia artificial especializado en ayudar a propietarios de tiendas a configurar y personalizar su tienda en línea en la plataforma Vexio. Tu rol es guiar al dueño paso a paso para construir una tienda profesional, atractiva y efectiva para vender sus productos.
+Eres Vexio Builder, un asistente de inteligencia artificial especializado en ayudar a propietarios de tiendas a configurar y personalizar su tienda en línea en la plataforma Vexio.
+
+⚠️ REGLA ABSOLUTA — GENERACIÓN DE IMÁGENES:
+Cuando el usuario pida generar, crear o diseñar cualquier imagen (logo, banner, fondo, producto, etc.), DEBES responder EXACTAMENTE así (sin excepciones):
+1. Una línea breve confirmando que vas a generar la imagen.
+2. En la última línea: ACTION:GENERATE_IMAGE|prompt:descripcion_detallada_en_ingles|aspectRatio:1:1
+NUNCA digas "no puedo generar imágenes". Simplemente escribe la acción y el sistema la genera automáticamente. Tu rol es guiar al dueño paso a paso para construir una tienda profesional, atractiva y efectiva para vender sus productos.
 
 Siempre respondes en español, de forma amigable, clara y motivadora. Tu tono es el de un consultor de branding y diseño que también entiende de negocios. Haces preguntas estratégicas para entender la identidad de la marca y generas sugerencias concretas y aplicables.
 
@@ -196,6 +202,29 @@ def build_builder_context(store_info: dict, settings: dict, frontend_context: di
     return "\n\n".join(parts)
 
 
+_IMAGE_KEYWORDS = [
+    "genera", "generar", "crea", "crear", "diseña", "diseñar",
+    "hazme", "haz", "produce", "imagen", "foto", "logo", "banner",
+    "generate", "create", "make", "image", "picture", "photo"
+]
+
+_FEW_SHOT_IMAGE = [
+    {
+        "role": "user",
+        "content": "genera un logo para mi tienda de ropa urbana"
+    },
+    {
+        "role": "assistant",
+        "content": "¡Perfecto! Voy a generar el logo para tu tienda ahora mismo.\nACTION:GENERATE_IMAGE|prompt:minimalist urban streetwear brand logo, bold typography, black and white, modern design, clean vector style, professional branding|aspectRatio:1:1"
+    }
+]
+
+
+def _wants_image_generation(messages: list) -> bool:
+    last = next((m["content"].lower() for m in reversed(messages) if m["role"] == "user"), "")
+    return any(kw in last for kw in _IMAGE_KEYWORDS)
+
+
 def generate_builder_response(messages: list, context: str = "") -> str:
     try:
         system = BUILDER_SYSTEM_PROMPT
@@ -203,6 +232,11 @@ def generate_builder_response(messages: list, context: str = "") -> str:
             system += f"\n\nEstado actual de la tienda del dueño:\n{context}"
 
         groq_messages = [{"role": "system", "content": system}]
+
+        # Inyecta ejemplo few-shot cuando el usuario quiere generar una imagen
+        if _wants_image_generation(messages):
+            groq_messages.extend(_FEW_SHOT_IMAGE)
+
         for msg in messages:
             groq_messages.append({
                 "role": "assistant" if msg["role"] == "assistant" else "user",
