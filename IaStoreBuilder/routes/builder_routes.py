@@ -84,6 +84,41 @@ async def get_history(
     return messages
 
 
+# ─── Borrar sesiones ─────────────────────────────────────────────────────────
+
+@router.delete("/sessions/{session_id}", status_code=204)
+async def delete_session(
+    session_id: UUID,
+    owner_id: str = Depends(get_owner_id),
+    db: Session   = Depends(get_db)
+):
+    """Elimina una sesión de chat y todos sus mensajes."""
+    session = db.query(BuilderSession).filter(
+        BuilderSession.session_id == session_id,
+        BuilderSession.owner_id   == UUID(owner_id)
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+    db.query(BuilderMessage).filter(BuilderMessage.session_id == session_id).delete()
+    db.delete(session)
+    db.commit()
+
+
+@router.delete("/sessions", status_code=204)
+async def delete_all_sessions(
+    owner_id: str = Depends(get_owner_id),
+    db: Session   = Depends(get_db)
+):
+    """Elimina todas las sesiones del dueño y sus mensajes."""
+    sessions = db.query(BuilderSession).filter(
+        BuilderSession.owner_id == UUID(owner_id)
+    ).all()
+    for s in sessions:
+        db.query(BuilderMessage).filter(BuilderMessage.session_id == s.session_id).delete()
+        db.delete(s)
+    db.commit()
+
+
 # ─── Generación de imágenes ───────────────────────────────────────────────────
 
 @router.post("/generate-image")
