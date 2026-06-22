@@ -230,6 +230,17 @@ def _process_builder_action(session_id: UUID, ai_response: str) -> BuilderChatRe
             "shipping":      data.get("shipping", "ambos"),
         }
 
+    # ── Análisis de imagen ────────────────────────────────────────────────────
+    elif "ACTION:ANALYZE_IMAGE" in ai_response:
+        data = _extract_action_data(ai_response)
+        response.action = "ANALYZE_IMAGE"
+        response.action_data = {
+            "removeBackground": data.get("removeBackground", "false"),
+            "brightness":       data.get("brightness", "1.0"),
+            "contrast":         data.get("contrast", "1.0"),
+            "sharpness":        data.get("sharpness", "1.0"),
+        }
+
     # ── Generación de imagen (logo, banner, fondo) ────────────────────────────
     elif "ACTION:GENERATE_IMAGE" in ai_response:
         data = _extract_action_data(ai_response)
