@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.api.Inventory.client.NotificationClient;
 import com.api.Inventory.client.ProductClient;
 import com.api.Inventory.dto.InventoryBalanceResponseDTO;
 import com.api.Inventory.dto.MovementRequestDTO;
@@ -20,7 +21,11 @@ import com.api.Inventory.repository.InventoryMovementRepository;
 import com.common_request_context_starter.context.RequestContext;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+import java.util.Map;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
@@ -28,6 +33,7 @@ public class InventoryService {
     private final InventoryBalanceRepository balanceRepository;
     private final InventoryMovementRepository movementRepository;
     private final ProductClient productClient;
+    private final NotificationClient notificationClient;
 
     // ── Registrar movimiento ──────────────────────────────────────────────────
     @Transactional
@@ -75,6 +81,24 @@ public class InventoryService {
         }
 
         balanceRepository.save(balance);
+
+        // Alerta de stock al owner de la tienda cuando el balance cae a nivel crítico
+        if (dto.getMovementType() != MovementType.IN) {
+            int qty = balance.getQuantity();
+            if (qty == 0 || qty <= 5) {
+                String type    = qty == 0 ? "OUT_OF_STOCK"   : "LOW_STOCK_ALERT";
+                String title   = qty == 0 ? "Producto agotado" : "Stock crítico";
+                String message = qty == 0
+                        ? "La variante " + dto.getVariantId() + " se ha agotado"
+                        : "La variante " + dto.getVariantId() + " tiene solo " + qty + " unidades";
+                try {
+                    notificationClient.notifyStore(storeId, type, title, message,
+                            Map.of("variantId", dto.getVariantId(), "quantity", qty));
+                } catch (Exception e) {
+                    log.warn("No se pudo enviar alerta de stock a storeId={}: {}", storeId, e.getMessage());
+                }
+            }
+        }
 
         // Registrar movimiento
         InventoryMovement movement = new InventoryMovement();

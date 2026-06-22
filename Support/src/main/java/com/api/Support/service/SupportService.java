@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.api.Support.client.NotificationClient;
 import com.api.Support.dto.ApiResponseDTO;
 import com.api.Support.dto.MessageRequestDTO;
 import com.api.Support.dto.MessageResponseDTO;
@@ -23,7 +24,9 @@ import com.api.Support.repository.SupportTicketRepository;
 import com.common_request_context_starter.context.RequestContext;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SupportService {
@@ -32,6 +35,7 @@ public class SupportService {
     private final SupportMessageRepository messageRepository;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final NotificationClient notificationClient;
 
     // ── Crear ticket ─────────────────────────────────────────────────────────
     public TicketResponseDTO createTicket(TicketRequestDTO dto) {
@@ -122,6 +126,15 @@ public class SupportService {
         if (ticket.getUserEmail() != null) {
             emailService.sendTicketRepliedEmail(ticket.getUserEmail(), ticket.getSubject(), ticketId, dto.getMessage());
         }
+        try {
+            notificationClient.notifyUser(
+                    ticket.getUserId(),
+                    "SUPPORT_TICKET_REPLIED",
+                    "Respuesta en tu ticket",
+                    "Tu ticket \"" + ticket.getSubject() + "\" ha recibido una respuesta.");
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificación SSE de respuesta a ticket {}: {}", ticketId, e.getMessage());
+        }
         return toMessageResponse(saved);
     }
 
@@ -158,6 +171,15 @@ public class SupportService {
 
         if (ticket.getUserEmail() != null) {
             emailService.sendTicketClosedEmail(ticket.getUserEmail(), ticket.getSubject(), ticketId);
+        }
+        try {
+            notificationClient.notifyUser(
+                    ticket.getUserId(),
+                    "SUPPORT_TICKET_CLOSED",
+                    "Ticket cerrado",
+                    "Tu ticket \"" + ticket.getSubject() + "\" ha sido cerrado.");
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificación SSE de cierre a ticket {}: {}", ticketId, e.getMessage());
         }
 
         ApiResponseDTO response = new ApiResponseDTO();

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -28,6 +29,32 @@ public class NotificationController {
     @GetMapping("/notifications/user/{userId}/stream")
     public SseEmitter userStream(@PathVariable UUID userId) {
         return notificationService.subscribeUser(userId);
+    }
+
+    /** Llamada interna genérica: cualquier microservicio puede notificar al usuario */
+    @PostMapping("/internal/notifications/user/{userId}")
+    public ResponseEntity<Void> notifyUser(@PathVariable UUID userId,
+                                           @RequestBody Map<String, Object> payload) {
+        notificationService.notifyUser(userId, com.api.OrderPayment.dto.notification.NotificationEvent.builder()
+                .type((String) payload.get("type"))
+                .title((String) payload.get("title"))
+                .message((String) payload.get("message"))
+                .data(payload.get("data"))
+                .build());
+        return ResponseEntity.ok().build();
+    }
+
+    /** Llamada interna genérica: cualquier microservicio puede notificar al admin/owner de la tienda */
+    @PostMapping("/internal/notifications/store/{storeId}")
+    public ResponseEntity<Void> notifyStore(@PathVariable UUID storeId,
+                                            @RequestBody Map<String, Object> payload) {
+        notificationService.notifyStore(storeId, com.api.OrderPayment.dto.notification.NotificationEvent.builder()
+                .type((String) payload.get("type"))
+                .title((String) payload.get("title"))
+                .message((String) payload.get("message"))
+                .data(payload.get("data"))
+                .build());
+        return ResponseEntity.ok().build();
     }
 
     /** Llamada interna desde Auth: notifica al usuario que se abrió una nueva sesión */
