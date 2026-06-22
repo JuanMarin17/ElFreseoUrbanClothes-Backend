@@ -25,6 +25,7 @@ public class StoreSettingsResponseDTO {
     private Map<String, Object> legal;
     private Map<String, Object> payment;
     private Map<String, Object> styles;
+    private Map<String, Object> maintenance;
 
     private OffsetDateTime updatedAt;
 }

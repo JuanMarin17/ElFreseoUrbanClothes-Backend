@@ -67,6 +67,11 @@ public class StoreSettings {
     @Column(name = "styles", columnDefinition = "jsonb")
     private Map<String, Object> styles;
 
+    // Modo mantenimiento: { enabled: true, message: "..." }
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "maintenance", columnDefinition = "jsonb")
+    private Map<String, Object> maintenance;
+
     @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
 
