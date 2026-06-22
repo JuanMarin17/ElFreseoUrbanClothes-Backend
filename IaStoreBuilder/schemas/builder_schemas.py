@@ -45,6 +45,12 @@ class BuilderChatResponse(BaseModel):
     generated_image_mime_type: Optional[str] = None
 
 
+class ImageAnalyzeRequest(BaseModel):
+    image_base64: str
+    mime_type: str = "image/jpeg"
+    context: Optional[str] = None
+
+
 class ChatMessageResponse(BaseModel):
     message_id: UUID
     role: str

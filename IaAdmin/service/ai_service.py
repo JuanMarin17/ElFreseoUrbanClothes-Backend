@@ -233,10 +233,10 @@ def generate_admin_response(messages: list, context: str = "") -> str:
         raise RuntimeError(f"Error Groq: {e}")
 
 
-GEMINI_MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"]
+GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-preview-05-20"]
 
 def analyze_product_image(image_base64: str, mime_type: str, context: str = "") -> str:
-    """Gemini Vision para analizar imagen de producto. Intenta modelos alternativos si hay cuota agotada."""
+    """Gemini Vision para analizar imagen de producto. Intenta modelos alternativos si hay cuota o modelo no disponible."""
     image_data = base64.b64decode(image_base64)
 
     prompt = (
@@ -264,12 +264,12 @@ def analyze_product_image(image_base64: str, mime_type: str, context: str = "") 
             return response.text
         except Exception as e:
             error_str = str(e)
-            if "429" in error_str or "quota" in error_str.lower():
+            if "429" in error_str or "quota" in error_str.lower() or "404" in error_str or "not found" in error_str.lower():
                 last_error = e
                 continue
             raise RuntimeError(f"Error Gemini ({model_name}): {e}")
 
     raise RuntimeError(
-        "El servicio de análisis de imágenes no está disponible en este momento por límite de cuota. "
+        "El servicio de análisis de imágenes no está disponible en este momento. "
         "Por favor intenta de nuevo más tarde."
     )
