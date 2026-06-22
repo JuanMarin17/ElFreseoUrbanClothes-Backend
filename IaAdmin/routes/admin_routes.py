@@ -123,7 +123,7 @@ async def delete_session(
     ).first()
     if not session:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
-    db.query(AdminChatMessage).filter(AdminChatMessage.session_id == session_id).delete()
+    db.query(AdminChatMessage).filter(AdminChatMessage.session_id == session_id).delete(synchronize_session=False)
     db.delete(session)
     db.commit()
 
@@ -135,14 +135,20 @@ async def delete_all_sessions(
     db: Session   = Depends(get_db)
 ):
     """Elimina todas las sesiones de chat del admin en esta tienda y sus mensajes."""
-    sessions = db.query(AdminChatSession).filter(
-        AdminChatSession.admin_id == UUID(admin_id),
-        AdminChatSession.store_id == UUID(store_id)
-    ).all()
-    for s in sessions:
-        db.query(AdminChatMessage).filter(AdminChatMessage.session_id == s.session_id).delete()
-        db.delete(s)
-    db.commit()
+    session_ids = [
+        s.session_id for s in
+        db.query(AdminChatSession).filter(
+            AdminChatSession.admin_id == UUID(admin_id),
+            AdminChatSession.store_id == UUID(store_id)
+        ).all()
+    ]
+    if session_ids:
+        db.query(AdminChatMessage).filter(AdminChatMessage.session_id.in_(session_ids)).delete(synchronize_session=False)
+        db.query(AdminChatSession).filter(
+            AdminChatSession.admin_id == UUID(admin_id),
+            AdminChatSession.store_id == UUID(store_id)
+        ).delete(synchronize_session=False)
+        db.commit()
 
 
 # ─── Análisis de imagen directo (sin chat) ───────────────────────────────────

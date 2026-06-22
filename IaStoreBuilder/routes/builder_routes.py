@@ -100,7 +100,7 @@ async def delete_session(
     ).first()
     if not session:
         raise HTTPException(status_code=404, detail="Sesión no encontrada")
-    db.query(BuilderMessage).filter(BuilderMessage.session_id == session_id).delete()
+    db.query(BuilderMessage).filter(BuilderMessage.session_id == session_id).delete(synchronize_session=False)
     db.delete(session)
     db.commit()
 
@@ -111,13 +111,14 @@ async def delete_all_sessions(
     db: Session   = Depends(get_db)
 ):
     """Elimina todas las sesiones del dueño y sus mensajes."""
-    sessions = db.query(BuilderSession).filter(
-        BuilderSession.owner_id == UUID(owner_id)
-    ).all()
-    for s in sessions:
-        db.query(BuilderMessage).filter(BuilderMessage.session_id == s.session_id).delete()
-        db.delete(s)
-    db.commit()
+    session_ids = [
+        s.session_id for s in
+        db.query(BuilderSession).filter(BuilderSession.owner_id == UUID(owner_id)).all()
+    ]
+    if session_ids:
+        db.query(BuilderMessage).filter(BuilderMessage.session_id.in_(session_ids)).delete(synchronize_session=False)
+        db.query(BuilderSession).filter(BuilderSession.owner_id == UUID(owner_id)).delete(synchronize_session=False)
+        db.commit()
 
 
 # ─── Análisis de imagen ───────────────────────────────────────────────────────

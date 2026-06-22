@@ -61,6 +61,9 @@ class AdminChatResponse(BaseModel):
     enhanced_image_mime_type: Optional[str] = None
     generated_image_base64: Optional[str] = None
     generated_image_mime_type: Optional[str] = None
+    report_base64: Optional[str] = None
+    report_mime_type: Optional[str] = None
+    report_filename: Optional[str] = None
 
 
 class ImageAnalyzeRequest(BaseModel):

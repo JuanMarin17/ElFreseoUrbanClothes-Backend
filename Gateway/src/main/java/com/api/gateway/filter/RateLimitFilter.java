@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -22,11 +23,6 @@ import org.springframework.web.server.ServerWebExchange;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
-/**
- * Limita la cantidad de peticiones por usuario (o por IP si todavía no hay JWT)
- * dentro de una ventana de tiempo. Corre después de JwtValidationFilter para
- * poder usar X-User-Id como clave cuando la request ya está autenticada.
- */
 @Slf4j
 @Component
 public class RateLimitFilter implements GlobalFilter, Ordered {
@@ -40,10 +36,19 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
     @Value("${rate-limit.strict-max-requests:5}")
     private int strictMaxRequests;
 
-    // Rutas sensibles a fuerza bruta / abuso: límite propio, más estricto que el general.
+    @Value("${rate-limit.ia-max-requests:20}")
+    private int iaMaxRequests;
+
+    // Rutas de auth sensibles a fuerza bruta — límite estricto (5/min).
     private static final List<String> STRICT_EXACT_PATHS = List.of(
         "/api/v1/auth/login",
-        "/api/v1/auth/register",
+        "/api/v1/auth/register"
+    );
+
+    // Rutas de IA — límite propio (20/min) + prevención de mensajes concurrentes.
+    private static final List<String> IA_CHAT_PATHS = List.of(
+        "/api/v1/ia/user/chat",
+        "/api/v1/ia/admin/chat",
         "/api/v1/ia/builder/chat"
     );
 
@@ -51,6 +56,9 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             Pattern.compile("^/api/v1/stores/[^/]+/toggle-status$");
 
     private final Map<String, RequestCounter> counters = new ConcurrentHashMap<>();
+
+    /** Claves de usuarios con una petición IA en vuelo. */
+    private final Set<String> inFlight = ConcurrentHashMap.newKeySet();
 
     @Override
     public int getOrder() {
@@ -66,13 +74,50 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         }
 
         String path = request.getURI().getPath();
-        boolean strict = isStrictPath(path);
-        int limit = strict ? strictMaxRequests : maxRequests;
-        String key = resolveKey(request) + (strict ? "|strict:" + path : "");
+        String userKey = resolveKey(request);
 
+        // ── Rutas de IA: prevención de concurrencia + rate limit propio ──────────
+        if (IA_CHAT_PATHS.contains(path)) {
+            String inFlightKey = userKey + "|ia-inflight";
+
+            // Rechaza si ya hay una petición en vuelo para este usuario
+            if (!inFlight.add(inFlightKey)) {
+                log.warn("Petición IA concurrente rechazada | key={}", userKey);
+                return concurrentIaRequest(exchange);
+            }
+
+            // Aplica rate limit de IA
+            if (exceedsLimit(userKey + "|ia:" + path, iaMaxRequests)) {
+                inFlight.remove(inFlightKey);
+                log.warn("IA rate limit excedido | key={}", userKey);
+                return tooManyRequests(exchange);
+            }
+
+            return chain.filter(exchange)
+                    .doFinally(signal -> inFlight.remove(inFlightKey));
+        }
+
+        // ── Rutas estrictas (auth) ────────────────────────────────────────────────
+        if (isStrictPath(path)) {
+            if (exceedsLimit(userKey + "|strict:" + path, strictMaxRequests)) {
+                log.warn("Strict rate limit excedido | key={} path={}", userKey, path);
+                return tooManyRequests(exchange);
+            }
+            return chain.filter(exchange);
+        }
+
+        // ── Resto de rutas: límite general ────────────────────────────────────────
+        if (exceedsLimit(userKey, maxRequests)) {
+            log.warn("Rate limit general excedido | key={}", userKey);
+            return tooManyRequests(exchange);
+        }
+
+        return chain.filter(exchange);
+    }
+
+    private boolean exceedsLimit(String key, int limit) {
         long windowMillis = windowSeconds * 1000L;
         long now = System.currentTimeMillis();
-
         RequestCounter counter = counters.computeIfAbsent(key, k -> new RequestCounter(now));
         int count;
         synchronized (counter) {
@@ -82,13 +127,7 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             }
             count = ++counter.count;
         }
-
-        if (count > limit) {
-            log.warn("Rate limit excedido | key={} | {} peticiones en {}s (límite={})", key, count, windowSeconds, limit);
-            return tooManyRequests(exchange);
-        }
-
-        return chain.filter(exchange);
+        return count > limit;
     }
 
     private boolean isStrictPath(String path) {
@@ -111,14 +150,22 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
         exchange.getResponse().getHeaders().add("Retry-After", String.valueOf(windowSeconds));
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
-
         String body = "{\"status\":429,\"message\":\"Demasiadas peticiones, intenta de nuevo más tarde\"}";
         DataBuffer buffer = exchange.getResponse().bufferFactory()
                 .wrap(body.getBytes(StandardCharsets.UTF_8));
         return exchange.getResponse().writeWith(Mono.just(buffer));
     }
 
-    /** Limpia entradas inactivas para no crecer indefinidamente en memoria. */
+    private Mono<Void> concurrentIaRequest(ServerWebExchange exchange) {
+        exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+        exchange.getResponse().getHeaders().add("Retry-After", "5");
+        exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        String body = "{\"status\":429,\"message\":\"Ya tienes un mensaje en proceso. Espera la respuesta antes de enviar otro.\"}";
+        DataBuffer buffer = exchange.getResponse().bufferFactory()
+                .wrap(body.getBytes(StandardCharsets.UTF_8));
+        return exchange.getResponse().writeWith(Mono.just(buffer));
+    }
+
     @Scheduled(fixedRate = 5 * 60 * 1000)
     public void cleanup() {
         long staleAfter = windowSeconds * 1000L * 2;
