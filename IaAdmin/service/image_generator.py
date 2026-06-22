@@ -11,30 +11,43 @@ _DIMENSIONS = {
     "16:9": (1024, 576),
 }
 
+_FALLBACK_DIMENSIONS = {
+    "1:1":  (512, 512),
+    "3:4":  (512, 682),
+    "4:3":  (682, 512),
+    "9:16": (512, 910),
+    "16:9": (910, 512),
+}
+
+
+def _pollinations_get(prompt: str, width: int, height: int) -> bytes:
+    encoded = urllib.parse.quote(prompt, safe="")
+    url = (
+        f"https://image.pollinations.ai/prompt/{encoded}"
+        f"?width={width}&height={height}&model=flux&nologo=1"
+    )
+    r = httpx.get(url, timeout=90, follow_redirects=True)
+    if r.status_code == 200 and r.content:
+        return r.content
+    raise RuntimeError(f"Pollinations respondió con status {r.status_code}")
+
 
 def generate_image(prompt: str, aspect_ratio: str = "1:1") -> bytes:
     """Genera una imagen con Pollinations.ai (FLUX.1) — gratis, sin API key."""
     ratio = aspect_ratio if aspect_ratio in _VALID_RATIOS else "1:1"
-    width, height = _DIMENSIONS[ratio]
+    w, h = _DIMENSIONS[ratio]
+    fw, fh = _FALLBACK_DIMENSIONS[ratio]
 
-    encoded_prompt = urllib.parse.quote(prompt)
-    url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
-
+    # Intento 1: tamaño completo
     try:
-        response = httpx.get(
-            url,
-            params={
-                "width":   width,
-                "height":  height,
-                "model":   "flux",
-                "nologo":  "true",
-                "seed":    42,
-            },
-            timeout=90,
-            follow_redirects=True,
-        )
-        if response.status_code == 200 and response.content:
-            return response.content
-        raise RuntimeError(f"Pollinations respondió con status {response.status_code}")
-    except Exception as e:
-        raise RuntimeError(f"Error generando imagen: {e}")
+        return _pollinations_get(prompt, w, h)
+    except Exception as e1:
+        print(f"[image_generator] Pollinations {w}x{h} falló: {e1}, reintentando con tamaño reducido...")
+
+    # Intento 2: tamaño reducido
+    try:
+        return _pollinations_get(prompt, fw, fh)
+    except Exception as e2:
+        print(f"[image_generator] Pollinations {fw}x{fh} falló: {e2}")
+
+    raise RuntimeError("No se pudo generar la imagen. Intenta de nuevo en unos segundos.")
