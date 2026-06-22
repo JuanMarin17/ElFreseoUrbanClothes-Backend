@@ -14,20 +14,19 @@
 
 networks:
   vexio-net:
-    driver: bridge   # Red interna compartida por todos los contenedores
+    driver: bridge # Red interna compartida por todos los contenedores
 
 volumes:
-  postgres-data:     # Volumen persistente: los datos de la BD sobreviven reinicios
+  postgres-data: # Volumen persistente: los datos de la BD sobreviven reinicios
 
 services:
-
   # ── POSTGRESQL ──────────────────────────────────────────────────────────────
   # Un solo contenedor de PostgreSQL aloja las 15 bases de datos.
   # El archivo init.sql se ejecuta automáticamente la primera vez.
   postgres:
     image: postgres:16-alpine
     container_name: vexio-postgres
-    command: postgres -c max_connections=300   # 15 servicios x 5 pool = 75, con margen
+    command: postgres -c max_connections=300 # 15 servicios x 5 pool = 75, con margen
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -35,14 +34,14 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "127.0.0.1:5432:5432"   # Solo accesible desde localhost del VPS
+      - "127.0.0.1:5432:5432" # Solo accesible desde localhost del VPS
     networks:
       - vexio-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
-      retries: 10     # Los servicios esperan a que Postgres esté listo antes de iniciar
+      retries: 10 # Los servicios esperan a que Postgres esté listo antes de iniciar
 
   # ── SERVICIOS SIN DEPENDENCIAS ENTRE MICROSERVICIOS ─────────────────────────
   # Estos servicios solo dependen de la base de datos.
@@ -50,7 +49,7 @@ services:
   auth-service:
     build:
       context: ./Auth
-      dockerfile: ../Dockerfile   # Dockerfile genérico en la raíz del proyecto
+      dockerfile: ../Dockerfile # Dockerfile genérico en la raíz del proyecto
     container_name: auth-service
     ports:
       - "127.0.0.1:8082:8082"
@@ -60,7 +59,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      DB_URL: jdbc:postgresql://postgres:5432/auth   # por si el YAML usa ${DB_URL}
+      DB_URL: jdbc:postgresql://postgres:5432/auth # por si el YAML usa ${DB_URL}
       DB_USER: postgres
       DB_PASSWORD: ${DB_PASSWORD}
       SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 5
@@ -70,7 +69,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD}
     depends_on:
       postgres:
-        condition: service_healthy   # Espera que Postgres pase el healthcheck
+        condition: service_healthy # Espera que Postgres pase el healthcheck
     networks:
       - vexio-net
     restart: unless-stopped
@@ -113,7 +112,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8083/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -184,7 +187,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8084/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -249,7 +256,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8085/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8085/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -280,7 +291,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8088/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8088/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -315,7 +330,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8091/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8091/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -344,7 +363,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8093/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8093/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -373,7 +396,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8094/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8094/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -402,7 +429,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8095/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8095/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -464,7 +495,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8100/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8100/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -532,7 +567,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8099/docs')\" || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8099/docs'')" || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -576,7 +615,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8102/docs')\" || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8102/docs'')" || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -645,7 +688,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8089/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8089/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -677,7 +724,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8087/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8087/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -709,7 +760,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8092/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8092/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -738,7 +793,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8104/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8104/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -770,7 +829,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8105/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8105/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -802,7 +865,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8103/api/v1/actuator/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:8103/api/v1/actuator/health || exit 1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -828,7 +895,11 @@ services:
       - vexio-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8113/docs')\" || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8113/docs'')" || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -844,11 +915,12 @@ services:
       dockerfile: ../Dockerfile
     container_name: gateway
     ports:
-      - "8080:8080"   # Único puerto expuesto al exterior; todo pasa por aquí
+      - "8080:8080" # Único puerto expuesto al exterior; todo pasa por aquí
     environment:
       SERVER_PORT: 8080
       JWT_SECRET: ${JWT_SECRET}
       SPRING_PROFILES_ACTIVE: docker
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
     depends_on:
       auth-service:
         condition: service_healthy
