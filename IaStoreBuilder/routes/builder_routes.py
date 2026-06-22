@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from models.database import get_db, BuilderSession, BuilderMessage
-from schemas.builder_schemas import BuilderChatRequest, BuilderChatResponse, ChatMessageResponse
-from service.builder_chat_service import process_builder_chat
+from schemas.builder_schemas import BuilderChatRequest, BuilderChatResponse, ChatMessageResponse, ImageAnalyzeRequest
+from service.builder_chat_service import process_builder_chat, _process_builder_action
+from service.ai_service import analyze_store_image
 from service.image_generator import generate_image
 from pydantic import BaseModel
 from typing import Optional, List
@@ -117,6 +118,30 @@ async def delete_all_sessions(
         db.query(BuilderMessage).filter(BuilderMessage.session_id == s.session_id).delete()
         db.delete(s)
     db.commit()
+
+
+# ─── Análisis de imagen ───────────────────────────────────────────────────────
+
+@router.post("/analyze-image", response_model=BuilderChatResponse)
+async def analyze_image(
+    dto: ImageAnalyzeRequest,
+    owner_id: str = Depends(get_owner_id),
+    db: Session   = Depends(get_db)
+):
+    """
+    Analiza una imagen de tienda (logo, banner, fondo) con Gemini Vision.
+    Devuelve sugerencias de calidad, brillo/contraste/nitidez y si necesita quitar el fondo.
+    """
+    ai_response = analyze_store_image(dto.image_base64, dto.mime_type, dto.context or "")
+
+    session = BuilderSession(owner_id=UUID(owner_id))
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    db.add(BuilderMessage(session_id=session.session_id, role="assistant", content=ai_response))
+    db.commit()
+
+    return _process_builder_action(session.session_id, ai_response)
 
 
 # ─── Generación de imágenes ───────────────────────────────────────────────────

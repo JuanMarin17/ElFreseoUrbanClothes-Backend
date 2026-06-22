@@ -1,8 +1,13 @@
 import json
+import base64
 from groq import Groq
-from config.settings import GROQ_API_KEY
+from google import genai as google_genai
+from google.genai import types as genai_types
+from config.settings import GROQ_API_KEY, GEMINI_API_KEY
 
 groq_client = Groq(api_key=GROQ_API_KEY)
+_genai_client = google_genai.Client(api_key=GEMINI_API_KEY)
+GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-preview-05-20"]
 
 BUILDER_SYSTEM_PROMPT = """
 Eres Vexio Builder, un asistente de inteligencia artificial especializado en ayudar a propietarios de tiendas a configurar y personalizar su tienda en línea en la plataforma Vexio.
@@ -253,3 +258,43 @@ def generate_builder_response(messages: list, context: str = "") -> str:
 
     except Exception as e:
         raise RuntimeError(f"Error Groq: {e}")
+
+
+def analyze_store_image(image_base64: str, mime_type: str, context: str = "") -> str:
+    """Gemini Vision para analizar imágenes de tienda (logo, banner, fondo)."""
+    image_data = base64.b64decode(image_base64)
+
+    prompt = (
+        "Eres Vexio Builder, un consultor de branding y diseño para tiendas en línea.\n\n"
+        "Analiza esta imagen y entrega:\n"
+        "1. Tipo de imagen detectado (logo, banner, fondo, producto u otro)\n"
+        "2. Calidad visual (iluminación, nitidez, composición, resolución) puntuada del 1 al 10\n"
+        "3. ¿Necesita quitar el fondo? Explica con criterio profesional\n"
+        "4. Ajustes recomendados de brillo, contraste y nitidez (valores entre 0.8 y 1.5)\n"
+        "5. Sugerencias de mejora para que encaje mejor en una tienda de ropa urbana\n"
+        "6. Si es un logo: ¿es legible en fondos claros y oscuros? ¿Qué mejorarías?\n"
+        "7. Si es un banner: ¿el mensaje visual es claro? ¿Qué falta o sobra?\n\n"
+        f"Contexto adicional: {context or 'Ninguno'}\n\n"
+        "Al final incluye la acción: ACTION:ANALYZE_IMAGE|removeBackground:true_o_false|brightness:valor|contrast:valor|sharpness:valor"
+    )
+
+    last_error = None
+    for model_name in GEMINI_MODELS:
+        try:
+            image_part = genai_types.Part.from_bytes(data=image_data, mime_type=mime_type)
+            response = _genai_client.models.generate_content(
+                model=model_name,
+                contents=[image_part, prompt]
+            )
+            return response.text
+        except Exception as e:
+            error_str = str(e)
+            if "429" in error_str or "quota" in error_str.lower() or "404" in error_str or "not found" in error_str.lower():
+                last_error = e
+                continue
+            raise RuntimeError(f"Error Gemini ({model_name}): {e}")
+
+    raise RuntimeError(
+        "El servicio de análisis de imágenes no está disponible en este momento. "
+        "Por favor intenta de nuevo más tarde."
+    )
