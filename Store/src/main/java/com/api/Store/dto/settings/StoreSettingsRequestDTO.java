@@ -37,7 +37,6 @@ import java.util.Map;
 @Data
 public class StoreSettingsRequestDTO {
 
-    @NotNull(message = "El paso completado es obligatorio")
     private Integer completedStep;
 
     /** URL o preview del logo (se extrae para guardarlo como campo dedicado) */
@@ -66,6 +65,9 @@ public class StoreSettingsRequestDTO {
 
     /** Styles: se almacena tal cual como JSONB */
     private Map<String, Object> styles;
+
+    /** Modo mantenimiento: { enabled, message } */
+    private Map<String, Object> maintenance;
 
     @Valid
     private StoreInfoSettingsDTO store;
