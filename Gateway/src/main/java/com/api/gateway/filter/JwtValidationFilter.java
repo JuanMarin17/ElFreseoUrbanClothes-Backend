@@ -3,6 +3,8 @@ package com.api.gateway.filter;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.crypto.SecretKey;
 
@@ -36,6 +38,10 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     public JwtValidationFilter(@Qualifier("authWebClient") WebClient authWebClient) {
         this.authWebClient = authWebClient;
     }
+
+    // Patrón para el stream SSE del usuario: /api/v1/notifications/user/{userId}/stream
+    private static final Pattern USER_STREAM_PATTERN =
+            Pattern.compile("^/api/v1/notifications/user/([^/]+)/stream$");
 
     private static final List<String> PUBLIC_PATHS = List.of(
         "/api/v1/auth/register",
@@ -84,12 +90,17 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         String authHeader = request.getHeaders().getFirst("Authorization");
         String storeId = request.getHeaders().getFirst("X-Store-Id");
 
-        // Fallback para descarga de CSV: browser no puede enviar Authorization header en downloads
-        if ((authHeader == null || !authHeader.startsWith("Bearer "))
-                && path.endsWith("/sales/export")) {
-            String queryToken = request.getQueryParams().getFirst("token");
-            if (queryToken != null && !queryToken.isBlank()) {
-                authHeader = "Bearer " + queryToken;
+        // Fallback ?token para endpoints donde el browser no puede enviar headers:
+        //  · SSE (EventSource): /notifications/*/stream
+        //  · Descarga de CSV:  /sales/export
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            boolean needsQueryToken = path.endsWith("/sales/export")
+                    || (path.contains("/notifications/") && path.endsWith("/stream"));
+            if (needsQueryToken) {
+                String queryToken = request.getQueryParams().getFirst("token");
+                if (queryToken != null && !queryToken.isBlank()) {
+                    authHeader = "Bearer " + queryToken;
+                }
             }
         }
 
@@ -123,6 +134,20 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
 
             ServerHttpRequest enrichedRequest = builder.build();
             ServerWebExchange enrichedExchange = exchange.mutate().request(enrichedRequest).build();
+
+            // SSE stream del usuario: verificar que el userId del JWT coincide con el de la URL
+            Matcher streamMatcher = USER_STREAM_PATTERN.matcher(path);
+            if (streamMatcher.matches()) {
+                String pathUserId = streamMatcher.group(1);
+                String jwtUserId  = claims.get("user_id", String.class);
+                String role       = claims.get("role", String.class);
+                boolean isAdmin   = "ADMIN".equals(role) || "SUPERADMIN".equals(role);
+                if (!pathUserId.equals(jwtUserId) && !isAdmin) {
+                    log.warn("SSE ownership check failed | jwtUser={} pathUser={} path={}", jwtUserId, pathUserId, path);
+                    exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                    return exchange.getResponse().setComplete();
+                }
+            }
 
             // Tokens sin session_id (emitidos antes del deploy): dejar pasar
             if (sessionId == null) {
@@ -179,8 +204,6 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         if ("GET".equals(method) && "/api/v1/stores".equals(path)) return true;
         if ("GET".equals(method) && path.startsWith("/api/v1/stores/getBySlug/")) return true;
         if ("GET".equals(method) && "/api/v1/stores/settings/getSettings".equals(path)) return true;
-        // SSE streams: EventSource del browser no soporta Authorization header
-        if (path.contains("/notifications/") && path.endsWith("/stream")) return true;
         return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
     }
 }

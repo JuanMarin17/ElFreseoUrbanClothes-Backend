@@ -1,4 +1,4 @@
-package com.api.Inventory.config;
+package com.api.Support.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -8,15 +8,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
-    @Bean
-    public WebClient productWebClient(WebClient.Builder builder,
-            @Value("${product.service.url}") String baseUrl) {
-        return builder.baseUrl(baseUrl).build();
-    }
-
     @Bean("notificationWebClient")
     public WebClient notificationWebClient(WebClient.Builder builder,
-            @Value("${notifications.service.url}") String baseUrl) {
+                                           @Value("${notifications.service.url}") String baseUrl) {
         return builder.baseUrl(baseUrl).build();
     }
 }

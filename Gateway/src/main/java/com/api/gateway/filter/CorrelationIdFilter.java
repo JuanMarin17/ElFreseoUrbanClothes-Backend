@@ -18,7 +18,7 @@ public class CorrelationIdFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return -100; // Corre antes de RateLimitFilter (-50) y JwtValidationFilter
+        return -200; // Corre primero: antes de JwtValidationFilter (-100) y RateLimitFilter (-50)
     }
 
     @Override
