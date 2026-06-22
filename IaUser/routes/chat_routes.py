@@ -82,6 +82,41 @@ async def get_history(
     return messages
 
 
+# ─── Borrar sesiones ─────────────────────────────────────────────────────────
+
+@router.delete("/sessions/{session_id}", status_code=204)
+async def delete_session(
+    session_id: UUID,
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db)
+):
+    """Elimina una sesión de chat y todos sus mensajes."""
+    session = db.query(ChatSession).filter(
+        ChatSession.session_id == session_id,
+        ChatSession.user_id    == UUID(user_id)
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+    db.query(ChatMessage).filter(ChatMessage.session_id == session_id).delete()
+    db.delete(session)
+    db.commit()
+
+
+@router.delete("/sessions", status_code=204)
+async def delete_all_sessions(
+    user_id: str = Depends(get_user_id),
+    db: Session = Depends(get_db)
+):
+    """Elimina todas las sesiones de chat del usuario y sus mensajes."""
+    sessions = db.query(ChatSession).filter(
+        ChatSession.user_id == UUID(user_id)
+    ).all()
+    for s in sessions:
+        db.query(ChatMessage).filter(ChatMessage.session_id == s.session_id).delete()
+        db.delete(s)
+    db.commit()
+
+
 # ─── Notificaciones de stock ──────────────────────────────────────────────────
 
 @router.get("/stock-notifications", response_model=List[StockNotificationResponse])
