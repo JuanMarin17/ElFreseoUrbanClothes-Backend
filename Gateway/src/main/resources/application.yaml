@@ -12,7 +12,6 @@ spring:
   cloud:
     gateway:
       httpclient:
-        response-timeout: 120s
         connect-timeout: 10000
       routes:
         # ── Auth (público) ────────────────────────────────────────────────────
