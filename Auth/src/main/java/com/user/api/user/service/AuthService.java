@@ -22,6 +22,7 @@ import com.user.api.user.dto.ValidationCodeDTO;
 import com.user.api.user.entity.Role;
 import com.user.api.user.entity.SecretKey;
 import com.user.api.user.entity.User;
+import com.user.api.user.exception.BadRequestException;
 import com.user.api.user.exception.IncorrectCredentialsException;
 import com.user.api.user.exception.InvalidOtpException;
 import com.user.api.user.exception.RoleNotFoundException;
@@ -75,10 +76,13 @@ public class AuthService {
 
     public MessageResponseDTO resendVerificationCode(EmailRequestDTO email) {
         User user = userRepository.findByEmail(email.getEmail().toLowerCase())
-                .orElseThrow(() -> new UserAlreadyExistsException("Usuario con este correo inexistente"));
+                .orElseThrow(() -> new UserNotFoundException("No existe una cuenta con ese correo"));
 
         SecretKey secretKey = secretKeyRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Este usuario no tiene una llave de configuración"));
+                .orElseThrow(() -> {
+                    log.error("SecretKey no encontrada para usuario {}", user.getUser_id());
+                    return new RuntimeException("Error de configuración interno");
+                });
 
         String newCode = otpService.generateOtp(secretKey.getSecretKey());
         secretKey.setCode(passwordEncoder.encode(newCode));
@@ -92,7 +96,7 @@ public class AuthService {
         return response;
     }
 
-    @Transactional
+    @Transactional(rollbackOn = Exception.class)
     public MessageResponseDTO register(UserRequestDTO userRequestDTO) {
         User user = new User();
 
@@ -116,7 +120,12 @@ public class AuthService {
         userRegisterDTO.setPhone(userRequestDTO.getPhone());
         userRegisterDTO.setImageProfile(userRequestDTO.getImageProfile());
 
-        usersClient.createUser(userRegisterDTO);
+        try {
+            usersClient.createUser(userRegisterDTO);
+        } catch (Exception e) {
+            log.error("Error al crear perfil en Users para userId={}: {}", userSave.getUser_id(), e.getMessage());
+            throw new RuntimeException("No se pudo completar el registro, intente de nuevo");
+        }
 
         String userSecretKey = otpService.userSecretKey();
         SecretKey secretKey = new SecretKey();
@@ -166,6 +175,10 @@ public class AuthService {
     public MessageResponseDTO login(LoginRequestDTO loginRequestDTO) {
         User user = userRepository.findByEmail(loginRequestDTO.getEmail().toLowerCase())
                 .orElseThrow(() -> new IncorrectCredentialsException("Credenciales incorrectas"));
+
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            throw new IncorrectCredentialsException("Credenciales incorrectas");
+        }
 
         if (!passwordEncoder.matches(loginRequestDTO.getPassword(), user.getPassword())) {
             throw new IncorrectCredentialsException("Credenciales incorrectas");
@@ -246,14 +259,14 @@ public class AuthService {
         String userIdHeader = RequestContext.getHeader("X-User-Id");
 
         if (userIdHeader == null) {
-            throw new UserNotFoundException("Usuario no autenticado");
+            throw new IncorrectCredentialsException("No autenticado");
         }
 
         UUID userId;
         try {
             userId = UUID.fromString(userIdHeader);
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Formato inválido del userId");
+            throw new BadRequestException("Formato inválido del userId");
         }
 
         User user = userRepository.findById(userId)
@@ -269,7 +282,7 @@ public class AuthService {
 
     public String getEmailByUserId(UUID userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuario con ese id no encontrado"))
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"))
                 .getEmail().toLowerCase();
     }
 
