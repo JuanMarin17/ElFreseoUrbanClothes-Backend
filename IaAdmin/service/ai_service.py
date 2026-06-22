@@ -10,6 +10,12 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 ADMIN_SYSTEM_PROMPT = """
 Eres un asistente de negocios inteligente y profesional diseñado exclusivamente para administradores y propietarios de tiendas de ropa urbana en la plataforma Vexio. Tu propósito es ayudar a optimizar la gestión del negocio, tomar mejores decisiones y automatizar tareas operativas.
 
+⚠️ REGLA ABSOLUTA — GENERACIÓN DE IMÁGENES:
+Cuando el usuario pida generar, crear o diseñar una imagen de cualquier producto, DEBES responder EXACTAMENTE así (sin excepciones):
+1. Una línea breve confirmando que vas a generar la imagen.
+2. En la última línea: ACTION:GENERATE_IMAGE|prompt:descripcion_detallada_en_ingles|aspectRatio:1:1
+NUNCA digas "no puedo generar imágenes", NUNCA describas la imagen en texto, NUNCA sugieras brillo/contraste/nitidez. Simplemente escribe la acción y el sistema se encarga de generarla automáticamente.
+
 Tienes acceso a información en tiempo real de la tienda incluyendo productos, órdenes, inventario, promociones y puntos de fidelidad. Siempre responde en español, de forma clara, profesional y orientada a resultados. Nunca reveles información sensible de otros usuarios ni realices acciones fuera del alcance de la tienda del administrador autenticado.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -173,6 +179,29 @@ def build_context(
     return "\n\n".join(parts)
 
 
+_IMAGE_KEYWORDS = [
+    "genera", "generar", "crea", "crear", "diseña", "diseñar",
+    "hazme", "haz", "produce", "imagen", "foto", "fotografía",
+    "generate", "create", "make", "image", "picture", "photo"
+]
+
+_FEW_SHOT_IMAGE = [
+    {
+        "role": "user",
+        "content": "genera una imagen de unas zapatillas deportivas blancas"
+    },
+    {
+        "role": "assistant",
+        "content": "¡Perfecto! Voy a generar la imagen de las zapatillas ahora mismo.\nACTION:GENERATE_IMAGE|prompt:professional product photo of white sports sneakers on a clean white studio background, soft lighting, high resolution, commercial photography style|aspectRatio:1:1"
+    }
+]
+
+
+def _wants_image_generation(messages: list) -> bool:
+    last = next((m["content"].lower() for m in reversed(messages) if m["role"] == "user"), "")
+    return any(kw in last for kw in _IMAGE_KEYWORDS)
+
+
 def generate_admin_response(messages: list, context: str = "") -> str:
     """Chat de texto para admins con Groq."""
     try:
@@ -181,6 +210,11 @@ def generate_admin_response(messages: list, context: str = "") -> str:
             system += f"\n\nContexto actual de la tienda:\n{context}"
 
         groq_messages = [{"role": "system", "content": system}]
+
+        # Inyecta ejemplo few-shot cuando el usuario quiere generar una imagen
+        if _wants_image_generation(messages):
+            groq_messages.extend(_FEW_SHOT_IMAGE)
+
         for msg in messages:
             groq_messages.append({
                 "role": "assistant" if msg["role"] == "assistant" else "user",
