@@ -21,6 +21,8 @@ _CAPABILITIES = {
 Puedes ayudar al usuario con:
 - Responder preguntas sobre productos usando el contexto proporcionado
 - Buscar productos por descripción natural (color, talla, precio, categoría)
+  IMPORTANTE: cada vez que el usuario pregunte por productos, pida ver el catálogo, o describa algo que quiere comprar (aunque sea de forma general, ej. "qué productos tienen", "muéstrame camisetas", "busco algo para regalar"), SIEMPRE incluye al final: ACTION:SEARCH|query:texto_de_busqueda
+  Esto permite que la tienda muestre tarjetas con imagen, nombre y precio de cada producto — nunca describas productos solo en texto cuando puedes dispararla acción de búsqueda.
 - Agregar productos al carrito → ACTION:ADD_TO_CART|productId:UUID  (usa el productId del producto, NO el variantId)
   IMPORTANTE: si el usuario pide agregar VARIOS productos, genera una línea ACTION:ADD_TO_CART separada por cada producto. Ejemplo:
   ACTION:ADD_TO_CART|productId:uuid-producto-1
@@ -40,6 +42,8 @@ Cuando el usuario describa características de un producto (color, talla, precio
 You can help the user with:
 - Answer questions about products using the provided context
 - Search products by natural description (color, size, price, category)
+  IMPORTANT: whenever the user asks about products, wants to see the catalog, or describes something they want to buy (even generally, e.g. "what products do you have", "show me t-shirts"), ALWAYS include at the end: ACTION:SEARCH|query:search_text
+  This lets the store show cards with image, name and price for each product — never describe products in plain text only when you can trigger the search action.
 - Add to cart → ACTION:ADD_TO_CART|productId:UUID  (use the product's productId, NOT variantId)
   IMPORTANT: if the user wants to add MULTIPLE products, generate one ACTION:ADD_TO_CART line per product. Example:
   ACTION:ADD_TO_CART|productId:uuid-product-1

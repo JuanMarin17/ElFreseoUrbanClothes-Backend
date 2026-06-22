@@ -13,6 +13,7 @@ import base64
 
 class ImageGenerateRequest(BaseModel):
     prompt: str
+    aspect_ratio: Optional[str] = "1:1"
 
 router = APIRouter(prefix="/api/v1/ia/builder", tags=["IA Store Builder"])
 
@@ -94,7 +95,7 @@ async def generate_store_image(
     Genera una imagen para la tienda (banner, logo, fondo) usando Imagen 3 de Google.
     Devuelve la imagen en base64.
     """
-    image_bytes = generate_image(dto.prompt)
+    image_bytes = generate_image(dto.prompt, dto.aspect_ratio)
     return JSONResponse({
         "image_base64": base64.b64encode(image_bytes).decode("utf-8"),
         "mime_type": "image/png"
