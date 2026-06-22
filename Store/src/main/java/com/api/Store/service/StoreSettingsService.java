@@ -104,6 +104,9 @@ public class StoreSettingsService {
 
         if (dto.getStyles() != null)
             settings.setStyles(dto.getStyles());
+
+        if (dto.getMaintenance() != null)
+            settings.setMaintenance(dto.getMaintenance());
     }
 
     private StoreSettingsResponseDTO toResponse(StoreSettings s) {
@@ -118,6 +121,7 @@ public class StoreSettingsService {
                 .legal(s.getLegal())
                 .payment(s.getPayment())
                 .styles(s.getStyles())
+                .maintenance(s.getMaintenance())
                 .updatedAt(s.getUpdatedAt())
                 .build();
     }
