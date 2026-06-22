@@ -79,10 +79,13 @@ async def process_chat(
     # Sesión
     if dto.session_id:
         session = db.query(ChatSession).filter(
-            ChatSession.session_id == dto.session_id
+            ChatSession.session_id == dto.session_id,
+            ChatSession.user_id    == uuid.UUID(user_id),
+            ChatSession.store_id   == uuid.UUID(store_id)
         ).first()
         if not session:
-            raise ValueError("Sesión no encontrada")
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Sesión no encontrada")
     else:
         session = ChatSession(
             user_id=uuid.UUID(user_id),
