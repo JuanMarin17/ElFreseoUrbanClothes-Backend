@@ -52,9 +52,15 @@ class AdminChatResponse(BaseModel):
     #
     # PROMOCIONES
     #   SUGGEST_PROMOTION    → action_data: {type, discount, duration, target, reason}
+    #
+    # GENERACIÓN DE IMAGEN
+    #   GENERATE_IMAGE       → action_data: {prompt, aspectRatio}
+    #                          + generated_image_base64 si se generó
     action_data: Optional[Dict[str, Any]] = None
     enhanced_image_base64: Optional[str] = None
     enhanced_image_mime_type: Optional[str] = None
+    generated_image_base64: Optional[str] = None
+    generated_image_mime_type: Optional[str] = None
 
 
 class ImageAnalyzeRequest(BaseModel):

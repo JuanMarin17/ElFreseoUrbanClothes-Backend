@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from models.database import AdminChatSession, AdminChatMessage
 from service.ai_service import generate_admin_response, analyze_product_image, build_context
 from service.image_processor import enhance_image
+from service.image_generator import generate_image
+import base64 as b64lib
 from service.client import (
     reports_client, inventory_client, support_client,
     store_client, product_client, promotions_client, loyalty_client
@@ -295,6 +297,22 @@ async def _process_admin_action(
                 response.enhanced_image_mime_type = enhanced_mime
             except Exception as e:
                 response.message += f"\n\nNo se pudo procesar la imagen: {e}"
+
+    # ── Generación de imagen (ACTION:GENERATE_IMAGE) ──────────────────────────
+    elif "ACTION:GENERATE_IMAGE" in ai_response:
+        data = _extract_action_data(ai_response)
+        prompt = str(data.get("prompt", "")).strip()
+        aspect_ratio = str(data.get("aspectRatio", "1:1"))
+        response.action = "GENERATE_IMAGE"
+        response.action_data = {"prompt": prompt, "aspectRatio": aspect_ratio}
+        response.message = _clean_response(ai_response) or "Aquí tienes la imagen generada."
+
+        try:
+            image_bytes = generate_image(prompt, aspect_ratio)
+            response.generated_image_base64 = b64lib.b64encode(image_bytes).decode("utf-8")
+            response.generated_image_mime_type = "image/png"
+        except Exception as e:
+            response.message += f"\n\nNo se pudo generar la imagen: {e}"
 
     else:
         response.message = _clean_response(ai_response)

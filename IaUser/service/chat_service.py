@@ -19,6 +19,19 @@ def _sanitize_uuid(value: str) -> str:
     return match.group(0) if match else value
 
 
+def _first_image_url(product: dict) -> str:
+    images = product.get("images") or []
+    if images and isinstance(images[0], dict):
+        return images[0].get("url", "")
+    if images and isinstance(images[0], str):
+        return images[0]
+    return ""
+
+
+def _with_image(product: dict) -> dict:
+    return {**product, "imageUrl": product.get("imageUrl") or _first_image_url(product)}
+
+
 def _build_product_context(products: list) -> str:
     if not products:
         return ""
@@ -244,7 +257,7 @@ async def process_action(
         response.action = "SEARCH"
         found = search_products_by_description(query, products)
         if found:
-            response.product_recommendations = found
+            response.product_recommendations = [_with_image(p) for p in found]
             response.message = clean_response(ai_response) or f"Encontré {len(found)} productos que coinciden con tu búsqueda."
         else:
             response.message = "No encontré productos que coincidan exactamente. ¿Puedes darme más detalles?"

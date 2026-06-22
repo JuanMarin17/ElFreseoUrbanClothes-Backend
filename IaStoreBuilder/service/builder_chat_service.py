@@ -8,7 +8,9 @@ from sqlalchemy.orm import Session
 from models.database import BuilderSession, BuilderMessage
 from service.ai_service import generate_builder_response, build_builder_context
 from service.client import store_client
+from service.image_generator import generate_image
 from schemas.builder_schemas import BuilderChatRequest, BuilderChatResponse
+import base64 as b64lib
 
 CONTEXT_WINDOW = 20
 
@@ -227,5 +229,20 @@ def _process_builder_action(session_id: UUID, ai_response: str) -> BuilderChatRe
             "paymentMethod": data.get("paymentMethod", "mercadopago"),
             "shipping":      data.get("shipping", "ambos"),
         }
+
+    # ── Generación de imagen (logo, banner, fondo) ────────────────────────────
+    elif "ACTION:GENERATE_IMAGE" in ai_response:
+        data = _extract_action_data(ai_response)
+        prompt = str(data.get("prompt", "")).strip()
+        aspect_ratio = str(data.get("aspectRatio", "1:1"))
+        response.action = "GENERATE_IMAGE"
+        response.action_data = {"prompt": prompt, "aspectRatio": aspect_ratio}
+
+        try:
+            image_bytes = generate_image(prompt, aspect_ratio)
+            response.generated_image_base64 = b64lib.b64encode(image_bytes).decode("utf-8")
+            response.generated_image_mime_type = "image/png"
+        except Exception as e:
+            response.message += f"\n\nNo se pudo generar la imagen: {e}"
 
     return response
