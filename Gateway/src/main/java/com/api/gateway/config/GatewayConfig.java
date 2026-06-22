@@ -18,10 +18,14 @@ public class GatewayConfig {
         return WebClient.builder().baseUrl(authServiceUrl).build();
     }
 
-    @Bean CorsWebFilter corsWebFilter() {
+    @Bean CorsWebFilter corsWebFilter(
+            @Value("${cors.allowed-origins:*}") String allowedOrigins) {
         CorsConfiguration config = new CorsConfiguration();
-        // allowedOriginPatterns permite "*" junto con allowCredentials:true
-        config.setAllowedOriginPatterns(List.of("*"));
+        List<String> origins = java.util.Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .toList();
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
