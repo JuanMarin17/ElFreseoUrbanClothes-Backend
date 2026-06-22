@@ -38,7 +38,11 @@ class BuilderChatResponse(BaseModel):
     #   PASO 8  SUGGEST_WIDGETS    → {sidebar:{visible,bg,color,font,width,items,border,radius},
     #                                  searchbar:{visible,bg,color,placeholderColor,
     #                                             placeholder,border,radius,icon}}
+    #           GENERATE_IMAGE     → {prompt, aspectRatio}
+    #                                + generated_image_base64 si se generó
     action_data: Optional[Dict[str, Any]] = None
+    generated_image_base64: Optional[str] = None
+    generated_image_mime_type: Optional[str] = None
 
 
 class ChatMessageResponse(BaseModel):

@@ -22,6 +22,8 @@ class ChatResponse(BaseModel):
     #   ORDER_SUMMARY     → sin action_data (el frontend consulta el carrito)
     #   COMPARE           → action_data: {productIds: "id1,id2"}
     action_data: Optional[Dict[str, Any]] = None
+    # product_recommendations: lista de productos completos (incluye "imageUrl" con
+    # la imagen principal, normalizada tanto en SEARCH como en GET_RECOMMENDATIONS)
     product_recommendations: Optional[List[Dict[str, Any]]] = None
 
 
