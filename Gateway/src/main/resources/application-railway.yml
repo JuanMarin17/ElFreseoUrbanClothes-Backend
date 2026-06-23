@@ -66,6 +66,11 @@ spring:
           predicates:
             - Path=/api/v1/stores/*/reviews/notifications/stream
 
+        - id: returns-admin-stream-routes
+          uri: http://returns-service.railway.internal:8092
+          predicates:
+            - Path=/api/v1/stores/*/returns/notifications/stream
+
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
           uri: http://store-service.railway.internal:8081

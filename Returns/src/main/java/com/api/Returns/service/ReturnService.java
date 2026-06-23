@@ -1,6 +1,7 @@
 package com.api.Returns.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class ReturnService {
     private final ReturnRequestRepository returnRepository;
     private final ReturnItemRepository returnItemRepository;
     private final OrderClient orderClient;
+    private final NotificationService notificationService;
 
     // ── Crear solicitud de devolución ─────────────────────────────────────────
     @Transactional
@@ -73,6 +75,15 @@ public class ReturnService {
         }).toList();
 
         returnItemRepository.saveAll(items);
+
+        try {
+            notificationService.notifyStore(storeId, "new-return", Map.of(
+                    "orderId", saved.getOrderId(),
+                    "reason", saved.getReason(),
+                    "returnId", saved.getReturnId()));
+        } catch (Exception e) {
+            // notificación no bloquea la respuesta
+        }
 
         return toResponse(saved, items);
     }
