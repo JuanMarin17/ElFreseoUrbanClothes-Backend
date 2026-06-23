@@ -110,6 +110,12 @@ public class InventoryService {
         return toMovementResponse(movementRepository.save(movement));
     }
 
+    /** Registra varios movimientos en una sola petición (consumido por PosSale para evitar N llamadas HTTP por venta). */
+    @Transactional
+    public List<MovementResponseDTO> registerMovementsBatch(List<MovementRequestDTO> dtos) {
+        return dtos.stream().map(this::registerMovement).toList();
+    }
+
     // ── Obtener balance de la tienda ──────────────────────────────────────────
     public List<InventoryBalanceResponseDTO> getBalanceByStore() {
         UUID storeId = getStoreIdFromHeader();

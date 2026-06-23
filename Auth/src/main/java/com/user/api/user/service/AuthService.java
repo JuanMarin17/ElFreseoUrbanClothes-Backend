@@ -295,6 +295,16 @@ public class AuthService {
                 user.getCreateAt());
     }
 
+    /** Trae la info de varios usuarios en una sola consulta, para evitar N llamadas HTTP desde otros servicios. */
+    public java.util.List<com.user.api.user.dto.UserInfoResponseDTO> getUserInfoBatch(java.util.List<UUID> userIds) {
+        return userRepository.findAllById(userIds).stream()
+                .map(user -> new com.user.api.user.dto.UserInfoResponseDTO(
+                        user.getUser_id(),
+                        user.getEmail().toLowerCase(),
+                        user.getCreateAt()))
+                .toList();
+    }
+
     public JwtResponseDTO refreshToken(String token) {
         String newToken = jwtService.refrechToken(token);
         JwtResponseDTO response = new JwtResponseDTO();

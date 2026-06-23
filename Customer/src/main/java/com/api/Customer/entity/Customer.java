@@ -2,6 +2,7 @@ package com.api.Customer.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -50,6 +51,7 @@ public class Customer {
 
     @Builder.Default
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     private List<CustomerAddress> addresses = new ArrayList<>();
 
     @CreationTimestamp

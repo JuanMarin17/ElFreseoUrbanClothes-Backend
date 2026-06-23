@@ -20,10 +20,10 @@ public interface PosSaleRepository extends JpaRepository<PosSale, UUID> {
 
     Optional<PosSale> findBySaleIdAndStoreId(UUID saleId, UUID storeId);
 
-    List<PosSale> findByStoreIdAndCreatedAtBetweenOrderByCreatedAtDesc(
-            UUID storeId, LocalDateTime from, LocalDateTime to);
+    Page<PosSale> findByStoreIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            UUID storeId, LocalDateTime from, LocalDateTime to, Pageable pageable);
 
-    List<PosSale> findByStoreIdAndCustomerIdOrderByCreatedAtDesc(UUID storeId, UUID customerId);
+    Page<PosSale> findByStoreIdAndCustomerIdOrderByCreatedAtDesc(UUID storeId, UUID customerId, Pageable pageable);
 
     boolean existsBySaleNumber(String saleNumber);
 

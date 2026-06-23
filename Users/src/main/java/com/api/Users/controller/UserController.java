@@ -2,6 +2,8 @@ package com.api.Users.controller;
 
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -62,6 +64,12 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
+    /** Trae varios usuarios por ID en una sola petición (consumido por Store para evitar N+1 al listar staff). */
+    @PostMapping("/batch")
+    public ResponseEntity<List<UserResponseDTO>> getUsersByIds(@RequestBody List<UUID> ids) {
+        return ResponseEntity.status(HttpStatus.OK).body(userService.getUsersByIds(ids));
+    }
+
     @GetMapping("/existUser/{id}")
     public ResponseEntity<Boolean> existUser(@PathVariable UUID id){
         return ResponseEntity.status(HttpStatus.OK).body(userService.existUser(id));
@@ -77,8 +85,10 @@ public class UserController {
      */
     /** Requiere JWT con rol ADMIN o SUPERADMIN */
     @GetMapping("/admin/all")
-    public ResponseEntity<List<UserWithStoreDTO>> listAllUsersWithStore() {
-        return ResponseEntity.ok(userService.listAllUsersWithStore());
+    public ResponseEntity<Page<UserWithStoreDTO>> listAllUsersWithStore(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(userService.listAllUsersWithStore(PageRequest.of(page, size)));
     }
 
     @PatchMapping("/profile-image")

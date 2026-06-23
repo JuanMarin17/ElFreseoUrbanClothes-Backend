@@ -14,6 +14,7 @@ import com.api.Store.repository.StoreRepository;
 import com.api.Store.repository.StoreUserRepository;
 import com.api.Store.util.HeaderUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -127,9 +128,9 @@ public class StoreService {
         return true;
     }
 
-    /** Obtener todas las tiendas */
+    /** Obtener todas las tiendas. Acotado a 1000 para evitar cargar la plataforma entera en memoria. */
     public List<StoreResponseDTO> getAllStores() {
-        List<Store> stores = storeRepository.findAll();
+        List<Store> stores = storeRepository.findAll(PageRequest.of(0, 1000)).getContent();
         return stores.stream()
                 .map(store -> toResponse(store, "Tienda encontrada", 200))
                 .collect(Collectors.toList());

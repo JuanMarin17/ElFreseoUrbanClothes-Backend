@@ -7,6 +7,8 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.api.Users.client.AuthClient;
@@ -187,6 +189,24 @@ public class UserService {
         return response;
     }
 
+    /** Trae varios usuarios por ID en una sola petición, para evitar N llamadas HTTP desde otros servicios (ej. Store). */
+    public List<UserResponseDTO> getUsersByIds(List<UUID> userIds) {
+        Map<UUID, com.api.Users.client.dto.AuthUserInfoDTO> infoByUser = authClient.getUserInfoBatch(userIds);
+
+        return userRepository.findAllById(userIds).stream()
+                .map(user -> {
+                    com.api.Users.client.dto.AuthUserInfoDTO info = infoByUser.get(user.getUserId());
+                    UserResponseDTO response = new UserResponseDTO();
+                    response.setUserId(user.getUserId());
+                    response.setUserName(user.getUserName());
+                    response.setPhone(user.getPhone());
+                    response.setUserEmail(info != null ? info.getEmail() : null);
+                    response.setImageProfile(user.getImageProfile());
+                    return response;
+                })
+                .toList();
+    }
+
     public Boolean existUser(UUID id){
         Optional<User> user = userRepository.findById(id);
 
@@ -197,12 +217,12 @@ public class UserService {
         return true;
     }
 
-    public List<UserWithStoreDTO> listAllUsersWithStore() {
+    public Page<UserWithStoreDTO> listAllUsersWithStore(Pageable pageable) {
         String role = RequestContext.getHeader("X-User-Role");
         if (!"ADMIN".equals(role) && !"SUPERADMIN".equals(role))
             throw new UnauthorizedUserException("Solo ADMIN o SUPERADMIN pueden acceder a este recurso");
 
-        List<User> users = userRepository.findAll();
+        Page<User> users = userRepository.findAll(pageable);
 
         // 1 HTTP call — mapa ownerId → tienda
         Map<UUID, StoreClient.StoreInfo> storeByOwner = storeClient.getAllStores()
@@ -213,7 +233,7 @@ public class UserService {
                         Function.identity(),
                         (a, b) -> a));
 
-        return users.stream().map(user -> {
+        return users.map(user -> {
             StoreClient.StoreInfo store = storeByOwner.get(user.getUserId());
             return UserWithStoreDTO.builder()
                     .userId(user.getUserId())
@@ -228,7 +248,7 @@ public class UserService {
                             .isActive(store.getIsActive())
                             .build() : null)
                     .build();
-        }).collect(Collectors.toList());
+        });
     }
 
     /**

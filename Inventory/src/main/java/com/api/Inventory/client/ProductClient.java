@@ -1,5 +1,6 @@
 package com.api.Inventory.client;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,6 +21,7 @@ public class ProductClient {
                 .bodyValue(Map.of("amount", amount))
                 .retrieve()
                 .toBodilessEntity()
+                .timeout(Duration.ofSeconds(5))
                 .block();
     }
 
@@ -29,6 +31,7 @@ public class ProductClient {
                 .bodyValue(Map.of("amount", amount))
                 .retrieve()
                 .toBodilessEntity()
+                .timeout(Duration.ofSeconds(5))
                 .block();
     }
 
@@ -38,6 +41,7 @@ public class ProductClient {
                     .uri("/api/v1/variants/{variantId}", variantId)
                     .retrieve()
                     .toBodilessEntity()
+                    .timeout(Duration.ofSeconds(5))
                     .block();
             return true;
         } catch (Exception e) {

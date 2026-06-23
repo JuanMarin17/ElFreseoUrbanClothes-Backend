@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.util.UUID;
 
 @Component
@@ -18,6 +19,7 @@ public class OrderClient {
                     .uri("/stores/{storeId}/orders/{orderId}", storeId, orderId)
                     .retrieve()
                     .toBodilessEntity()
+                    .timeout(Duration.ofSeconds(5))
                     .block();
             return true;
         } catch (Exception e) {

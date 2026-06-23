@@ -67,11 +67,13 @@ public class SupplierService {
     public List<SupplierResponseDTO> getSuppliersByStore() {
         UUID storeId = getStoreIdFromHeader();
 
-        return storeSupplierRepository.findByIdStoreId(storeId)
+        List<UUID> supplierIds = storeSupplierRepository.findByIdStoreId(storeId)
                 .stream()
-                .map(ss -> supplierRepository.findBySupplierIdAndIsActiveTrue(ss.getId().getSupplierId())
-                        .orElse(null))
-                .filter(s -> s != null) // excluir inactivos
+                .map(ss -> ss.getId().getSupplierId())
+                .toList();
+
+        return supplierRepository.findBySupplierIdInAndIsActiveTrue(supplierIds)
+                .stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -204,11 +206,12 @@ public class SupplierService {
         if (!storeSupplierRepository.existsByIdStoreIdAndIdSupplierId(storeId, supplierId))
             throw new BadRequestException("El proveedor no pertenece a esta tienda");
 
-        return supplierProductRepository.findByIdSupplierIdAndStoreId(supplierId, storeId)
+        List<UUID> productIds = supplierProductRepository.findByIdSupplierIdAndStoreId(supplierId, storeId)
                 .stream()
-                .map(link -> productClient.getProductById(link.getId().getProductId(), storeId).orElse(null))
-                .filter(Objects::nonNull)
+                .map(link -> link.getId().getProductId())
                 .toList();
+
+        return productClient.getProductsByIds(productIds, storeId);
     }
 
     // ── Helper: obtener storeId del header ───────────────────────────────────

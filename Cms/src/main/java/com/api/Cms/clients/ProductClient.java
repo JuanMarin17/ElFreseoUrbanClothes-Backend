@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -23,6 +24,7 @@ public class ProductClient {
                     .cast(Map.class)
                     .map(m -> (Map<String, Object>) m)
                     .collectList()
+                    .timeout(Duration.ofSeconds(5))
                     .block();
         } catch (Exception e) {
             return List.of();

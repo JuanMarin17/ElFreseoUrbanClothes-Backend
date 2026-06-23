@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -87,12 +88,17 @@ public class StoreUserService {
         if (!storeRepository.existsById(storeId))
             throw new StoreNotFoundException("Tienda no encontrada con id: " + storeId);
 
-        return storeUserRepository.findByIdStoreId(storeId)
-                .stream()
-                .map(su -> {
-                    var info = userClient.getUserById(su.getId().getUserId());
-                    return toResponse(su, info.orElse(null));
-                })
+        List<StoreUser> storeUsers = storeUserRepository.findByIdStoreId(storeId);
+        List<UUID> userIds = storeUsers.stream().map(su -> su.getId().getUserId()).toList();
+
+        // 2 llamadas HTTP (batch) en vez de 2 por cada usuario de la tienda
+        Map<UUID, UserInfoDTO> userInfoById = userClient.getUsersByIds(userIds);
+        Map<UUID, AuthUserInfoDTO> authInfoById = authClient.getUserInfoBatch(userIds);
+
+        return storeUsers.stream()
+                .map(su -> toResponse(su,
+                        userInfoById.get(su.getId().getUserId()),
+                        authInfoById.get(su.getId().getUserId())))
                 .toList();
     }
 
@@ -135,8 +141,12 @@ public class StoreUserService {
     }
 
     private StoreUserResponseDTO toResponse(StoreUser u, UserInfoDTO info) {
+        AuthUserInfoDTO authInfo = authClient.getUserInfo(u.getId().getUserId()).orElse(null);
+        return toResponse(u, info, authInfo);
+    }
+
+    private StoreUserResponseDTO toResponse(StoreUser u, UserInfoDTO info, AuthUserInfoDTO authInfo) {
         UUID userId = u.getId().getUserId();
-        AuthUserInfoDTO authInfo = authClient.getUserInfo(userId).orElse(null);
         return StoreUserResponseDTO.builder()
                 .userId(userId)
                 .storeId(u.getId().getStoreId())

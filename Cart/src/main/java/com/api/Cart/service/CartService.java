@@ -181,8 +181,13 @@ public class CartService {
                                                 p -> p,
                                                 (a, b) -> a)); // si hay varias, se queda la primera
 
+                // Verifica precios actuales de todos los productos en una sola llamada (batch)
+                Map<UUID, ProductResponse> currentProductByProduct = productClient
+                                .findProductsForPriceCheck(productIds, storeId);
+
                 List<CartItemResponseDTO> itemDTOs = cart.getItems().stream()
-                                .map(item -> toItemResponse(item, storeId,
+                                .map(item -> toItemResponse(item,
+                                                currentProductByProduct.get(item.getProductId()),
                                                 promotionByProduct.get(item.getProductId())))
                                 .toList();
 
@@ -217,14 +222,10 @@ public class CartService {
                                 .build();
         }
 
-        private CartItemResponseDTO toItemResponse(CartItem item, UUID storeId,
+        private CartItemResponseDTO toItemResponse(CartItem item, ProductResponse current,
                         ProductPromotionDTO promotion) {
                 BigDecimal subtotal = item.getUnitPrice()
                                 .multiply(BigDecimal.valueOf(item.getQuantity()));
-
-                // Consulta precio actual al Product Service para detectar cambios
-                ProductResponse current = productClient
-                                .findProductForPriceCheck(item.getProductId(), storeId);
 
                 boolean priceChanged = false;
                 BigDecimal currentPrice = null;

@@ -1,5 +1,6 @@
 package com.api.Cms.service;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +40,7 @@ public class GeminiService {
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(Map.class)
+                    .timeout(Duration.ofSeconds(20))
                     .block();
 
             List<Map> candidates = (List<Map>) response.get("candidates");
