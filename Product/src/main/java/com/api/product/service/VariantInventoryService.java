@@ -53,6 +53,20 @@ public class VariantInventoryService {
     }
 
     @Transactional
+    public ProductVariant setStock(UUID variantId, Integer quantity) {
+        if (quantity == null || quantity < 0)
+            throw new BadRequestException("El stock no puede ser negativo");
+
+        ProductVariant variant = variantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Variante no encontrada con id: " + variantId));
+
+        variant.setStock(quantity);
+        ProductVariant saved = variantRepository.save(variant);
+        checkAndSendAlert(saved);
+        return saved;
+    }
+
+    @Transactional
     public ProductVariant updateMinStock(UUID variantId, Integer minStock) {
         if (minStock == null || minStock < 0)
             throw new BadRequestException("El minStock no puede ser negativo");
