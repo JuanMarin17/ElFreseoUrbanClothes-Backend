@@ -28,6 +28,7 @@ public class ProductRequestDTO {
     @AllArgsConstructor
     @Builder
     public static class VariantDTO {
+        private UUID variantId; // opcional — si viene, se usa para match en PUT
         private String sku;
         private BigDecimal price;
         private Integer stock;
