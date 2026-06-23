@@ -2,8 +2,11 @@ package com.api.product.service;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -98,7 +101,7 @@ public class ProductService {
         product.setName(dto.getName());
         product.setDescription(dto.getDescription());
         product.setBrand(findBrand(dto.getBrandId()));
-        product.setVariants(buildVariants(dto, product));
+        mergeVariants(product, dto.getVariants());
 
         if (dto.getImages() != null && !dto.getImages().isEmpty()) {
             if (product.getImages() == null)
@@ -231,8 +234,7 @@ public class ProductService {
         UUID userId = getUserIdFromHeader();
         String role = storeClient.userRole(userId, storeId);
 
-        System.out.println(role);
-        if ("ADMIN".equals(role) || "OWNER".equals(role))
+        if (!"ADMIN".equals(role) && !"OWNER".equals(role))
             throw new UnauthorizedException("Solo el ADMIN u OWNER pueden realizar esta acción");
     }
 
@@ -279,6 +281,58 @@ public class ProductService {
                         .product(product)
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Actualiza variantes existentes in-place (match por variantId, luego por sku),
+     * agrega las nuevas y elimina (orphanRemoval) las que ya no vienen en el DTO.
+     * Reemplazar la lista completa con objetos nuevos perdía el stock acumulado
+     * porque las variantes viejas quedaban huérfanas en la base de datos.
+     */
+    private void mergeVariants(Product product, List<ProductRequestDTO.VariantDTO> dtoVariants) {
+        List<ProductVariant> existing = product.getVariants();
+        if (existing == null) {
+            existing = new ArrayList<>();
+            product.setVariants(existing);
+        }
+
+        Map<UUID, ProductVariant> byId = existing.stream()
+                .filter(v -> v.getVariantId() != null)
+                .collect(Collectors.toMap(ProductVariant::getVariantId, v -> v));
+        Map<String, ProductVariant> bySku = existing.stream()
+                .collect(Collectors.toMap(ProductVariant::getSku, v -> v, (a, b) -> a));
+
+        Set<UUID> matchedIds = new HashSet<>();
+        List<ProductVariant> toAdd = new ArrayList<>();
+
+        for (ProductRequestDTO.VariantDTO dto : dtoVariants) {
+            ProductVariant match = dto.getVariantId() != null ? byId.get(dto.getVariantId()) : null;
+            if (match == null)
+                match = bySku.get(dto.getSku());
+
+            if (match != null) {
+                match.setSku(dto.getSku());
+                match.setPrice(dto.getPrice());
+                match.setStock(dto.getStock());
+                match.setMinStock(dto.getMinStock());
+                match.setSize(dto.getSize());
+                match.setColor(dto.getColor());
+                matchedIds.add(match.getVariantId());
+            } else {
+                toAdd.add(ProductVariant.builder()
+                        .sku(dto.getSku())
+                        .price(dto.getPrice())
+                        .stock(dto.getStock())
+                        .minStock(dto.getMinStock())
+                        .size(dto.getSize())
+                        .color(dto.getColor())
+                        .product(product)
+                        .build());
+            }
+        }
+
+        existing.removeIf(v -> !matchedIds.contains(v.getVariantId()));
+        existing.addAll(toAdd);
     }
 
     private List<ProductImage> buildImages(ProductRequestDTO dto, Product product) {

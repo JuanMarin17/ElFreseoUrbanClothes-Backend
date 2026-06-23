@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.api.product.dto.ApiResponseDTO;
 import com.api.product.dto.MinStockUpdateDTO;
+import com.api.product.dto.SetStockRequestDTO;
 import com.api.product.dto.StockUpdateDTO;
 import com.api.product.entity.ProductVariant;
 import com.api.product.service.VariantInventoryService;
@@ -59,6 +60,26 @@ public class VariantInventoryController {
         return ResponseEntity.ok(
                 ApiResponseDTO.<ProductVariant>builder()
                         .message("Stock reducido correctamente")
+                        .status(HttpStatus.OK.value())
+                        .data(variant)
+                        .timestamp(OffsetDateTime.now())
+                        .build()
+        );
+    }
+
+    /**
+     * Establecer stock absoluto.
+     */
+    @PatchMapping("/{variantId}/stock/set")
+    public ResponseEntity<ApiResponseDTO<ProductVariant>> setStock(
+            @PathVariable UUID variantId,
+            @RequestBody SetStockRequestDTO dto) {
+
+        ProductVariant variant = inventoryService.setStock(variantId, dto.getQuantity());
+
+        return ResponseEntity.ok(
+                ApiResponseDTO.<ProductVariant>builder()
+                        .message("Stock establecido correctamente")
                         .status(HttpStatus.OK.value())
                         .data(variant)
                         .timestamp(OffsetDateTime.now())
