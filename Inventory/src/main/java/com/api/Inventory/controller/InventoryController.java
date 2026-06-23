@@ -31,6 +31,11 @@ public class InventoryController {
         return ResponseEntity.status(HttpStatus.CREATED).body(inventoryService.registerMovement(dto));
     }
 
+    @PostMapping("/movements/batch")
+    public ResponseEntity<List<MovementResponseDTO>> registerMovementsBatch(@RequestBody List<MovementRequestDTO> dtos) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(inventoryService.registerMovementsBatch(dtos));
+    }
+
     @GetMapping("/balance")
     public ResponseEntity<List<InventoryBalanceResponseDTO>> getBalance() {
         return ResponseEntity.ok(inventoryService.getBalanceByStore());

@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,13 +78,11 @@ public class SupportService {
     }
 
     // ── Obtener todos los tickets (solo OWNER) ────────────────────────────────
-    public List<TicketResponseDTO> getAllTickets() {
+    public Page<TicketResponseDTO> getAllTickets(Pageable pageable) {
         validateSuperAdmin();
 
-        return ticketRepository.findAll()
-                .stream()
-                .map(this::toTicketResponse)
-                .toList();
+        return ticketRepository.findAll(pageable)
+                .map(this::toTicketResponse);
     }
 
     // ── Obtener ticket por ID ─────────────────────────────────────────────────

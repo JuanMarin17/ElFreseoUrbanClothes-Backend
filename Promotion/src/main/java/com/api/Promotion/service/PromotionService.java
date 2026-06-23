@@ -3,6 +3,8 @@ package com.api.Promotion.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.api.Promotion.client.ProductClient;
@@ -66,11 +68,11 @@ public class PromotionService {
     }
 
     // ── Obtener todas las promociones de la tienda ────────────────────────────
-    public List<PromotionResponseDTO> getAllPromotions() {
+    public Page<PromotionResponseDTO> getAllPromotions(Pageable pageable) {
         validateAdminOrOwner();
         UUID storeId = getStoreIdFromHeader();
-        return promotionRepository.findByStoreId(storeId)
-                .stream().map(this::toPromotionResponse).toList();
+        return promotionRepository.findByStoreId(storeId, pageable)
+                .map(this::toPromotionResponse);
     }
 
     // ── Actualizar promoción ──────────────────────────────────────────────────

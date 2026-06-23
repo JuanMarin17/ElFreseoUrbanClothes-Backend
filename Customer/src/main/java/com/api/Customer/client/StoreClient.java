@@ -6,6 +6,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ public class StoreClient {
                     .uri("/stores/{storeId}/access/{userId}", storeId, userId)
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<Map<String, Boolean>>() {})
+                    .timeout(Duration.ofSeconds(5))
                     .block();
             return response != null && Boolean.TRUE.equals(response.get("hasAccess"));
         } catch (Exception e) {

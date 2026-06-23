@@ -112,6 +112,11 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body(authService.getUserInfo(id));
     }
 
+    @PostMapping("/getUserInfoBatch")
+    public ResponseEntity<java.util.List<UserInfoResponseDTO>> getUserInfoBatch(@RequestBody java.util.List<UUID> ids){
+        return ResponseEntity.status(HttpStatus.OK).body(authService.getUserInfoBatch(ids));
+    }
+
     @PostMapping("/refresh-token")
     public ResponseEntity<JwtResponseDTO> refreshToken(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader.replace("Bearer ", "");

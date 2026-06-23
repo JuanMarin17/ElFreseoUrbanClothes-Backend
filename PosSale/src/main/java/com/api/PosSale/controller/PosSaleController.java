@@ -62,15 +62,19 @@ public class PosSaleController {
     public ResponseEntity<List<PosSaleResponseDTO>> byDateRange(
             @PathVariable UUID storeId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
-        return ResponseEntity.ok(saleService.getSalesByDateRange(storeId, from, to));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(saleService.getSalesByDateRange(storeId, from, to, page, size));
     }
 
     @GetMapping("/customer/{customerId}")
     public ResponseEntity<List<PosSaleResponseDTO>> byCustomer(
             @PathVariable UUID storeId,
-            @PathVariable UUID customerId) {
-        return ResponseEntity.ok(saleService.getSalesByCustomer(storeId, customerId));
+            @PathVariable UUID customerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(saleService.getSalesByCustomer(storeId, customerId, page, size));
     }
 
     @GetMapping("/{saleId}")

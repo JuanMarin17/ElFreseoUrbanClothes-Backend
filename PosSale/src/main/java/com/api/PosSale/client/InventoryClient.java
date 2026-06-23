@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,34 +22,32 @@ public class InventoryClient {
     private String baseUrl;
 
     /**
-     * Registra una salida de inventario para la variante vendida.
-     * El servicio de Inventory usa el header X-Store-Id y X-User-Id para el contexto.
+     * Registra varios movimientos de inventario en una sola petición,
+     * en vez de una llamada HTTP por cada ítem de la venta.
      */
-    public void registerOutMovement(UUID storeId, UUID variantId, int quantity) {
-        sendMovement(storeId, variantId, quantity, "OUT");
-    }
-
-    public void registerInMovement(UUID storeId, UUID variantId, int quantity) {
-        sendMovement(storeId, variantId, quantity, "IN");
-    }
-
-    private void sendMovement(UUID storeId, UUID variantId, int quantity, String type) {
+    public void registerMovementsBatch(UUID storeId, List<Map<String, Object>> movements) {
+        if (movements.isEmpty()) return;
         try {
             webClient.post()
-                    .uri(baseUrl + "/inventory/movements")
+                    .uri(baseUrl + "/inventory/movements/batch")
                     .header("X-Store-Id", storeId.toString())
-                    .bodyValue(Map.of(
-                            "variantId", variantId.toString(),
-                            "quantity", quantity,
-                            "movementType", type
-                    ))
+                    .bodyValue(movements)
                     .retrieve()
                     .toBodilessEntity()
+                    .timeout(Duration.ofSeconds(10))
                     .block();
 
-            log.info("Movimiento {} registrado: variantId={}, qty={}", type, variantId, quantity);
+            log.info("Batch de {} movimientos registrado para storeId={}", movements.size(), storeId);
         } catch (Exception e) {
-            log.warn("No se pudo registrar movimiento {} para variantId={}: {}", type, variantId, e.getMessage());
+            log.warn("No se pudo registrar el batch de movimientos para storeId={}: {}", storeId, e.getMessage());
         }
+    }
+
+    public static Map<String, Object> movement(UUID variantId, int quantity, String movementType) {
+        return Map.of(
+                "variantId", variantId.toString(),
+                "quantity", quantity,
+                "movementType", movementType
+        );
     }
 }

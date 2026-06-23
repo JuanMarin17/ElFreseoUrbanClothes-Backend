@@ -9,6 +9,9 @@ import com.api.Customer.dto.customer.UpdateCustomerRequestDTO;
 import com.api.Customer.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,8 +48,12 @@ public class CustomerController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CustomerResponseDTO>> listCustomers(@PathVariable UUID storeId) {
-        return ResponseEntity.ok(customerService.getCustomersByStore(storeId));
+    public ResponseEntity<Page<CustomerResponseDTO>> listCustomers(
+            @PathVariable UUID storeId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return ResponseEntity.ok(customerService.getCustomersByStore(storeId, pageable));
     }
 
     @GetMapping("/{customerId}")

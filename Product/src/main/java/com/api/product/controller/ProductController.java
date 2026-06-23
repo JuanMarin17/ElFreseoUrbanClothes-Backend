@@ -145,6 +145,19 @@ public class ProductController {
                         .build());
     }
 
+    /** Trae varios productos por ID en una sola petición (consumido por Cart, Supplier, etc. para evitar N+1). */
+    @PostMapping("/batch")
+    public ResponseEntity<ApiResponseDTO<List<ProductResponseDTO>>> getByIds(@RequestBody List<UUID> ids) {
+        List<ProductResponseDTO> products = productService.getByIds(ids);
+        return ResponseEntity.ok(
+                ApiResponseDTO.<List<ProductResponseDTO>>builder()
+                        .message("Productos encontrados")
+                        .status(HttpStatus.OK.value())
+                        .data(products)
+                        .timestamp(OffsetDateTime.now())
+                        .build());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponseDTO<ProductResponseDTO>> getById(@PathVariable UUID id) {
 

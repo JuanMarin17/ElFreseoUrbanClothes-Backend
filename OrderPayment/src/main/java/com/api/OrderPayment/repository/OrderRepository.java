@@ -5,6 +5,7 @@ import com.api.OrderPayment.enums.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,6 +17,12 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
 
     List<Order> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
+    /** Trae items y payment en la misma consulta para evitar N+1 al recorrer todas las órdenes de la tienda. */
+    @Query("SELECT DISTINCT o FROM Order o " +
+            "LEFT JOIN FETCH o.items " +
+            "LEFT JOIN FETCH o.payment " +
+            "WHERE o.storeId = :storeId " +
+            "ORDER BY o.createdAt DESC")
     List<Order> findByStoreIdOrderByCreatedAtDesc(UUID storeId);
 
     Page<Order> findByStoreIdOrderByCreatedAtDesc(UUID storeId, Pageable pageable);

@@ -1,5 +1,6 @@
 package com.api.Users.client;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +29,7 @@ public class StoreClient {
                     .uri("/stores")
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<List<StoreInfo>>() {})
+                    .timeout(Duration.ofSeconds(5))
                     .block();
             return stores != null ? stores : Collections.emptyList();
         } catch (Exception e) {

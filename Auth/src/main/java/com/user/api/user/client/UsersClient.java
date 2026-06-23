@@ -1,5 +1,6 @@
 package com.user.api.user.client;
 
+import java.time.Duration;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -33,6 +34,7 @@ public class UsersClient {
                                     new UserAlreadyExistsException("Nombre de usuario no disponible: " + userRegisterDTO.getUserName())))
                         )
                         .toBodilessEntity()
+                        .timeout(Duration.ofSeconds(5))
                         .block();
         } catch (WebClientResponseException e) {
             throw new UserAlreadyExistsException("Nombre de usuario no disponible: " + userRegisterDTO.getUserName());
@@ -44,6 +46,7 @@ public class UsersClient {
                         .uri("/users/myUserName/{id}", id)
                         .retrieve()
                         .bodyToMono(String.class)
+                        .timeout(Duration.ofSeconds(5))
                         .block();
     }
 }

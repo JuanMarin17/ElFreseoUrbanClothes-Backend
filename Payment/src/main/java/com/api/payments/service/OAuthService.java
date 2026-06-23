@@ -16,6 +16,7 @@ import com.api.payments.entity.TenantMpCredential;
 import com.api.payments.exception.PaymentException;
 import com.api.payments.repository.TenantMpCredentialRepository;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -119,6 +120,7 @@ public class OAuthService {
                 .body(BodyInserters.fromFormData(body))
                 .retrieve()
                 .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(10))
                 .block();
         } catch (Exception e) {
             log.error("Error intercambiando código OAuth: {}", e.getMessage());
@@ -143,6 +145,7 @@ public class OAuthService {
                 .body(BodyInserters.fromFormData(body))
                 .retrieve()
                 .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(10))
                 .block();
 
             cred.setAccessToken((String) response.get("access_token"));

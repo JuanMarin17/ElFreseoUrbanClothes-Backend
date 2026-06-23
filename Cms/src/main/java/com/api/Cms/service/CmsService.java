@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.api.Cms.clients.PreferencesClient;
@@ -63,10 +65,10 @@ public class CmsService {
     }
 
     // ── Obtener páginas del usuario ───────────────────────────────────────────
-    public List<CmsPageResponseDTO> getMyPages() {
+    public Page<CmsPageResponseDTO> getMyPages(Pageable pageable) {
         String userId = getUserIdFromHeader();
-        return cmsPageRepository.findByUserIdOrderByCreatedAtDesc(UUID.fromString(userId))
-                .stream().map(p -> toResponse(p, List.of())).toList();
+        return cmsPageRepository.findByUserIdOrderByCreatedAtDesc(UUID.fromString(userId), pageable)
+                .map(p -> toResponse(p, List.of()));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
