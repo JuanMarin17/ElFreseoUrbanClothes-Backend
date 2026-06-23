@@ -11,6 +11,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Map;
 
 @Component
@@ -47,6 +48,7 @@ public class MediaServiceClient {
                 .body(BodyInserters.fromMultipartData(formData))
                 .retrieve()
                 .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(30))
                 .block();
 
         if (response == null || !response.containsKey("url")) {

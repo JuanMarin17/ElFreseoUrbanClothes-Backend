@@ -1,5 +1,6 @@
 package com.api.Cms.clients;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ public class PreferencesClient {
                     .cast(Map.class)
                     .map(m -> (Map<String, Object>) m)
                     .collectList()
+                    .timeout(Duration.ofSeconds(5))
                     .block();
         } catch (Exception e) {
             return List.of();
@@ -40,6 +42,7 @@ public class PreferencesClient {
                     .cast(Map.class)
                     .map(m -> (Map<String, Object>) m)
                     .collectList()
+                    .timeout(Duration.ofSeconds(5))
                     .block();
         } catch (Exception e) {
             return List.of();

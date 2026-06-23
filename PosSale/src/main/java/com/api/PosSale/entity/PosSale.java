@@ -4,6 +4,7 @@ import com.api.PosSale.enums.PosPaymentMethod;
 import com.api.PosSale.enums.PosSaleStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -49,6 +50,7 @@ public class PosSale {
 
     @Builder.Default
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 50)
     private List<PosSaleItem> items = new ArrayList<>();
 
     @Column(nullable = false, precision = 12, scale = 2)

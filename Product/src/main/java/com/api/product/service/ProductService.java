@@ -143,6 +143,12 @@ public class ProductService {
         return productRepository.findById(id).map(this::mapToResponse);
     }
 
+    /** Trae varios productos en una sola consulta, para evitar N llamadas HTTP desde otros servicios (ej. Cart). */
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> getByIds(List<UUID> ids) {
+        return productRepository.findAllById(ids).stream().map(this::mapToResponse).toList();
+    }
+
     @Transactional
     public Optional<ProductResponseDTO> inactiveProduct(UUID id) {
         validateAdminOrOwner();

@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -115,11 +116,11 @@ public class PosSaleService {
         PosSale saved = saleRepository.save(sale);
         log.info("Venta POS creada: {}", saved.getSaleNumber());
 
-        items.forEach(item -> {
-            if (item.getVariantId() != null) {
-                inventoryClient.registerOutMovement(storeId, item.getVariantId(), item.getQuantity());
-            }
-        });
+        List<Map<String, Object>> movements = items.stream()
+                .filter(item -> item.getVariantId() != null)
+                .map(item -> InventoryClient.movement(item.getVariantId(), item.getQuantity(), "OUT"))
+                .toList();
+        inventoryClient.registerMovementsBatch(storeId, movements);
 
         return mapper.toDTO(saved);
     }
@@ -143,16 +144,18 @@ public class PosSaleService {
     }
 
     @Transactional(readOnly = true)
-    public List<PosSaleResponseDTO> getSalesByCustomer(UUID storeId, UUID customerId) {
+    public List<PosSaleResponseDTO> getSalesByCustomer(UUID storeId, UUID customerId, int page, int size) {
         validateRole();
-        return saleRepository.findByStoreIdAndCustomerIdOrderByCreatedAtDesc(storeId, customerId)
+        Pageable pageable = PageRequest.of(page, size);
+        return saleRepository.findByStoreIdAndCustomerIdOrderByCreatedAtDesc(storeId, customerId, pageable)
                 .stream().map(mapper::toDTO).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<PosSaleResponseDTO> getSalesByDateRange(UUID storeId, LocalDateTime from, LocalDateTime to) {
+    public List<PosSaleResponseDTO> getSalesByDateRange(UUID storeId, LocalDateTime from, LocalDateTime to, int page, int size) {
         validateRole();
-        return saleRepository.findByStoreIdAndCreatedAtBetweenOrderByCreatedAtDesc(storeId, from, to)
+        Pageable pageable = PageRequest.of(page, size);
+        return saleRepository.findByStoreIdAndCreatedAtBetweenOrderByCreatedAtDesc(storeId, from, to, pageable)
                 .stream().map(mapper::toDTO).toList();
     }
 
@@ -170,11 +173,11 @@ public class PosSaleService {
         PosSale saved = saleRepository.save(sale);
         log.info("Venta POS cancelada: {}", sale.getSaleNumber());
 
-        sale.getItems().forEach(item -> {
-            if (item.getVariantId() != null) {
-                inventoryClient.registerInMovement(storeId, item.getVariantId(), item.getQuantity());
-            }
-        });
+        List<Map<String, Object>> movements = sale.getItems().stream()
+                .filter(item -> item.getVariantId() != null)
+                .map(item -> InventoryClient.movement(item.getVariantId(), item.getQuantity(), "IN"))
+                .toList();
+        inventoryClient.registerMovementsBatch(storeId, movements);
 
         return mapper.toDTO(saved);
     }
@@ -187,7 +190,8 @@ public class PosSaleService {
         LocalDateTime to = today.atTime(23, 59, 59);
 
         List<PosSale> sales = saleRepository
-                .findByStoreIdAndCreatedAtBetweenOrderByCreatedAtDesc(storeId, from, to);
+                .findByStoreIdAndCreatedAtBetweenOrderByCreatedAtDesc(storeId, from, to, Pageable.unpaged())
+                .getContent();
 
         List<PosSale> completed = sales.stream()
                 .filter(s -> s.getStatus() == PosSaleStatus.COMPLETED)

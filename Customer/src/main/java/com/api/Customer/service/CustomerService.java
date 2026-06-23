@@ -17,6 +17,8 @@ import com.api.Customer.util.CustomerMapper;
 import com.api.Customer.util.HeaderUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,10 +68,10 @@ public class CustomerService {
     }
 
     @Transactional(readOnly = true)
-    public List<CustomerResponseDTO> getCustomersByStore(UUID storeId) {
+    public Page<CustomerResponseDTO> getCustomersByStore(UUID storeId, Pageable pageable) {
         requireStoreAccess(storeId);
-        return customerRepository.findByStoreIdOrderByCreatedAtDesc(storeId)
-                .stream().map(mapper::toDTO).toList();
+        return customerRepository.findByStoreIdOrderByCreatedAtDesc(storeId, pageable)
+                .map(mapper::toDTO);
     }
 
     @Transactional(readOnly = true)

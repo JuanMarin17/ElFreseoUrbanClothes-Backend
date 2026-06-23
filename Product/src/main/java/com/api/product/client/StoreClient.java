@@ -1,5 +1,6 @@
 package com.api.product.client;
 
+import java.time.Duration;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ public class StoreClient {
                     .uri("/stores/existStore/{id}", storeId)
                     .retrieve()
                     .bodyToMono(Boolean.class)
+                    .timeout(Duration.ofSeconds(5))
                     .block();
             return Boolean.TRUE.equals(exists);
         } catch (Exception e) {
@@ -32,6 +34,7 @@ public class StoreClient {
                             .uri("/stores/{storeId}/isOwner/{userId}", storeId, userId)
                             .retrieve()
                             .bodyToMono(String.class)
+                            .timeout(Duration.ofSeconds(5))
                             .block();
             return role;
         } catch(Exception e){

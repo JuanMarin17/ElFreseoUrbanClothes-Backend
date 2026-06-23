@@ -1,5 +1,6 @@
 package com.api.Supplier.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,4 +11,5 @@ import com.api.Supplier.entity.Supplier;
 public interface SupplierRepository extends JpaRepository<Supplier, UUID> {
     boolean existsByName(String name);
     Optional<Supplier> findBySupplierIdAndIsActiveTrue(UUID supplierId);
+    List<Supplier> findBySupplierIdInAndIsActiveTrue(List<UUID> supplierIds);
 }
