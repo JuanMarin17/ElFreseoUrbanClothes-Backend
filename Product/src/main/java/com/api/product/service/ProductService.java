@@ -190,8 +190,24 @@ public class ProductService {
                 .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
+    /**
+     * Si viene X-Store-Id, filtra solo los productos activos de esa tienda (caso de IaUser/IaAdmin/Cms,
+     * que ya envían el header esperando este filtro). Sin el header, conserva el comportamiento histórico
+     * de devolver el catálogo activo completo, para no romper a otros consumidores (ej. feed público).
+     */
     @Transactional(readOnly = true)
     public List<ProductResponseDTO> listAllActiveProducts() {
+        String storeIdHeader = RequestContext.getHeader("X-Store-Id");
+        if (storeIdHeader != null && !storeIdHeader.isBlank()) {
+            UUID storeId;
+            try {
+                storeId = UUID.fromString(storeIdHeader);
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Formato inválido del storeId");
+            }
+            return productRepository.findByStoreIdAndActiveTrue(storeId)
+                    .stream().map(this::mapToResponse).collect(Collectors.toList());
+        }
         return productRepository.findByActiveTrue()
                 .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
