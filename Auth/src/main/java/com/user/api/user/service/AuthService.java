@@ -182,10 +182,10 @@ public class AuthService {
         User user = userRepository.findByEmail(loginRequestDTO.getEmail().toLowerCase())
                 .orElseThrow(() -> new IncorrectCredentialsException("Credenciales incorrectas"));
 
-        if (Boolean.FALSE.equals(user.getIsActive())) {
-            throw new IncorrectCredentialsException("Credenciales incorrectas");
-        }
-
+        // Cuentas desactivadas pueden seguir el login normalmente: si demuestran
+        // identidad completa (password + OTP), se reactivan en loginSecondStep —
+        // igual que ya hace el login con Google. No se revela el estado de la
+        // cuenta aquí para no filtrar si un correo existe/está desactivado.
         if (!passwordEncoder.matches(loginRequestDTO.getPassword(), user.getPassword())) {
             throw new IncorrectCredentialsException("Credenciales incorrectas");
         }
@@ -206,6 +206,13 @@ public class AuthService {
 
         if (!validateCode(validationCodeDTO)) {
             throw new InvalidOtpException("El codigo que ingreso es incorrecto o ya expiro");
+        }
+
+        // Password + OTP correctos = identidad confirmada → reactivar si estaba desactivada
+        // (mismo criterio que ya usa el login con Google).
+        if (Boolean.FALSE.equals(user.getIsActive())) {
+            user.setIsActive(true);
+            user = userRepository.save(user);
         }
 
         String userName = usersClient.getUserName(user.getUser_id());
