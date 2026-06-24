@@ -42,6 +42,9 @@ geo:
   service:
     url: ${GEO_SERVICE_URL:http://ip-api.com}
 
+google:
+  client-id: ${GOOGLE_CLIENT_ID:}
+
 security:
   jwt:
     secret-key: ${JWT_SECRET:Wm5N30DT1nFqUmdjrvM4GWqw1utDrSlpdDLyDGa4kBw=}

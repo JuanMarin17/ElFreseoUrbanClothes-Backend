@@ -37,6 +37,7 @@ import java.util.Map;
 @Data
 public class StoreSettingsRequestDTO {
 
+    @NotNull(message = "completedStep es obligatorio")
     private Integer completedStep;
 
     /** URL o preview del logo (se extrae para guardarlo como campo dedicado) */

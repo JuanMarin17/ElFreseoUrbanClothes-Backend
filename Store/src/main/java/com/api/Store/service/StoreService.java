@@ -10,7 +10,9 @@ import com.api.Store.exception.StoreAlreadyExistsException;
 import com.api.Store.exception.StoreNotFoundException;
 import com.api.Store.exception.UnauthorizedStoreActionException;
 import com.api.Store.client.NotificationClient;
+import com.api.Store.entity.StoreSettings;
 import com.api.Store.repository.StoreRepository;
+import com.api.Store.repository.StoreSettingsRepository;
 import com.api.Store.repository.StoreUserRepository;
 import com.api.Store.util.HeaderUtil;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +33,7 @@ public class StoreService {
 
     private final StoreRepository storeRepository;
     private final StoreUserRepository storeUserRepository;
+    private final StoreSettingsRepository storeSettingsRepository;
     private final StoreCmsService cmsService;
     private final HeaderUtil headerUtil;
     private final NotificationClient notificationClient;
@@ -128,12 +133,35 @@ public class StoreService {
         return true;
     }
 
-    /** Obtener todas las tiendas. Acotado a 1000 para evitar cargar la plataforma entera en memoria. */
-    public List<StoreResponseDTO> getAllStores() {
+    /**
+     * Obtener todas las tiendas. Acotado a 1000 para evitar cargar la plataforma entera en memoria.
+     *
+     * @param excludeMaintenance si es true, excluye las tiendas con maintenance.enabled=true
+     *                           (para listados públicos, ej. el marketplace). Por defecto false,
+     *                           para no afectar a los consumidores internos (panel SUPERADMIN, Users).
+     */
+    public List<StoreResponseDTO> getAllStores(boolean excludeMaintenance) {
         List<Store> stores = storeRepository.findAll(PageRequest.of(0, 1000)).getContent();
+
+        if (excludeMaintenance) {
+            Set<UUID> storeIds = stores.stream().map(Store::getStoreId).collect(Collectors.toSet());
+            Map<UUID, StoreSettings> settingsByStore = storeSettingsRepository.findAllById(storeIds)
+                    .stream()
+                    .collect(Collectors.toMap(StoreSettings::getStoreId, s -> s));
+
+            stores = stores.stream()
+                    .filter(store -> !isInMaintenance(settingsByStore.get(store.getStoreId())))
+                    .toList();
+        }
+
         return stores.stream()
                 .map(store -> toResponse(store, "Tienda encontrada", 200))
                 .collect(Collectors.toList());
+    }
+
+    private boolean isInMaintenance(StoreSettings settings) {
+        if (settings == null || settings.getMaintenance() == null) return false;
+        return Boolean.TRUE.equals(settings.getMaintenance().get("enabled"));
     }
 }
 

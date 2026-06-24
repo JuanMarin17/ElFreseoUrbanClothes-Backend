@@ -91,6 +91,13 @@
             <version>1.5.0</version>
         </dependency>
 
+        <!-- Google Sign-In: verificación de idToken contra los servidores de Google -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.7.0</version>
+        </dependency>
+
         <!-- dotenv (opcional) -->
         <dependency>
             <groupId>me.paulschwarz</groupId>

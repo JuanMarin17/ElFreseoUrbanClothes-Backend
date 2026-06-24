@@ -13,6 +13,7 @@ import com.user.api.user.client.NotificationClient;
 import com.user.api.user.client.UsersClient;
 import com.user.api.user.dto.EmailRequestDTO;
 import com.user.api.user.dto.ForgotPasswordRequestDTO;
+import com.user.api.user.dto.GoogleLoginRequestDTO;
 import com.user.api.user.dto.JwtResponseDTO;
 import com.user.api.user.dto.LoginRequestDTO;
 import com.user.api.user.dto.MessageResponseDTO;
@@ -23,6 +24,7 @@ import com.user.api.user.entity.Role;
 import com.user.api.user.entity.SecretKey;
 import com.user.api.user.entity.User;
 import com.user.api.user.exception.BadRequestException;
+import com.user.api.user.exception.GoogleAuthException;
 import com.user.api.user.exception.IncorrectCredentialsException;
 import com.user.api.user.exception.InvalidOtpException;
 import com.user.api.user.exception.RoleNotFoundException;
@@ -31,6 +33,9 @@ import com.user.api.user.exception.UserNotFoundException;
 import com.user.api.user.repository.RoleRepository;
 import com.user.api.user.repository.SecretKeyRepository;
 import com.user.api.user.repository.UserRepository;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +56,7 @@ public class AuthService {
     private final UsersClient usersClient;
     private final UserSessionService userSessionService;
     private final NotificationClient notificationClient;
+    private final GoogleTokenVerifierService googleTokenVerifierService;
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
@@ -311,5 +317,85 @@ public class AuthService {
         response.setJwt(newToken);
         response.setMessage("Token renovado correctamente");
         return response;
+    }
+
+    @Transactional(rollbackOn = Exception.class)
+    public JwtResponseDTO loginWithGoogle(GoogleLoginRequestDTO googleLoginRequestDTO, String ipAddress, String userAgent) {
+        GoogleTokenVerifierService.GooglePayload payload = googleTokenVerifierService.verify(googleLoginRequestDTO.getIdToken());
+
+        if (!payload.emailVerified()) {
+            throw new GoogleAuthException("El correo de la cuenta de Google no está verificado");
+        }
+
+        String email = payload.email().toLowerCase();
+        Optional<User> existingUser = findByEmail(email);
+
+        User user;
+        if (existingUser.isPresent()) {
+            user = existingUser.get();
+            if (Boolean.FALSE.equals(user.getIsActive())) {
+                user.setIsActive(true);
+                user = userRepository.save(user);
+            }
+        } else {
+            user = createUserFromGoogle(payload, email);
+        }
+
+        Role role = user.getRoles().iterator().next();
+        String userName = usersClient.getUserName(user.getUser_id());
+
+        UUID sessionId = null;
+        try {
+            sessionId = userSessionService.saveSession(user.getUser_id(), ipAddress, userAgent);
+        } catch (Exception e) {
+            log.warn("No se pudo guardar la sesión tras el login con Google: {}", e.getMessage());
+        }
+
+        String token = jwtService.generateToken(user.getUser_id(), userName, role.getName(), email, sessionId);
+
+        JwtResponseDTO response = new JwtResponseDTO();
+        response.setJwt(token);
+        response.setMessage("Se inicio sesión correctamente");
+        return response;
+    }
+
+    private User createUserFromGoogle(GoogleTokenVerifierService.GooglePayload payload, String email) {
+        Role role = roleRepository.findByName("USER")
+                .orElseThrow(() -> new RoleNotFoundException("Tipo de usuario inexistente"));
+
+        User user = new User();
+        user.setEmail(email);
+        user.setCreateAt(LocalDateTime.now());
+        user.setIsActive(true);
+        user.setRoles(Set.of(role));
+
+        User savedUser = userRepository.save(user);
+
+        String userName = payload.name() != null && !payload.name().isBlank()
+                ? payload.name()
+                : email.substring(0, email.indexOf('@'));
+        String imageProfile = resolveImageProfile(payload.picture(), userName);
+
+        UserRegisterDTO userRegisterDTO = new UserRegisterDTO();
+        userRegisterDTO.setUserId(savedUser.getUser_id());
+        userRegisterDTO.setUserName(userName);
+        userRegisterDTO.setImageProfile(imageProfile);
+
+        try {
+            usersClient.createUser(userRegisterDTO);
+        } catch (UserAlreadyExistsException e) {
+            userRegisterDTO.setUserName(userName + "-" + savedUser.getUser_id().toString().substring(0, 4));
+            usersClient.createUser(userRegisterDTO);
+        }
+
+        return savedUser;
+    }
+
+    private String resolveImageProfile(String picture, String name) {
+        if (picture != null && !picture.isBlank()) {
+            return picture;
+        }
+        String encodedName = URLEncoder.encode(name, StandardCharsets.UTF_8);
+        return "https://ui-avatars.com/api/?name=" + encodedName + "&background=random";
     }
 }
