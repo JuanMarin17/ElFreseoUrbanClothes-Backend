@@ -19,4 +19,10 @@ public class WebClientConfig {
             @Value("${product.service.url}") String baseUrl) {
         return builder.baseUrl(baseUrl).build();
     }
+
+    @Bean
+    public WebClient storeWebClient(WebClient.Builder builder,
+            @Value("${store.service.url}") String baseUrl) {
+        return builder.baseUrl(baseUrl).build();
+    }
 }

@@ -34,3 +34,7 @@ preferences:
 product:
   service:
     url: ${PRODUCT_SERVICE_URL:http://localhost:8084/api/v1}
+
+store:
+  service:
+    url: ${STORE_SERVICE_URL:http://localhost:8081/api/v1}

@@ -81,6 +81,7 @@ async def get_sessions(
         AdminChatSession.admin_id == UUID(admin_id),
         AdminChatSession.store_id == UUID(store_id)
     ).order_by(AdminChatSession.created_at.desc()).all()
+    print(f"[ia-admin][GET /sessions] admin_id={admin_id} store_id={store_id} encontradas={len(sessions)}")
     return [s.session_id for s in sessions]
 
 
