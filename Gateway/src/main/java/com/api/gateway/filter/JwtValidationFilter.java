@@ -20,6 +20,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ServerWebExchange;
 
+import com.api.gateway.cache.TtlCache;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -34,6 +36,10 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     private String secretKey;
 
     private final WebClient authWebClient;
+
+    // Evita N llamadas idénticas a Auth cuando el dashboard carga varios widgets en paralelo:
+    // todas comparten el mismo sessionId y dentro de esta ventana asumen el último resultado conocido.
+    private final TtlCache<String, Boolean> sessionActiveCache = new TtlCache<>(Duration.ofSeconds(5));
 
     public JwtValidationFilter(@Qualifier("authWebClient") WebClient authWebClient) {
         this.authWebClient = authWebClient;
@@ -176,7 +182,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Boolean> checkSessionActive(String sessionId) {
-        return authWebClient.get()
+        return sessionActiveCache.getOrCompute(sessionId, () -> authWebClient.get()
                 .uri("/auth/sessions/internal/" + sessionId + "/active")
                 .retrieve()
                 .toBodilessEntity()
@@ -196,7 +202,7 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                     // Timeout o Auth caído → fail open
                     log.error("Auth unreachable for session check (failing open): {}", e.getMessage());
                     return Mono.just(true);
-                });
+                }));
     }
 
     private boolean isPublicPath(String path, String method) {
