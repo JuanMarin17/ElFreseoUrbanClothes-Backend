@@ -45,6 +45,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), null);
     }
 
+    @ExceptionHandler(GoogleAuthException.class)
+    public ResponseEntity<Map<String, Object>> handleGoogleAuth(GoogleAuthException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), null);
+    }
+
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Map<String, Object>> handleBadRequest(BadRequestException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);

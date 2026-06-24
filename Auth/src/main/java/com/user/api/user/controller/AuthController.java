@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import com.user.api.user.dto.GoogleLoginRequestDTO;
 import com.user.api.user.dto.JwtResponseDTO;
 import com.user.api.user.dto.LoginRequestDTO;
 import com.user.api.user.dto.MessageResponseDTO;
@@ -83,6 +84,17 @@ public class AuthController {
         JwtResponseDTO responseDTO = authService.loginSecondStep(validationCodeDTO, ip, userAgent);
         return ResponseEntity.status(HttpStatus.OK).body(responseDTO);
 
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<JwtResponseDTO> loginWithGoogle(
+            @Valid @RequestBody GoogleLoginRequestDTO googleLoginRequestDTO,
+            HttpServletRequest request) {
+
+        String ip = resolveIp(request);
+        String userAgent = request.getHeader("User-Agent");
+        JwtResponseDTO response = authService.loginWithGoogle(googleLoginRequestDTO, ip, userAgent);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/forgotPassword")

@@ -49,10 +49,14 @@ public class StoreController {
         return ResponseEntity.status(HttpStatus.OK).body(storeService.existStore(storeId));
     }
 
-    /** Obtener todas las tiendas */
+    /**
+     * Obtener todas las tiendas.
+     * `excludeMaintenance=true` excluye las tiendas en modo mantenimiento (para listados públicos).
+     */
     @GetMapping
-    public ResponseEntity<List<StoreResponseDTO>> getAllStores() {
-        return ResponseEntity.ok(storeService.getAllStores());
+    public ResponseEntity<List<StoreResponseDTO>> getAllStores(
+            @RequestParam(defaultValue = "false") boolean excludeMaintenance) {
+        return ResponseEntity.ok(storeService.getAllStores(excludeMaintenance));
     }
 
     /** Inhabilitar o habilitar una tienda (solo SUPERADMIN) */

@@ -159,8 +159,7 @@ public class CategoryService {
         UUID userId = getUserIdFromHeader();
         String role = storeClient.userRole(userId, storeId);
 
-        System.out.println(role);
-        if ("ADMIN".equals(role) || "OWNER".equals(role))
+        if (!"ADMIN".equals(role) && !"OWNER".equals(role))
             throw new UnauthorizedException("Solo el ADMIN u OWNER pueden realizar esta acción");
     }
 

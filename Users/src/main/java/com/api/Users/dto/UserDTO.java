@@ -14,7 +14,7 @@ public class UserDTO {
     @NotBlank(message = "El nombre de usuario no puede estar vació")
     private String userName;
 
-    @NotBlank(message = "El telefono no puede estar vació")
+    /** Opcional: los usuarios creados vía Google Sign-In no aportan teléfono. */
     private String phone;
 
     private String imageProfile;
