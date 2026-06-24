@@ -75,6 +75,7 @@ async def process_admin_chat(
         db.add(session)
         db.commit()
         db.refresh(session)
+        print(f"[ia-admin][POST /chat] sesión creada session_id={session.session_id} admin_id={admin_id} store_id={store_id}")
 
     # Guardar mensaje del usuario
     db.add(AdminChatMessage(

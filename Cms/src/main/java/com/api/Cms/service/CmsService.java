@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.api.Cms.clients.PreferencesClient;
 import com.api.Cms.clients.ProductClient;
+import com.api.Cms.clients.StoreClient;
 import com.api.Cms.dto.CmsGenerateRequestDTO;
 import com.api.Cms.dto.CmsPageResponseDTO;
 import com.api.Cms.dto.ProductCardDTO;
@@ -30,6 +31,7 @@ public class CmsService {
     private final GeminiService geminiService;
     private final PreferencesClient preferencesClient;
     private final ProductClient productClient;
+    private final StoreClient storeClient;
 
     // ── Generar página personalizada con IA ───────────────────────────────────
     public CmsPageResponseDTO generatePage(CmsGenerateRequestDTO dto) {
@@ -43,8 +45,11 @@ public class CmsService {
         // Obtener productos activos de la tienda
         List<Map<String, Object>> products = productClient.getActiveProducts(storeId);
 
+        // Info de la tienda (nombre/descripción), para que el prompt no asuma siempre "ropa urbana"
+        Map<String, String> storeInfo = storeClient.getStoreInfo(storeId);
+
         // Construir prompt para Gemini
-        String prompt = buildPrompt(userId, behaviors, preferences, products, dto.getQuery());
+        String prompt = buildPrompt(userId, behaviors, preferences, products, dto.getQuery(), storeInfo);
 
         // Llamar a Gemini
         String aiResponse = geminiService.generate(prompt);
@@ -74,10 +79,20 @@ public class CmsService {
     // ── Helpers ───────────────────────────────────────────────────────────────
     private String buildPrompt(String userId, List<Map<String, Object>> behaviors,
             List<Map<String, Object>> preferences, List<Map<String, Object>> products,
-            String userQuery) {
+            String userQuery, Map<String, String> storeInfo) {
+
+        String storeName = storeInfo.getOrDefault("name", "");
+        String storeDescription = storeInfo.getOrDefault("description", "");
 
         StringBuilder sb = new StringBuilder();
-        sb.append("Eres un asistente de recomendaciones de moda para una tienda de ropa urbana. ");
+        sb.append("Eres un asistente de recomendaciones de productos para la tienda");
+        if (!storeName.isBlank()) {
+            sb.append(" \"").append(storeName).append("\"");
+        }
+        if (!storeDescription.isBlank()) {
+            sb.append(", que se describe así: ").append(storeDescription);
+        }
+        sb.append(". Recomienda únicamente productos del catálogo real de esta tienda (no asumas que es de ropa salvo que el catálogo o la descripción lo confirmen). ");
         sb.append("Basándote en el comportamiento e intereses del usuario, recomienda productos relevantes.\n\n");
 
         sb.append("COMPORTAMIENTO DEL USUARIO:\n");
