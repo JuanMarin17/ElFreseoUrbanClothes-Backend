@@ -23,6 +23,7 @@ spring:
               /api/v1/auth/resendVerificationCode,
               /api/v1/auth/login,
               /api/v1/auth/loginSecondStep,
+              /api/v1/auth/google,
               /api/v1/auth/forgotPassword,
               /api/v1/auth/forgotPasswordSecondStep,
               /api/v1/auth/deactivateAccount,
