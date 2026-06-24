@@ -459,12 +459,15 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       PREFERENCES_SERVICE_URL: http://preferences-service:8094
       PRODUCT_SERVICE_URL: http://product-service:8084
+      STORE_SERVICE_URL: http://store-service:8081/api/v1
     depends_on:
       postgres:
         condition: service_healthy
       preferences-service:
         condition: service_healthy
       product-service:
+        condition: service_healthy
+      store-service:
         condition: service_healthy
     networks:
       - vexio-net
