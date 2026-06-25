@@ -43,6 +43,7 @@ public class JwtValidationFilter extends OncePerRequestFilter {
 
         return path.contains("/register") ||
                 path.contains("/login") ||
+		path.contains("/google") ||
                 path.contains("/verificationCode") ||
                 path.contains("/refresh-token") ||
                 path.contains("/resendVerificationCode") ||
