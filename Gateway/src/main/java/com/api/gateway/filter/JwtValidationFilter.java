@@ -138,9 +138,6 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
             if (sessionId != null) builder.header("X-Session-Id", sessionId);
             if (storeId != null) builder.header("X-Store-Id", storeId);
 
-            if (storeId != null)
-                builder.header("X-Store-Id", storeId);
-
             ServerHttpRequest enrichedRequest = builder.build();
             ServerWebExchange enrichedExchange = exchange.mutate().request(enrichedRequest).build();
 

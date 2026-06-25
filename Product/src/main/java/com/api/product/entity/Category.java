@@ -33,6 +33,19 @@ public class Category {
     @Column(name = "active")
     private Boolean active;
 
+    // ── Atributos de variante configurables (ej. "Capacidad" para Tecnología,
+    //    "Material" para Hogar, en vez de los Talla/Color por defecto) ───────
+    @Column(name = "attribute1_label")
+    private String attribute1Label;
+    @Column(name = "attribute1_options_json", columnDefinition = "TEXT")
+    private String attribute1OptionsJson;
+    @Column(name = "attribute2_label")
+    private String attribute2Label;
+    @Column(name = "attribute2_options_json", columnDefinition = "TEXT")
+    private String attribute2OptionsJson;
+    @Column(name = "attribute2_is_color")
+    private Boolean attribute2IsColor;
+
     @PrePersist
     public void prePersist() {
         this.active = true;
