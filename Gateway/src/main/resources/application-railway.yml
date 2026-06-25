@@ -72,6 +72,22 @@ spring:
           predicates:
             - Path=/api/v1/stores/*/returns/notifications/stream
 
+        # ── Customer y POS Sale (antes de store-routes: si no, los intercepta
+        #    /api/v1/stores/** y los manda al microservicio Store) ────────────
+        - id: customer-routes
+          uri: http://customer-service.railway.internal:8104
+          predicates:
+            - Path=/api/v1/stores/*/customers/**
+          filters:
+            - JwtValidationFilter
+
+        - id: pos-sale-routes
+          uri: http://pos-sale-service.railway.internal:8105
+          predicates:
+            - Path=/api/v1/stores/*/pos/**
+          filters:
+            - JwtValidationFilter
+
         # ── Tiendas ───────────────────────────────────────────────────────────
         - id: store-routes
           uri: http://store-service.railway.internal:8081
@@ -284,26 +300,10 @@ spring:
           filters:
             - JwtValidationFilter
 
-        # ── Customer (gestión de clientes por tienda) ─────────────────────────
-        - id: customer-routes
-          uri: http://customer-service.railway.internal:8104
-          predicates:
-            - Path=/api/v1/stores/*/customers/**
-          filters:
-            - JwtValidationFilter
-
-        # ── POS Sale (ventas en punto de venta) ───────────────────────────────
-        # u{2500}u{2500} Sesiones de usuario (requiere JWT) u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}
+        # ── Sesiones de usuario (requiere JWT) ────────────────────────────────
         - id: auth-session-routes
           uri: http://auth-service.railway.internal:8082
           predicates:
             - Path=/api/v1/auth/sessions/**
-          filters:
-            - JwtValidationFilter
-
-        - id: pos-sale-routes
-          uri: http://pos-sale-service.railway.internal:8105
-          predicates:
-            - Path=/api/v1/stores/*/pos/**
           filters:
             - JwtValidationFilter
