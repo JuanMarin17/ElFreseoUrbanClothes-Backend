@@ -58,7 +58,6 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
         "/api/v1/auth/google",
         "/api/v1/auth/forgotPassword",
         "/api/v1/auth/forgotPasswordSecondStep",
-        "/api/v1/auth/deactivateAccount",
         "/api/v1/auth/refresh-token",
         "/api/v1/products/all/active",
         "/api/v1/promotions/getActivePromotions",
