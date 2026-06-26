@@ -107,6 +107,19 @@ app.get('/api/v1/upload/signature', handleSignature);
 // Alias: el Gateway redirige /api/v1/cloudinary/** a este servicio
 app.get('/api/v1/cloudinary/signature', handleSignature);
 
+// Captura errores de multer (tipo de archivo no permitido, archivo demasiado
+// grande, etc.) que llegan vía cb(err) antes de entrar a handleUpload, y que
+// de otro modo caerían en el manejador de errores HTML por defecto de Express.
+app.use((err, _req, res, _next) => {
+  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ error: 'El archivo supera el tamaño máximo permitido (10 MB).' });
+  }
+  if (err) {
+    return res.status(400).json({ error: err.message ?? 'Error al procesar el archivo.' });
+  }
+  _next();
+});
+
 const PORT = process.env.PORT || 8096;
 app.listen(PORT, () => {
   console.log(`Media service corriendo en http://localhost:${PORT}`);
