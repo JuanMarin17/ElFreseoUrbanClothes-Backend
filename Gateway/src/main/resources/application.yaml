@@ -13,6 +13,20 @@ spring:
     gateway:
       httpclient:
         connect-timeout: 10000
+        # Nota: sin response-timeout global a propósito — varias rutas son
+        # streams SSE de larga duración (notifications/admin/stream, etc.)
+        # que deben permanecer abiertos por horas; un timeout global aquí
+        # los cortaría a todos.
+        pool:
+          # Las conexiones pooleadas que el Gateway reutiliza para reenviar
+          # peticiones a cada microservicio pueden quedar "muertas" a nivel de
+          # red (Docker/NAT cierra el socket sin avisar) si están inactivas
+          # mucho tiempo. Al reutilizarlas el Gateway se queda esperando una
+          # respuesta que nunca llega — de ahí los cuelgues intermitentes que
+          # afectan incluso a peticiones simples como isOwner/getSettings.
+          max-idle-time: 20s
+          max-life-time: 5m
+          eviction-interval: 30s
       routes:
         # ── Auth (público) ────────────────────────────────────────────────────
         - id: auth-routes
