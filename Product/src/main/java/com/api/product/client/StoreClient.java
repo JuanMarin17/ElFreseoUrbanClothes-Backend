@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class StoreClient {
@@ -36,8 +38,10 @@ public class StoreClient {
                             .bodyToMono(String.class)
                             .timeout(Duration.ofSeconds(5))
                             .block();
+            log.info("[StoreClient.userRole] storeId={} userId={} role={}", storeId, userId, role);
             return role;
         } catch(Exception e){
+            log.error("[StoreClient.userRole] storeId={} userId={} fallo: {}", storeId, userId, e.getMessage());
             throw new RuntimeException("Error: " + e.getMessage());
         }
     }

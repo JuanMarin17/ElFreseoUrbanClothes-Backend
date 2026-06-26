@@ -10,6 +10,19 @@ spring:
 
   cloud:
     gateway:
+      # Las conexiones pooleadas que el cliente HTTP interno del Gateway reutiliza
+      # para reenviar TODAS las rutas pueden morir a nivel de red (Docker/NAT)
+      # sin que Reactor Netty lo note: al reutilizarlas, el Gateway se queda
+      # esperando una respuesta que nunca llega hasta el response-timeout — de
+      # ahí los cuelgues intermitentes de ~10s en cualquier ruta (Store, Product, etc).
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 5s
+        pool:
+          type: elastic
+          max-idle-time: 20s
+          max-life-time: 5m
+          eviction-interval: 30s
       routes:
         # ── Auth (público) ────────────────────────────────────────────────────
         - id: auth-routes
