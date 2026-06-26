@@ -38,6 +38,13 @@ public class StoreClient {
                             .bodyToMono(String.class)
                             .timeout(Duration.ofSeconds(5))
                             .block();
+            // Store devuelve un enum (StoreRole), que al serializarse a JSON queda como
+            // un string entre comillas (ej. "OWNER"). bodyToMono(String.class) entrega
+            // ese texto crudo tal cual, comillas incluidas, por lo que sin este strip
+            // "OWNER".equals(role) nunca es true.
+            if (role != null) {
+                role = role.replace("\"", "");
+            }
             log.info("[StoreClient.userRole] storeId={} userId={} role={}", storeId, userId, role);
             return role;
         } catch(Exception e){
