@@ -34,26 +34,15 @@ public class ProductController {
     public ResponseEntity<ApiResponseDTO<ProductResponseDTO>> createProduct(
             @RequestBody ProductRequestDTO dto) {
 
-        try {
-            ProductResponseDTO product = productService.createProduct(dto);
+        ProductResponseDTO product = productService.createProduct(dto);
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(
-                    ApiResponseDTO.<ProductResponseDTO>builder()
-                            .message("Producto creado correctamente")
-                            .status(HttpStatus.CREATED.value())
-                            .data(product)
-                            .timestamp(OffsetDateTime.now())
-                            .build());
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                    ApiResponseDTO.<ProductResponseDTO>builder()
-                            .message("Error al crear producto: " + e.getMessage())
-                            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                            .data(null)
-                            .timestamp(OffsetDateTime.now())
-                            .build());
-        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                ApiResponseDTO.<ProductResponseDTO>builder()
+                        .message("Producto creado correctamente")
+                        .status(HttpStatus.CREATED.value())
+                        .data(product)
+                        .timestamp(OffsetDateTime.now())
+                        .build());
     }
 
     @PutMapping("/{id}")
@@ -61,32 +50,21 @@ public class ProductController {
             @PathVariable UUID id,
             @RequestBody ProductRequestDTO dto) {
 
-        try {
-            Optional<ProductResponseDTO> updated = productService.updateProduct(id, dto);
+        Optional<ProductResponseDTO> updated = productService.updateProduct(id, dto);
 
-            if (updated.isPresent()) {
-                return ResponseEntity.status(HttpStatus.ACCEPTED).body(
-                        ApiResponseDTO.<ProductResponseDTO>builder()
-                                .message("Producto actualizado correctamente")
-                                .status(HttpStatus.ACCEPTED.value())
-                                .data(updated.get())
-                                .timestamp(OffsetDateTime.now())
-                                .build());
-            } else {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                        ApiResponseDTO.<ProductResponseDTO>builder()
-                                .message("Producto con ID " + id + " no encontrado para actualizar")
-                                .status(HttpStatus.NOT_FOUND.value())
-                                .data(null)
-                                .timestamp(OffsetDateTime.now())
-                                .build());
-            }
-
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+        if (updated.isPresent()) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(
                     ApiResponseDTO.<ProductResponseDTO>builder()
-                            .message("Error al actualizar producto: " + e.getMessage())
-                            .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .message("Producto actualizado correctamente")
+                            .status(HttpStatus.ACCEPTED.value())
+                            .data(updated.get())
+                            .timestamp(OffsetDateTime.now())
+                            .build());
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    ApiResponseDTO.<ProductResponseDTO>builder()
+                            .message("Producto con ID " + id + " no encontrado para actualizar")
+                            .status(HttpStatus.NOT_FOUND.value())
                             .data(null)
                             .timestamp(OffsetDateTime.now())
                             .build());

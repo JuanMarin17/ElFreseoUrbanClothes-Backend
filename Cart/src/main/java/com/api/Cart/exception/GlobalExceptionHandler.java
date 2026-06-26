@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -49,9 +52,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor",
-                Map.of("exception", ex.getClass().getSimpleName(),
-                       "detail", ex.getMessage() != null ? ex.getMessage() : "Sin mensaje"));
+        log.error("Error no controlado [{}]: {}", ex.getClass().getSimpleName(), ex.getMessage(), ex);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", null);
     }
 
     private ResponseEntity<Map<String, Object>> build(HttpStatus status, String message, Object errors) {
