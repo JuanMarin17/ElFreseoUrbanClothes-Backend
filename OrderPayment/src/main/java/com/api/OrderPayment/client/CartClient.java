@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -48,6 +49,7 @@ public class CartClient {
                         Mono.error(new CartServiceException(
                                 "El servicio de carrito no está disponible (5xx)")))
                 .bodyToMono(CartResponseDTO.class)
+                .timeout(Duration.ofSeconds(5))
                 .block();
     }
 
@@ -65,6 +67,7 @@ public class CartClient {
                         Mono.error(new CartServiceException(
                                 "No se pudo vaciar el carrito tras crear la orden")))
                 .bodyToMono(Void.class)
+                .timeout(Duration.ofSeconds(5))
                 .block();
     }
 }
