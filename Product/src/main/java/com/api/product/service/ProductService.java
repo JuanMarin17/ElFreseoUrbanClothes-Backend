@@ -268,6 +268,12 @@ public class ProductService {
         if (dto.getImages() != null && dto.getImages().size() > 6)
             throw new BadRequestException("Máximo 6 imágenes por producto");
 
+        if (dto.getDescription() != null && !dto.getDescription().isBlank()) {
+            int len = dto.getDescription().length();
+            if (len < 50 || len > 1000)
+                throw new BadRequestException("La descripción debe tener entre 50 y 1000 caracteres");
+        }
+
         if (dto.getImages() != null &&
                 dto.getImages().stream().distinct().count() != dto.getImages().size())
             throw new ConflictException("No se permiten URLs de imagen duplicadas");

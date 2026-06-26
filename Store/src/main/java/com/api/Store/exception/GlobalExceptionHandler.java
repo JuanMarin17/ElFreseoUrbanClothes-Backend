@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestControllerAdvice(basePackages = "com.api.Store.controller")
 public class GlobalExceptionHandler {
 
@@ -63,12 +66,8 @@ public class GlobalExceptionHandler {
     // ── Error genérico ────────────────────────────────────────────────────────
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        Map<String, Object> errorDetails = new HashMap<>();
-        errorDetails.put("exception", ex.getClass().getSimpleName());
-        errorDetails.put("detail", ex.getMessage() != null ? ex.getMessage() : "Sin mensaje");
-
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR,
-                "Error interno del servidor", errorDetails);
+        log.error("Error no controlado [{}]: {}", ex.getClass().getSimpleName(), ex.getMessage(), ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", null);
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
