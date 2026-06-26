@@ -26,6 +26,10 @@ inventory:
   service:
     base-url: ${INVENTORY_SERVICE_URL:http://localhost:8089/api/v1}
 
+store:
+  service:
+    base-url: ${STORE_SERVICE_URL:http://localhost:8081/api/v1}
+
 management:
   endpoints:
     web:

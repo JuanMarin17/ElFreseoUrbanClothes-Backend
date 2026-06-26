@@ -1,6 +1,7 @@
 package com.api.PosSale.service;
 
 import com.api.PosSale.client.InventoryClient;
+import com.api.PosSale.client.StoreClient;
 import com.api.PosSale.dto.CreatePosSaleRequestDTO;
 import com.api.PosSale.dto.DailySummaryResponseDTO;
 import com.api.PosSale.dto.PosSaleResponseDTO;
@@ -35,16 +36,17 @@ import java.util.UUID;
 @Slf4j
 public class PosSaleService {
 
-    private static final Set<String> ALLOWED_ROLES = Set.of("ADMIN", "OWNER", "EMPLOYEE");
+    private static final Set<String> ALLOWED_ROLES = Set.of("ADMIN", "OWNER", "STAFF");
 
     private final PosSaleRepository saleRepository;
     private final InventoryClient inventoryClient;
+    private final StoreClient storeClient;
     private final PosSaleMapper mapper;
     private final HttpServletRequest httpRequest;
 
     @Transactional
     public PosSaleResponseDTO createSale(UUID storeId, UUID employeeId, CreatePosSaleRequestDTO dto) {
-        validateRole();
+        validateRole(storeId);
 
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new IllegalArgumentException("El carrito está vacío");
@@ -127,7 +129,7 @@ public class PosSaleService {
 
     @Transactional(readOnly = true)
     public List<PosSaleResponseDTO> getSalesByStore(UUID storeId, PosSaleStatus status, int page, int size) {
-        validateRole();
+        validateRole(storeId);
         Pageable pageable = PageRequest.of(page, size);
         if (status != null) {
             return saleRepository.findByStoreIdAndStatusOrderByCreatedAtDesc(storeId, status, pageable)
@@ -139,13 +141,13 @@ public class PosSaleService {
 
     @Transactional(readOnly = true)
     public PosSaleResponseDTO getSale(UUID storeId, UUID saleId) {
-        validateRole();
+        validateRole(storeId);
         return mapper.toDTO(findSale(storeId, saleId));
     }
 
     @Transactional(readOnly = true)
     public List<PosSaleResponseDTO> getSalesByCustomer(UUID storeId, UUID customerId, int page, int size) {
-        validateRole();
+        validateRole(storeId);
         Pageable pageable = PageRequest.of(page, size);
         return saleRepository.findByStoreIdAndCustomerIdOrderByCreatedAtDesc(storeId, customerId, pageable)
                 .stream().map(mapper::toDTO).toList();
@@ -153,7 +155,7 @@ public class PosSaleService {
 
     @Transactional(readOnly = true)
     public List<PosSaleResponseDTO> getSalesByDateRange(UUID storeId, LocalDateTime from, LocalDateTime to, int page, int size) {
-        validateRole();
+        validateRole(storeId);
         Pageable pageable = PageRequest.of(page, size);
         return saleRepository.findByStoreIdAndCreatedAtBetweenOrderByCreatedAtDesc(storeId, from, to, pageable)
                 .stream().map(mapper::toDTO).toList();
@@ -161,7 +163,7 @@ public class PosSaleService {
 
     @Transactional
     public PosSaleResponseDTO cancelSale(UUID storeId, UUID saleId) {
-        validateRole();
+        validateRole(storeId);
         PosSale sale = findSale(storeId, saleId);
 
         if (sale.getStatus() == PosSaleStatus.CANCELLED) {
@@ -184,7 +186,7 @@ public class PosSaleService {
 
     @Transactional(readOnly = true)
     public DailySummaryResponseDTO getDailySummary(UUID storeId) {
-        validateRole();
+        validateRole(storeId);
         LocalDate today = LocalDate.now();
         LocalDateTime from = today.atStartOfDay();
         LocalDateTime to = today.atTime(23, 59, 59);
@@ -227,8 +229,25 @@ public class PosSaleService {
                 .orElseThrow(() -> new PosSaleNotFoundException("Venta no encontrada: " + saleId));
     }
 
-    private void validateRole() {
-        String role = httpRequest.getHeader("X-User-Role");
+    /**
+     * Valida el rol del usuario EN ESTA TIENDA específica (vía Store), no el rol
+     * global de la plataforma del JWT (X-User-Role) — un OWNER de tienda normalmente
+     * tiene rol global "USER", así que validar contra X-User-Role bloqueaba a
+     * cualquier dueño de tienda real.
+     */
+    private void validateRole(UUID storeId) {
+        String userIdHeader = httpRequest.getHeader("X-User-Id");
+        if (userIdHeader == null || userIdHeader.isBlank()) {
+            throw new ForbiddenException("No tienes permiso para acceder al módulo POS");
+        }
+        UUID userId;
+        try {
+            userId = UUID.fromString(userIdHeader);
+        } catch (IllegalArgumentException e) {
+            throw new ForbiddenException("No tienes permiso para acceder al módulo POS");
+        }
+
+        String role = storeClient.userRole(userId, storeId);
         if (role == null || !ALLOWED_ROLES.contains(role.toUpperCase())) {
             throw new ForbiddenException("No tienes permiso para acceder al módulo POS");
         }
