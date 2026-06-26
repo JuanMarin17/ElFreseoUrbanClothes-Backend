@@ -270,8 +270,8 @@ public class ProductService {
 
         if (dto.getDescription() != null && !dto.getDescription().isBlank()) {
             int len = dto.getDescription().length();
-            if (len < 50 || len > 1000)
-                throw new BadRequestException("La descripción debe tener entre 50 y 1000 caracteres");
+            if (len < 50 || len > 200)
+                throw new BadRequestException("La descripción debe tener entre 50 y 200 caracteres");
         }
 
         if (dto.getImages() != null &&
