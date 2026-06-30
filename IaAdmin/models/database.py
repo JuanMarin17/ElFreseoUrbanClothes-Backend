@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, DateTime, Text
+from sqlalchemy import create_engine, Column, String, DateTime, Text, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import UUID
@@ -26,6 +26,14 @@ class AdminChatMessage(Base):
     role       = Column(String, nullable=False)
     content    = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class AdminRateLimit(Base):
+    """Contador de peticiones por admin_id (no por session_id) para limitar el uso del chat IA."""
+    __tablename__ = "admin_rate_limit"
+    admin_id      = Column(UUID(as_uuid=True), primary_key=True)
+    window_start  = Column(DateTime(timezone=True), nullable=False)
+    request_count = Column(Integer, nullable=False, default=0)
 
 
 def get_db():

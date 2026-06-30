@@ -4,13 +4,15 @@ from sqlalchemy.orm import Session
 from models.database import get_db, AdminChatMessage, AdminChatSession
 from schemas.admin_schemas import (
     AdminChatRequest, AdminChatResponse,
-    ImageAnalyzeRequest, ChatMessageResponse
+    ImageAnalyzeRequest, ChatMessageResponse,
+    ProductSuggestRequest, ProductSuggestResponse
 )
 from service.admin_chat_service import process_admin_chat
-from service.ai_service import analyze_product_image
+from service.ai_service import analyze_product_image, suggest_product_fields
 from service.image_processor import enhance_image
 from service.image_generator import generate_image
 from service.client import store_client
+from service.rate_limiter import check_and_increment
 from pydantic import BaseModel
 from typing import Optional, List
 from uuid import UUID
@@ -65,6 +67,7 @@ async def admin_chat(
             status_code=403,
             detail="Acceso denegado: el usuario no es ADMIN ni OWNER de esta tienda"
         )
+    check_and_increment(db, admin_id)
     return await process_admin_chat(dto, admin_id, store_id, jwt_token, db)
 
 
@@ -171,6 +174,7 @@ async def analyze_image(
             status_code=403,
             detail="Acceso denegado: el usuario no es ADMIN ni OWNER de esta tienda"
         )
+    check_and_increment(db, admin_id)
 
     ai_response = analyze_product_image(
         dto.image_base64, dto.mime_type, dto.context or ""
@@ -201,6 +205,45 @@ async def analyze_image(
     return await _process_admin_action(
         session.session_id, ai_response, dummy_dto, admin_id, store_id, ""
     )
+
+
+# ─── Generador de ficha de producto (nombre/descripción/precio/categoría) ────
+
+@router.post("/product/suggest", response_model=ProductSuggestResponse)
+async def suggest_product(
+    dto: ProductSuggestRequest,
+    admin_id: str  = Depends(get_admin_id),
+    store_id: str  = Depends(get_store_id),
+    db: Session    = Depends(get_db)
+):
+    """
+    Genera nombre, descripción, precio y categoría sugeridos para un producto
+    nuevo a partir de un texto breve (hint) y/o una imagen. No usa sesión de
+    chat: responde directamente en JSON para que el formulario de
+    crear/editar producto pueda autocompletarse con un botón "Generar con IA".
+    """
+    role = await store_client.get_user_store_role(store_id, admin_id)
+    if role not in ("ADMIN", "OWNER"):
+        raise HTTPException(
+            status_code=403,
+            detail="Acceso denegado: el usuario no es ADMIN ni OWNER de esta tienda"
+        )
+    if not (dto.hint and dto.hint.strip()) and not dto.image_base64:
+        raise HTTPException(status_code=400, detail="Proporciona una descripción breve o una imagen.")
+
+    check_and_increment(db, admin_id)
+
+    try:
+        result = suggest_product_fields(
+            hint=dto.hint,
+            image_base64=dto.image_base64,
+            image_mime_type=dto.image_mime_type,
+            existing_categories=dto.existing_categories,
+        )
+    except RuntimeError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return ProductSuggestResponse(**result)
 
 
 # ─── Generación de imágenes ───────────────────────────────────────────────────

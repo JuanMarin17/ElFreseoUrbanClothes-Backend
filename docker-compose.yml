@@ -599,6 +599,8 @@ services:
       SUPPORT_SERVICE_URL: http://support-service:8088
       PROMOTIONS_SERVICE_URL: http://promotion-service:8091
       LOYALTY_SERVICE_URL: http://loyal-customer-service:8093
+      IA_ADMIN_RATE_LIMIT_MAX: ${IA_ADMIN_RATE_LIMIT_MAX:-30}
+      IA_ADMIN_RATE_LIMIT_WINDOW_MINUTES: ${IA_ADMIN_RATE_LIMIT_WINDOW_MINUTES:-60}
     depends_on:
       postgres:
         condition: service_healthy

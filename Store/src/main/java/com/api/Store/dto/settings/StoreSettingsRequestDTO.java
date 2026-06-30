@@ -150,6 +150,8 @@ public class StoreSettingsRequestDTO {
         private String legalName;
         private String idNumber;
         private String documentName;
+        private String address;
+        private String phone;
     }
 
     @Data

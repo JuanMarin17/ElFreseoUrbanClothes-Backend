@@ -3,7 +3,19 @@ from fastapi import Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from service.rate_limiter import RateLimitExceeded
+
 logger = logging.getLogger(__name__)
+
+
+async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={
+            "message": "Has alcanzado el límite de peticiones.",
+            "retryAfterSeconds": exc.retry_after_seconds,
+        },
+    )
 
 
 async def http_exception_handler(request: Request, exc: HTTPException):
