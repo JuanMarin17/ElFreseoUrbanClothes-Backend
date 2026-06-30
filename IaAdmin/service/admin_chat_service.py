@@ -121,7 +121,22 @@ async def process_admin_chat(
                 message=str(e)
             )
     else:
-        ai_response = generate_admin_response(history, context)
+        try:
+            ai_response = generate_admin_response(history, context)
+        except RuntimeError as e:
+            msg = str(e).lower()
+            if "context_length" in msg or "too large" in msg or "context window" in msg:
+                friendly = (
+                    "Esta conversación se ha vuelto muy larga para el modelo de IA. "
+                    "Por favor inicia una nueva conversación para continuar."
+                )
+            else:
+                friendly = "El asistente de IA no está disponible en este momento. Intenta de nuevo en unos segundos."
+            db.add(AdminChatMessage(
+                session_id=session.session_id, role="assistant", content=friendly
+            ))
+            db.commit()
+            return AdminChatResponse(session_id=session.session_id, message=friendly)
 
     # Guardar respuesta limpia (sin ACTION tags)
     db.add(AdminChatMessage(

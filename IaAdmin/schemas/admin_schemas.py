@@ -73,6 +73,21 @@ class ImageAnalyzeRequest(BaseModel):
     context: Optional[str] = None
 
 
+class ProductSuggestRequest(BaseModel):
+    """Generador de ficha de producto (nombre/descripción/precio/categoría) sin chat."""
+    hint: Optional[str] = None
+    image_base64: Optional[str] = None
+    image_mime_type: Optional[str] = None
+    existing_categories: Optional[List[str]] = None
+
+
+class ProductSuggestResponse(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[int] = None
+    category: Optional[str] = None
+
+
 class ChatMessageResponse(BaseModel):
     message_id: UUID
     role: str

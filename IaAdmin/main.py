@@ -5,8 +5,10 @@ from routes.admin_routes import router
 from exceptions.handlers import (
     general_exception_handler, value_error_handler,
     http_exception_handler, validation_exception_handler,
+    rate_limit_exceeded_handler,
 )
 from service.ai_service import groq_client
+from service.rate_limiter import RateLimitExceeded
 
 app = FastAPI(title="IA Admin Agent", version="1.0.0")
 
@@ -32,6 +34,7 @@ app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 app.add_exception_handler(ValueError, value_error_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 if __name__ == "__main__":
     import uvicorn

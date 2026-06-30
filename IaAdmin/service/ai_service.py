@@ -3,6 +3,7 @@ from groq import Groq
 from config.settings import GEMINI_API_KEY, GROQ_API_KEY
 import base64
 import json
+import re
 
 genai.configure(api_key=GEMINI_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY)
@@ -293,3 +294,100 @@ def analyze_product_image(image_base64: str, mime_type: str, context: str = "") 
         "El servicio de análisis de imágenes no está disponible en este momento. "
         "Por favor intenta de nuevo más tarde."
     )
+
+
+def _parse_product_json(raw: str) -> dict:
+    """Extrae {name, description, price, category} de la respuesta del modelo, tolerando markdown/backticks."""
+    text = (raw or "").strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(json)?", "", text).rstrip("`").strip()
+
+    try:
+        data = json.loads(text)
+    except Exception:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if not match:
+            raise RuntimeError("La IA no devolvió un resultado válido. Intenta de nuevo.")
+        data = json.loads(match.group(0))
+
+    name = str(data.get("name") or "").strip()[:60]
+    description = str(data.get("description") or "").strip()[:200]
+    category = str(data.get("category") or "").strip()
+
+    price = None
+    price_raw = data.get("price")
+    if price_raw not in (None, ""):
+        digits = re.sub(r"[^\d]", "", str(price_raw))
+        if digits:
+            price = int(digits)
+
+    return {
+        "name": name or None,
+        "description": description or None,
+        "price": price,
+        "category": category or None,
+    }
+
+
+def suggest_product_fields(
+    hint: str = None,
+    image_base64: str = None,
+    image_mime_type: str = None,
+    existing_categories: list = None,
+) -> dict:
+    """Genera nombre, descripción, precio y categoría sugeridos para un producto nuevo.
+
+    Responde en JSON estricto (no usa el formato ACTION: del chat general) para que el
+    frontend pueda aplicar los valores directamente al formulario de creación/edición.
+    """
+    categories_txt = ", ".join(existing_categories) if existing_categories else "ninguna registrada aún"
+    instructions = (
+        "Eres un generador de fichas de producto para tiendas de ropa urbana colombiana "
+        "en la plataforma Vexio. A partir de la descripción o imagen que te dé el administrador, "
+        "responde ÚNICAMENTE con un objeto JSON válido (sin texto adicional, sin backticks, sin markdown) "
+        "con exactamente estas claves:\n"
+        '- "name": nombre de producto atractivo y comercial, máximo 60 caracteres\n'
+        '- "description": descripción de venta atractiva, entre 50 y 200 caracteres\n'
+        '- "price": precio sugerido en pesos colombianos (COP), número entero sin puntos ni símbolos\n'
+        '- "category": una categoría corta para el producto; si coincide con alguna de estas categorías '
+        f"ya existentes en la tienda, úsala EXACTAMENTE igual (mismo texto): {categories_txt}\n"
+    )
+
+    if image_base64:
+        image_data = base64.b64decode(image_base64)
+        prompt = instructions + f"\nDescripción adicional del administrador: {hint or 'Ninguna'}"
+        last_error = None
+        for model_name in GEMINI_MODELS:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content([
+                    prompt,
+                    {"mime_type": image_mime_type or "image/jpeg", "data": image_data}
+                ])
+                return _parse_product_json(response.text)
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str or "quota" in error_str.lower() or "404" in error_str or "not found" in error_str.lower():
+                    last_error = e
+                    continue
+                raise RuntimeError(f"Error Gemini: {e}")
+        raise RuntimeError(
+            "El servicio de IA no está disponible en este momento. Intenta de nuevo más tarde."
+        )
+
+    if not hint or not hint.strip():
+        raise RuntimeError("Escribe una breve descripción del producto para generar la sugerencia.")
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": instructions},
+                {"role": "user", "content": hint.strip()},
+            ],
+            temperature=0.7,
+            max_tokens=500,
+        )
+        return _parse_product_json(response.choices[0].message.content)
+    except Exception as e:
+        raise RuntimeError(f"Error Groq: {e}")
